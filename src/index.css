@@ -10,3 +10,26 @@
   -moz-osx-font-smoothing: grayscale;
   background-color: #ffffff;
 }
+
+/* Loại bỏ style của submenu */
+.ant-menu-submenu {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.ant-menu-submenu {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.ant-menu-submenu-inline {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.ant-menu-submenu-open {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.ant-menu-submenu-selected {
+  padding: 0 !important;
+  margin: 0 !important;
+}

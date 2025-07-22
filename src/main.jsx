@@ -7,6 +7,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en/translation.json';
 import vi from './locales/vi/translation.json';
+import { CounterProvider } from './context/UserContext.jsx';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -20,6 +21,8 @@ i18n.use(initReactI18next).init({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <CounterProvider>
+      <App />
+    </CounterProvider>
   </StrictMode>
 );

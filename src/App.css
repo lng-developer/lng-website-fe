@@ -3,4 +3,15 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  --primary-hover: #f1f5f9;
+  font-family: inherit;
+  --header-height: 60px;
+}
+
+.primary-hover {
+  background-color: var(--primary-hover);
+}
+
+.border-primary {
+  border-color: var(--primary-hover);
 }
