@@ -13,10 +13,10 @@ export const dataNav = [
     link: '',
     isSubMenu: true,
   },
-  {
-    title: 'Listings',
-    icon: <RiListIndefinite />,
-    link: '',
-    isSubMenu: false,
-  },
+  // {
+  //   title: 'Listings',
+  //   icon: <RiListIndefinite />,
+  //   link: '',
+  //   isSubMenu: false,
+  // },
 ];
