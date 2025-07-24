@@ -8,6 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en/translation.json';
 import vi from './locales/vi/translation.json';
 import { CounterProvider } from './context/UserContext.jsx';
+import { ToastContainer } from 'react-toastify';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <CounterProvider>
       <App />
+      <ToastContainer />
     </CounterProvider>
   </StrictMode>
 );

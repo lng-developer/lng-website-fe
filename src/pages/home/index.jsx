@@ -9,37 +9,69 @@ import SubItemCustom from './table/SubItemCustom';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
+import { useCallback, useEffect, useState } from 'react';
+import { getALlOrder } from '../../apis/order';
+import { formatDate } from '../../utils/fomatDate';
 
 const Home = () => {
-  const data = [
-    {
-      key: 1,
-      order: <StatusComponent title="131151241adasdsadasasdsa" color={''} />,
-      customer: 'Nguyễn Văn A',
-      status: <StatusComponent title="New" color={dataColors.success} />,
-      date: '2025-07-22',
-      created: '2025-07-22',
-      order_date: '2025-07-22',
-      shipping_type: <StatusComponent title="Standard Shipping" color={dataColors.success} />,
-      config_cost_center: 'Re-Test',
-      basecost: '$9.53',
-      store: 'LNG Store',
-      delivery_date: '2025-07-22',
-      handling_time: '2025-07-22',
-      case: '',
-      subItems: [
-        {
-          key: '1-1',
-          product: <SubItemImage />,
-          sku: <SubItemSku />,
-          price: <SubItemCustom />,
-          quantity: <SubItemQuantity />,
-          cost_center: <SubItemCost />,
-          tracking_note: <SubItemTracking />,
-        },
-      ],
-    },
-  ];
+  const [orders, setOrders] = useState([]);
+
+  const handleColorStatus = (stt) => {
+    switch (stt) {
+      case 'New':
+        return dataColors.success;
+      case 'Fulfilled':
+        return dataColors.process;
+      case 'Shipped':
+        return dataColors.pending;
+      case 'Cancelled':
+        return dataColors.cancelled;
+      default:
+        return dataColors.default;
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetchAllOrder = useCallback(async () => {
+    try {
+      const response = await getALlOrder();
+      if (response.status === 200) {
+        const results = response.data.map((item, index) => {
+          return {
+            key: index,
+            order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
+            customer: item?.customer_infor?.name,
+            status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+            created: formatDate(item?.createdAt),
+            order_date: formatDate(item?.purchase_date),
+            shipping_type: <StatusComponent title="Standard" color={dataColors.success} />,
+            config_cost_center: 'Re-Test',
+            basecost: `$${item?.totalCustomizationPrice}`,
+            store: 'LNG Store',
+            delivery_date: '2025-07-22',
+            handling_time: '2025-07-22',
+            case: '',
+            subItems: [
+              {
+                key: '1-1',
+                product: <SubItemImage linkImage={item?.baseImageUrl} />,
+                sku: <SubItemSku sku={item?.sku} asin={item?.asin} />,
+                price: <SubItemCustom items={item?.version3Data} customUrl={item?.customized_url} />,
+                quantity: <SubItemQuantity quantity={item?.quantity} />,
+                cost_center: <SubItemCost />,
+                tracking_note: <SubItemTracking status={item?.status} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
+              },
+            ],
+          };
+        });
+        setOrders(results);
+      } else {
+        console.log('error');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
   const columns = [
     { title: 'Order', dataIndex: 'order', key: 'ord', align: 'center' },
@@ -69,6 +101,10 @@ const Home = () => {
 
     return <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" />;
   };
+
+  useEffect(() => {
+    fetchAllOrder();
+  }, [fetchAllOrder]);
   return (
     <div className="px-8 py-4 h-full">
       <div className="flex gap-3 items-center">
@@ -95,7 +131,7 @@ const Home = () => {
         </div>
       </div>
       <div className="mt-4">
-        <Table columns={columns} dataSource={data} expandable={{ expandedRowRender }} rowKey="key" bordered pagination={false} />
+        <Table columns={columns} dataSource={orders} expandable={{ expandedRowRender }} rowKey="key" bordered pagination={false} />
       </div>
     </div>
   );

@@ -1,7 +1,23 @@
 import { Input, Select } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
+import { updateStatusOrder } from '../../../apis/order';
+import { toast } from 'react-toastify';
 
-const SubItemTracking = () => {
+const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder }) => {
+  const handleSelect = async (value) => {
+    try {
+      const result = await updateStatusOrder(orderId, value);
+      if (result.status === 200) {
+        toast.success(result.data?.message);
+        fetchAllOrder();
+      } else {
+        toast.error(result.data?.message);
+      }
+    } catch (error) {
+      toast.error(error.response.data?.message);
+      console.log(error);
+    }
+  };
   return (
     <div>
       <div className="mb-2">
@@ -12,12 +28,14 @@ const SubItemTracking = () => {
       </div>
       <div className="mb-2">
         <Select
-          defaultValue="lucy"
+          defaultValue={status}
           style={{ width: 220 }}
+          onChange={(value) => handleSelect(value)}
           options={[
-            { value: 'jack', label: 'Jack' },
-            { value: 'lucy', label: 'Lucy' },
-            { value: 'Yiminghe', label: 'yiminghe' },
+            { value: 'New', label: 'New' },
+            { value: 'Fulfilled', label: 'Fulfilled' },
+            { value: 'Shipped', label: 'Shipped' },
+            { value: 'Cancelled', label: 'Cancelled' },
           ]}
         />
       </div>

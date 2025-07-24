@@ -5,14 +5,15 @@ import { MdOutlineDone } from 'react-icons/md';
 import StatusComponent from '../../../components/StatusComponent';
 import { MdDoneOutline } from 'react-icons/md';
 import { dataColors } from '../../../utils/dataColors';
+import NoImage from '../../../assets/NoImage.jpg';
 
-const SubItemImage = () => {
+const SubItemImage = ({ linkImage = '' }) => {
   const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState(null);
 
   const productList = [
-    { id: 1, name: 'Font' },
-    { id: 2, name: 'back' },
+    { id: 1, name: 'Front' },
+    { id: 2, name: 'Back' },
   ];
 
   const handleSelect = (product) => {
@@ -22,8 +23,7 @@ const SubItemImage = () => {
   return (
     <div>
       <div className="rounded-lg overflow-hidden flex gap-2">
-        <Image width={130} src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png" className="rounded-lg" />
-        <Image width={130} src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png" className="rounded-lg" />
+        <Image width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
       </div>
       <div className="mt-2">
         <Popconfirm
@@ -61,7 +61,7 @@ const SubItemImage = () => {
             <MdDoneOutline color="green" />
           </div>
           <div>
-            <StatusComponent title="Download" color="#38a00b" />
+            <StatusComponent title="No data" color="#38a00b" />
           </div>
         </div>
         <div className="flex-col gap-2 mt-2">
@@ -69,7 +69,7 @@ const SubItemImage = () => {
             <span className="mr-2 font-medium">ASIN Type:</span>
           </div>
           <div>
-            <StatusComponent title="Pod Lovers" color="#0958d7" />
+            <StatusComponent title="No data" color="#0958d7" />
           </div>
         </div>
         <div className="flex-col gap-2 mt-2">
@@ -77,7 +77,7 @@ const SubItemImage = () => {
             <span className="mr-2 font-medium">PNG Status:</span>
           </div>
           <div>
-            <StatusComponent title="Completed" color={dataColors.success} />
+            <StatusComponent title="No data" color={dataColors.success} />
           </div>
         </div>
         <div className="flex-col gap-2 mt-2">
@@ -85,7 +85,7 @@ const SubItemImage = () => {
             <span className="mr-2 font-medium">Scale By:</span>
           </div>
           <div>
-            <StatusComponent title="Nguyễn Thị Thu Trang" color={dataColors.process} />
+            <StatusComponent title="No data" color={dataColors.process} />
           </div>
         </div>
         <div className="flex-col gap-2 mt-2">
@@ -93,7 +93,7 @@ const SubItemImage = () => {
             <span className="mr-2 font-medium">QC By:</span>
           </div>
           <div>
-            <StatusComponent title="Trần Thị Thu Trang" color={dataColors.purple} />
+            <StatusComponent title="No data" color={dataColors.purple} />
           </div>
         </div>
       </div>
