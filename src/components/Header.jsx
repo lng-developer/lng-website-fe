@@ -16,7 +16,7 @@ const Header = () => {
   return (
     <>
       <div className="z-20 h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
-        <h1 className="text-2xl !mb-0">Manage Orders</h1>
+        <h1 className="text-2xl !mb-0" style={{color: 'black'}}>Manage Orders</h1>
         <div className="flex justify-center items-center gap-2">
           <Popconfirm
             open={isShowPop}
@@ -40,14 +40,15 @@ const Header = () => {
                 setIsShowPop((prev) => !prev);
               }}
             >
-              <span className="text-sm font-medium">Actions</span>
-              <div>
+              <span className="text-sm font-medium" style={{color: 'black'}}>Actions</span>
+              <div style={{color: 'black'}}>
                 <IoIosArrowDown size={15} />
               </div>
             </button>
           </Popconfirm>
 
           <button
+          style={{color: 'black'}}
             className={`border-[${dataColors.default}] inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium disabled:opacity-50 border border-input h-10 px-4 py-2 cursor-pointer`}
           >
             <IoSettingsOutline />
