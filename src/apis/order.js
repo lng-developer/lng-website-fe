@@ -15,10 +15,11 @@ const getALlShop = () => {
   return instance.get('/shop');
 };
 
-const importOrderByFile = (shopId, file) => {
-  return instance.post('/order/update-from-xlsx', {
-    shopId,
-    file,
+const importOrderByFile = (payload) => {
+  return instance.post('/order/update-from-xlsx', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
   });
 };
 export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile };

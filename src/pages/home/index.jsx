@@ -104,7 +104,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchAllOrder();
-  }, [fetchAllOrder]);
+  }, []);
   return (
     <div className="px-8 py-4 h-full">
       <div className="flex gap-3 items-center">

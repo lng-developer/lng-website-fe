@@ -1,13 +1,16 @@
-import { Checkbox, Modal, Select, Upload } from 'antd';
+import { Checkbox, Modal, Select, Spin, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
+import { toast } from 'react-toastify';
 const { Dragger } = Upload;
 
 const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [shops, setShops] = useState([]);
   const [fileList, setFileList] = useState([]);
   const [shopId, setShopId] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const fetchAllShop = async () => {
     try {
       const result = await getALlShop();
@@ -27,43 +30,64 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       console.log(error);
     }
   };
+
   const handleCancel = () => {
     setIsModalOpen((prev) => !prev);
   };
-  console.log('data file', fileList);
 
   const handleOk = async () => {
-    const file = fileList[0]?.originFileObj;
+    const fileFormat = fileList?.[0];
+    if (!fileFormat) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', fileFormat);
+    formData.append('shopId', shopId);
 
-    const response = await importOrderByFile(shopId, formData);
-    if (response.status === 200) {
-      console.log('oke');
+    try {
+      setLoading(true); // 👉 Hiện màn chờ
+      handleCancel();
+      const response = await importOrderByFile(formData);
+      if (response.status === 200) {
+        toast.success('Import success');
+        const results = response.data.results;
+        results.forEach((result) => {
+          if (result?.status !== 200) {
+            toast.error(`Order: ${result?.orderId} ${result.status}`, {
+              autoClose: 50000,
+            });
+            return;
+          }
+        });
+      } else {
+        toast.error('Import error');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Import error');
+    } finally {
+      setLoading(false); // 👉 Tắt màn chờ
+      handleCancel();
     }
   };
 
-  const props = {
-    name: 'file',
-    multiple: true,
-    onDrop(e) {
-      console.log('Dropped files', e.dataTransfer.files);
-    },
-    beforeUpload(file) {
-      setFileList([file]);
-    },
-    onRemove() {
-      setFileList([]);
-    },
+  const beforeUpload = (file) => {
+    setFileList([file]);
+    return false;
+  };
+
+  const handleChangeSelect = (value) => {
+    const result = shops.find((shop) => shop.value === value);
+    setShopId(result?.id);
   };
 
   useEffect(() => {
     fetchAllShop();
   }, []);
+
   return (
     <Modal
       title="Import Orders"
+      okText="Import"
       closable={{ 'aria-label': 'Custom Close Button' }}
       open={isModalOpen}
       onOk={handleOk}
@@ -79,11 +103,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           placeholder="Select Shop"
           style={{ width: 350 }}
           optionFilterProp="label"
-          onChange={(value) => {
-            console.log(value);
-
-            // setShopId(value.id);
-          }}
+          onChange={handleChangeSelect}
           filterSort={(optionA, optionB) => {
             var _a, _b;
             return ((_a = optionA === null || optionA === void 0 ? void 0 : optionA.label) !== null && _a !== void 0 ? _a : '')
@@ -95,7 +115,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           options={shops}
         />
         <div className="my-3">
-          <Dragger {...props}>
+          <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".txt,.json,.csv" maxCount={1}>
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
@@ -114,6 +134,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           </div>
         </div>
       </div>
+      {loading && <Spin tip="Đang xử lý..." size="large" style={{ color: 'white' }} fullscreen={true} />}
     </Modal>
   );
 };
