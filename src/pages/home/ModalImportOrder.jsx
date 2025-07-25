@@ -1,8 +1,9 @@
 import { Checkbox, Modal, Select, Spin, Upload } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { CloudUploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
 import { toast } from 'react-toastify';
+import { MdOutlineCloudUpload } from 'react-icons/md';
 const { Dragger } = Upload;
 
 const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
@@ -22,8 +23,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
             id: item?._id,
           };
         });
-        console.log('data', formatData);
-
         setShops(formatData);
       }
     } catch (error) {
@@ -117,9 +116,9 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
         <div className="my-3">
           <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".txt,.json,.csv" maxCount={1}>
             <p className="ant-upload-drag-icon">
-              <InboxOutlined />
+              <CloudUploadOutlined />
             </p>
-            <p className="ant-upload-text">Click to uploador drag and drop .txt file</p>
+            <p className="ant-upload-text">Click to upload or drag and drop .txt file</p>
           </Dragger>
         </div>
         <div>

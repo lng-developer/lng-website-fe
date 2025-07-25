@@ -7,7 +7,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en/translation.json';
 import vi from './locales/vi/translation.json';
-import { CounterProvider } from './context/UserContext.jsx';
+import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastContainer } from 'react-toastify';
 
 i18n.use(initReactI18next).init({
@@ -22,9 +22,9 @@ i18n.use(initReactI18next).init({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <CounterProvider>
+    <AuthProvider>
       <App />
       <ToastContainer />
-    </CounterProvider>
+    </AuthProvider>
   </StrictMode>
 );

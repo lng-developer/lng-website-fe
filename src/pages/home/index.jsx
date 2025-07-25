@@ -12,6 +12,10 @@ import SubItemTracking from './table/SubItemTracking';
 import { useCallback, useEffect, useState } from 'react';
 import { getALlOrder } from '../../apis/order';
 import { formatDate } from '../../utils/fomatDate';
+import { FcShop } from 'react-icons/fc';
+import { FcPlus } from 'react-icons/fc';
+
+import ItemCustomer from './table/ItemCustomer';
 
 const Home = () => {
   const [orders, setOrders] = useState([]);
@@ -40,28 +44,47 @@ const Home = () => {
           return {
             key: index,
             order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
-            customer: item?.customer_infor?.name,
+            customer: <ItemCustomer nameCustomer={item?.customer_infor?.name} />,
             status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-            created: formatDate(item?.createdAt),
-            order_date: formatDate(item?.purchase_date),
+            created: <span className="font-medium">{formatDate(item?.createdAt)}</span>,
+            order_date: <span className="font-medium">{formatDate(item?.purchase_date)}</span>,
             shipping_type: <StatusComponent title="Standard" color={dataColors.success} />,
-            config_cost_center: 'Re-Test',
-            basecost: `$${item?.totalCustomizationPrice}`,
-            store: 'LNG Store',
-            delivery_date: '2025-07-22',
-            handling_time: '2025-07-22',
-            case: '',
-            subItems: [
-              {
-                key: '1-1',
-                product: <SubItemImage linkImage={item?.baseImageUrl} />,
-                sku: <SubItemSku sku={item?.sku} asin={item?.asin} />,
-                price: <SubItemCustom items={item?.version3Data} customUrl={item?.customized_url} />,
-                quantity: <SubItemQuantity quantity={item?.quantity} />,
+            config_cost_center: (
+              <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
+                <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
+                  Re-test
+                </span>
+              </div>
+            ),
+            basecost: <span className="font-medium">{`$${3}`}</span>,
+            store: (
+              <div className="flex items-center border-1 rounded-full px-2" style={{ borderColor: dataColors.pending }}>
+                <FcShop />
+                <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
+                  {item?.shopName}
+                </span>
+              </div>
+            ),
+            delivery_date: <span className="font-medium">July 25, 2025</span>,
+            handling_time: <span className="font-medium">6 Days</span>,
+            case: (
+              <div className="flex justify-center cursor-pointer">
+                <FcPlus size={20} />
+              </div>
+            ),
+            subItems: item?.items?.map((itemSub, indexItem) => {
+              return {
+                key: `${index}-${indexItem}`,
+                product: <SubItemImage linkImage={itemSub?.baseImageUrl} />,
+                sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} />,
+                price: (
+                  <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+                ),
+                quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
                 cost_center: <SubItemCost />,
                 tracking_note: <SubItemTracking status={item?.status} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
-              },
-            ],
+              };
+            }),
           };
         });
         setOrders(results);
@@ -102,21 +125,32 @@ const Home = () => {
     return <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" />;
   };
 
+  // Xử lý search
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    console.log('value', value);
+
+    const results = orders.filter((item) => item?.orderId?.toLowerCase().includes(value?.toLowerCase()));
+    console.log('result', results);
+  };
+
   useEffect(() => {
     fetchAllOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div className="px-8 py-4 h-full">
       <div className="flex gap-3 items-center">
-        <ButtonFilter />
-        <ButtonFilter />
-        <ButtonFilter />
-        <ButtonFilter />
-        <ButtonFilter />
+        <ButtonFilter title="All" />
+        <ButtonFilter title="New Order" />
+        <ButtonFilter title="Fulfilled" />
+        <ButtonFilter title="Shipped" />
+        <ButtonFilter title="Cancelled" />
       </div>
       <div className="flex justify-between items-center mt-4">
         <div className="flex w-[40%] gap-2">
           <Input
+            onChange={handleSearch}
             placeholder="Search orders by ID, Customer..."
             className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
           />

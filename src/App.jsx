@@ -5,15 +5,21 @@ import { Register } from './pages/register';
 import Home from './pages/home';
 import { NotFound } from './pages/notfound';
 import MainLayout from './layouts/MainLayout';
+import { PrivateRoute } from './layouts/PrivateRoute';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path={routes.home} element={<MainLayout />}>
+        <Route
+          path={routes.home}
+          element={
+            <PrivateRoute allowedRoles={['Admin']}>
+              <MainLayout />
+            </PrivateRoute>
+          }
+        >
           <Route index element={<Home />} />
-          {/* <Route path="about/:section" element={<About />} />
-          <Route path="services/:type" element={<Services />} /> */}
         </Route>
 
         <Route path={routes.login} element={<Login />} />

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const ItemComponent = ({ icon, title = '', link = '' }) => {
   return (
-    <Menu.Item key={link}>
+    <Menu.Item>
       <Link to={link}>
         <div className="flex gap-3 items-center px-2">
           {icon}

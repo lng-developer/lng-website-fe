@@ -13,7 +13,7 @@ const SubItemQuantity = ({ quantity = null }) => {
         <div>
           <span className="font-medium">Fulfill Qty</span>
         </div>
-        <InputNumber width={10} min={1} max={10} defaultValue={3} />
+        <InputNumber width={10} min={1} max={10} defaultValue={quantity} />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
+import { Image } from 'antd';
 import { Link } from 'react-router-dom';
 
-const SubItemCustom = ({ items = [], customUrl }) => {
+const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
   return (
     <div className="flex-col justify-between">
       {items.map((item, index) => (
@@ -14,6 +15,14 @@ const SubItemCustom = ({ items = [], customUrl }) => {
         <Link to={customUrl} className="text-[#64748B]">
           Link
         </Link>
+      </div>
+      <div className="flex-col gap-2">
+        <div>
+          <span className="font-medium">Customer Photo: </span>
+        </div>
+        <div className="w-[80px] h-[80px] mt-2 rounded-lg overflow-hidden shadow-xl">
+          <Image width={80} src={linkImage} />
+        </div>
       </div>
     </div>
   );

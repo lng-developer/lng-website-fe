@@ -21,7 +21,7 @@ const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder }) => {
   return (
     <div>
       <div className="mb-2">
-        <Input style={{ width: 220 }} />
+        <Input style={{ width: 220 }} placeholder="Fulfillment" />
       </div>
       <div className="mb-2">
         <Input style={{ width: 220 }} placeholder="Tracking" />

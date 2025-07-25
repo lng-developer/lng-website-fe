@@ -6,6 +6,7 @@ import StatusComponent from '../../../components/StatusComponent';
 import { MdDoneOutline } from 'react-icons/md';
 import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
+import { FcApproval } from 'react-icons/fc';
 
 const SubItemImage = ({ linkImage = '' }) => {
   const [visible, setVisible] = useState(false);
@@ -22,7 +23,7 @@ const SubItemImage = ({ linkImage = '' }) => {
   };
   return (
     <div>
-      <div className="rounded-lg overflow-hidden flex gap-2">
+      <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2">
         <Image width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
       </div>
       <div className="mt-2">
@@ -58,7 +59,7 @@ const SubItemImage = ({ linkImage = '' }) => {
         <div className="flex-col gap-2 mt-2">
           <div className="flex items-center">
             <span className="mr-2 font-medium">PSD:</span>
-            <MdDoneOutline color="green" />
+            <FcApproval />
           </div>
           <div>
             <StatusComponent title="No data" color="#38a00b" />
