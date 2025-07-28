@@ -14,3 +14,7 @@
 .ant-table-cell {
   vertical-align: top !important;
 }
+
+.range-center :where(.ant-picker-input > input) {
+  @apply text-center;
+}

@@ -6,6 +6,7 @@ import Home from './pages/home';
 import { NotFound } from './pages/notfound';
 import MainLayout from './layouts/MainLayout';
 import { PrivateRoute } from './layouts/PrivateRoute';
+import { OrderProvider } from './context/OrderContext';
 
 function App() {
   return (
@@ -15,7 +16,9 @@ function App() {
           path={routes.home}
           element={
             <PrivateRoute allowedRoles={['Admin']}>
-              <MainLayout />
+              <OrderProvider>
+                <MainLayout />
+              </OrderProvider>
             </PrivateRoute>
           }
         >
