@@ -3,13 +3,14 @@ import TextArea from 'antd/es/input/TextArea';
 import { updateStatusOrder } from '../../../apis/order';
 import { toast } from 'react-toastify';
 
-const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder }) => {
+const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, changeDataForFilter }) => {
   const handleSelect = async (value) => {
     try {
       const result = await updateStatusOrder(orderId, value);
       if (result.status === 200) {
-        toast.success(result.data?.message);
         fetchAllOrder();
+        toast.success(result.data?.message);
+        changeDataForFilter();
       } else {
         toast.error(result.data?.message);
       }

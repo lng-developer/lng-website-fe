@@ -5,7 +5,18 @@ export const OrderContext = createContext();
 
 export const OrderProvider = ({ children }) => {
   const [orders, setOrders] = useState([]);
-  const [dataFilter, setDataFilter] = useState([]);
+  const [dataFilter, setDataFilter] = useState({
+    status: '',
+    dateRange: [],
+    search: '',
+  });
+
+  const handleFilterChange = (key, value) => {
+    setDataFilter((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
   return (
     <OrderContext.Provider
       value={{
@@ -13,6 +24,7 @@ export const OrderProvider = ({ children }) => {
         setOrders,
         dataFilter,
         setDataFilter,
+        handleFilterChange,
       }}
     >
       {children}

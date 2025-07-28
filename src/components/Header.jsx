@@ -6,7 +6,7 @@ import ModalImportOrder from '../pages/home/ModalImportOrder';
 import { useState } from 'react';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
-import { isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+
 import { useOrder } from '../context/OrderContext';
 import { LuImport } from 'react-icons/lu';
 const customLocale = {
@@ -24,7 +24,7 @@ const Header = () => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState([]);
   const [range, setRange] = useState([]);
-  const { dataFilter, setOrders } = useOrder();
+  const { setDataFilter } = useOrder();
 
   const handleOnclick = () => {
     setIsShowModal((prev) => !prev);
@@ -32,21 +32,15 @@ const Header = () => {
   };
 
   const handleApply = () => {
-    const filtered = filterOrdersByDate(dataFilter, range);
-    setOrders(filtered);
+    setDataFilter((prev) => ({
+      ...prev,
+      dateRange: range,
+    }));
+    console.log('chayj vaof day');
+
     setOpen(false); // ✅ chỉ đóng khi ấn Apply
   };
 
-  const filterOrdersByDate = (ordersFil, range) => {
-    if (!range?.[0] || !range?.[1]) return ordersFil;
-
-    const [start, end] = [startOfDay(range[0]), endOfDay(range[1])];
-
-    return ordersFil?.filter((order) => {
-      const createdAt = parseISO(order?.purchase_date); // convert ISO string to Date
-      return isWithinInterval(createdAt, { start, end });
-    });
-  };
   const onDateChange = (dates) => {
     setRange(dates);
   };
