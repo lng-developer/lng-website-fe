@@ -53,7 +53,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
 
     try {
       setLoading(true); // 👉 Hiện màn chờ
-      handleCancel();
       const response = await importOrderByFile(formData);
       if (response.status === 200) {
         toast.success('Import success');

@@ -10,20 +10,24 @@ const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
           <span className="text-[#64748B] ml-2">{item?.value}</span>
         </div>
       ))}
-      <div className="flex gap-2 mb-1">
-        <span className="font-medium">Customization Url: </span>
-        <Link to={customUrl} className="text-[#64748B]">
-          Link
-        </Link>
-      </div>
-      <div className="flex-col gap-2">
-        <div>
-          <span className="font-medium">Customer Photo: </span>
-        </div>
-        <div className="w-[80px] h-[80px] mt-2 rounded-lg overflow-hidden shadow-xl">
-          <Image width={80} src={linkImage} />
-        </div>
-      </div>
+      {linkImage && (
+        <>
+          <div className="flex gap-2 mb-1">
+            <span className="font-medium">Customization Url: </span>
+            <Link to={customUrl} className="text-[#64748B]">
+              Link
+            </Link>
+          </div>
+          <div className="flex-col gap-2">
+            <div>
+              <span className="font-medium">Customer Photo: </span>
+            </div>
+            <div className="w-[80px] h-[80px] mt-2 rounded-lg overflow-hidden shadow-xl">
+              <Image width={80} src={linkImage} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

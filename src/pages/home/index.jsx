@@ -1,4 +1,4 @@
-import { Input, Pagination, Table } from 'antd';
+import { Flex, Input, Pagination, Table } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -10,7 +10,7 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useEffect, useState } from 'react';
-import { getALlOrder, updateBaseCost } from '../../apis/order';
+import { getALlOrder } from '../../apis/order';
 import { formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
@@ -22,10 +22,10 @@ import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { toast } from 'react-toastify';
 
 import { LuImport } from 'react-icons/lu';
 import ModalImportOrder from './ModalImportOrder';
+import ItemBaseCost from './table/ItemBaseCost';
 const customLocale = {
   ...enUS,
   lang: {
@@ -145,7 +145,7 @@ const Home = () => {
     { title: 'Shipping Type', dataIndex: 'shipping_type', key: 'shipping_type', align: 'center' },
     { title: 'Customer', dataIndex: 'customer', key: 'customer', align: 'center' },
     { title: 'Config Cost Center', dataIndex: 'config_cost_center', key: 'config_cost_center', align: 'center' },
-    { title: 'Basecost', dataIndex: 'basecost', key: 'basecost', align: 'center' },
+    { title: 'Basecost', dataIndex: 'base_cost', key: 'basecost', align: 'center' },
     { title: 'Store', dataIndex: 'store', key: 'store', align: 'center' },
     { title: 'Delivery Date', dataIndex: 'delivery_date', key: 'delivery_date', align: 'center' },
     { title: 'Handling Time', dataIndex: 'handling_time', key: 'handling_time', align: 'center' },
@@ -206,45 +206,14 @@ const Home = () => {
             </span>
           </div>
         ),
-        basecost: (
-          <Input
-            defaultValue={item?.base_cost}
-            size="small"
-            style={{
-              width: 50,
-              borderRadius: 20,
-              outline: 'none',
-              boxShadow: 'none',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            prefix="$"
-            onBlur={async (e) => {
-              const newValue = parseFloat(e.target.value);
-              const oldValue = parseFloat(item?.base_cost);
-              if (!isNaN(newValue) && newValue !== oldValue) {
-                try {
-                  await updateBaseCost(item?.orderId, newValue);
-                  toast.success(`Updated base cost for ${item?.orderId}`);
-                } catch (err) {
-                  console.error(err);
-                  toast.error(`Failed to update base cost for ${item?.orderId}`);
-                }
-              }
-            }}
-            onPressEnter={(e) => {
-              e.target.blur();
-            }}
-          />
-        ),
+        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} />,
         store: (
-          <div className="flex items-center border-1 rounded-full px-2" style={{ borderColor: dataColors.pending }}>
-            <FcShop />
+          <Flex justify="center" style={{ borderColor: dataColors.pending }}>
+            <FcShop size={20} />
             <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
               {item?.shopName}
             </span>
-          </div>
+          </Flex>
         ),
         delivery_date: <span className="font-medium">July 25, 2025</span>,
         handling_time: <span className="font-medium">6 Days</span>,
