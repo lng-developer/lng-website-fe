@@ -1,4 +1,4 @@
-import { Input, Pagination, Table, message } from 'antd';
+import { Input, Pagination, Table } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -9,19 +9,19 @@ import SubItemCustom from './table/SubItemCustom';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getALlOrder, updateBaseCost } from '../../apis/order';
 import { formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
-import { useOrder } from '../../context/OrderContext';
 import { isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { toast } from 'react-toastify';
 
 import { LuImport } from 'react-icons/lu';
@@ -40,7 +40,6 @@ const Home = () => {
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
-  const [currentPage, setCurrentPage] = useState(1);
   const [curentData, setCurentData] = useState([]);
 
   const [isShowModal, setIsShowModal] = useState(false);
@@ -50,6 +49,25 @@ const Home = () => {
   const [status, setStatus] = useState('');
   const [valueSearch, setValueSearch] = useState('');
   const [isFilterStatus, setIsFilterStatus] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+
+  const rowSelection = {
+    type: 'checkbox',
+    selectedRowKeys,
+    onChange: (newKeys) => {
+      setSelectedRowKeys(newKeys);
+    },
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    setCurrentPage(page);
+    setPageSize(pageSize);
+  };
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = orders.slice(startIndex, endIndex);
 
   const handleOnclick = () => {
     setIsShowModal((prev) => !prev);
@@ -83,8 +101,7 @@ const Home = () => {
     setOrders(filtered);
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const fetchAllOrder = useCallback(async () => {
+  const fetchAllOrder = async () => {
     try {
       const response = await getALlOrder();
       if (response.status === 200) {
@@ -97,20 +114,13 @@ const Home = () => {
     } catch (error) {
       console.log(error);
     }
-  });
+  };
 
   const handleApply = () => {
     setOpen(false); // ✅ chỉ đóng khi ấn Apply
     changeDataForFilter(range, '', valueSearch);
     setIsFilterStatus(false);
   };
-
-  // handle pagination
-  const handleChangePage = (page) => {
-    setCurrentPage(page);
-  };
-
-  const paginatedData = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleColorStatus = (stt) => {
     switch (stt) {
@@ -159,6 +169,7 @@ const Home = () => {
   // Xử lý search
   const handleSearch = (e) => {
     if (!e.target.value) {
+      setValueSearch('');
       changeDataForFilter(range, status, '');
       return;
     }
@@ -183,7 +194,7 @@ const Home = () => {
       return {
         key: index,
         order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
-        customer: <ItemCustomer nameCustomer={item?.customer_infor?.name} />,
+        customer: <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         created: <span className="font-medium">{formatDate(item?.createdAt)}</span>,
         order_date: <span className="font-medium">{formatDate(item?.purchase_date)}</span>,
@@ -205,8 +216,8 @@ const Home = () => {
               outline: 'none',
               boxShadow: 'none',
               display: 'flex',
-              justifyContent: "center",
-              alignItems: "center"
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
             prefix="$"
             onBlur={async (e) => {
@@ -250,14 +261,7 @@ const Home = () => {
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
             cost_center: <SubItemCost />,
-            tracking_note: (
-              <SubItemTracking
-                status={item?.status}
-                orderId={item?.orderId}
-                fetchAllOrder={fetchAllOrder}
-                changeDataForFilter={changeDataForFilter}
-              />
-            ),
+            tracking_note: <SubItemTracking status={item?.status} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
           };
         }),
       };
@@ -275,7 +279,7 @@ const Home = () => {
       return;
     }
     fetchCountStatus(orders);
-  }, [orders]);
+  }, [isFilterStatus, orders]);
 
   return (
     <div>
@@ -377,7 +381,8 @@ const Home = () => {
                 showTotal={(total) => `Total ${total} items`}
                 defaultPageSize={10}
                 defaultCurrent={1}
-                onChange={handleChangePage}
+                onChange={handlePageChange}
+                onShowSizeChange={handlePageChange}
               />
             </div>
           </div>
@@ -385,10 +390,19 @@ const Home = () => {
             <Table
               columns={columns}
               dataSource={renderOrderInTable(paginatedData)}
-              expandable={{ expandedRowRender }}
-              rowKey="key"
+              expandable={{
+                expandedRowRender,
+                expandIcon: ({ expanded, onExpand, record }) =>
+                  expanded ? (
+                    <IoIosArrowUp onClick={(e) => onExpand(record, e)} style={{ fontSize: 20 }} className="cursor-pointer" />
+                  ) : (
+                    <IoIosArrowDown onClick={(e) => onExpand(record, e)} style={{ fontSize: 20 }} className="cursor-pointer" />
+                  ),
+              }}
+              rowKey="id"
               bordered={true}
               pagination={false}
+              rowSelection={rowSelection}
             />
           </div>
         </div>

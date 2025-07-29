@@ -21,10 +21,8 @@ i18n.use(initReactI18next).init({
 });
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <AuthProvider>
-      <App />
-      <ToastContainer />
-    </AuthProvider>
-  </StrictMode>
+  <AuthProvider>
+    <App />
+    <ToastContainer />
+  </AuthProvider>
 );

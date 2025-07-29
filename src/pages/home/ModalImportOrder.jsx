@@ -11,6 +11,8 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [fileList, setFileList] = useState([]);
   const [shopId, setShopId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkErrorShop, setCheckErrorShop] = useState(false);
+  const [checkErrorUpload, setCheckErrorUpload] = useState(false);
 
   const fetchAllShop = async () => {
     try {
@@ -35,8 +37,15 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   };
 
   const handleOk = async () => {
+    if (!shopId) {
+      setCheckErrorShop(true);
+      return;
+    }
     const fileFormat = fileList?.[0];
-    if (!fileFormat) return;
+    if (!fileFormat) {
+      setCheckErrorUpload(true);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', fileFormat);
@@ -71,12 +80,14 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
 
   const beforeUpload = (file) => {
     setFileList([file]);
+    setCheckErrorUpload(false);
     return false;
   };
 
   const handleChangeSelect = (value) => {
     const result = shops.find((shop) => shop.value === value);
     setShopId(result?.id);
+    setCheckErrorShop(false);
   };
 
   useEffect(() => {
@@ -113,6 +124,11 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           }}
           options={shops}
         />
+        {checkErrorShop && (
+          <div className="my-2">
+            <span className="text-[#ff0000]">Please select shop</span>
+          </div>
+        )}
         <div className="my-3">
           <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".txt,.json,.csv" maxCount={1}>
             <p className="ant-upload-drag-icon">
@@ -121,13 +137,18 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
             <p className="ant-upload-text">Click to upload or drag and drop .txt file</p>
           </Dragger>
         </div>
+        {checkErrorUpload && (
+          <div className="my-2">
+            <span className="text-[#ff0000]">Please upload file</span>
+          </div>
+        )}
         <div>
           <div>
             <span className="font-medium">Import Type:</span>
           </div>
           <div>
             <div className="flex gap-2 items-center">
-              <Checkbox>New</Checkbox>
+              <Checkbox checked>New</Checkbox>
               <Checkbox>Latest ship date</Checkbox>
             </div>
           </div>
