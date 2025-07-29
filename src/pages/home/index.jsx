@@ -1,4 +1,4 @@
-import { Input, Pagination, Table } from 'antd';
+import { Input, Pagination, Table, message } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -10,7 +10,7 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useCallback, useEffect, useState } from 'react';
-import { getALlOrder } from '../../apis/order';
+import { getALlOrder, updateBaseCost } from '../../apis/order';
 import { formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
@@ -22,6 +22,7 @@ import { IoSettingsOutline } from 'react-icons/io5';
 import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
+import { toast } from 'react-toastify';
 
 import { LuImport } from 'react-icons/lu';
 import ModalImportOrder from './ModalImportOrder';
@@ -194,7 +195,38 @@ const Home = () => {
             </span>
           </div>
         ),
-        basecost: <span className="font-medium">{`$${3}`}</span>,
+        basecost: (
+          <Input
+            defaultValue={item?.base_cost}
+            size="small"
+            style={{
+              width: 50,
+              borderRadius: 20,
+              outline: 'none',
+              boxShadow: 'none',
+              display: 'flex',
+              justifyContent: "center",
+              alignItems: "center"
+            }}
+            prefix="$"
+            onBlur={async (e) => {
+              const newValue = parseFloat(e.target.value);
+              const oldValue = parseFloat(item?.base_cost);
+              if (!isNaN(newValue) && newValue !== oldValue) {
+                try {
+                  await updateBaseCost(item?.orderId, newValue);
+                  toast.success(`Updated base cost for ${item?.orderId}`);
+                } catch (err) {
+                  console.error(err);
+                  toast.error(`Failed to update base cost for ${item?.orderId}`);
+                }
+              }
+            }}
+            onPressEnter={(e) => {
+              e.target.blur();
+            }}
+          />
+        ),
         store: (
           <div className="flex items-center border-1 rounded-full px-2" style={{ borderColor: dataColors.pending }}>
             <FcShop />

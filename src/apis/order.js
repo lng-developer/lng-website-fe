@@ -22,4 +22,11 @@ const importOrderByFile = (payload) => {
     },
   });
 };
-export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile };
+
+const updateBaseCost = (orderId, base_cost) => {
+  return instance.put('/order/update-base-cost', {
+    orderId,
+    base_cost,
+  });
+};
+export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile, updateBaseCost };
