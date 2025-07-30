@@ -1,7 +1,7 @@
 import StatusComponent from '../../../components/StatusComponent';
-import { VscLink } from 'react-icons/vsc';
 import { Link } from 'react-router-dom';
 import { dataColors } from '../../../utils/dataColors';
+import { FaLink } from 'react-icons/fa6';
 
 const SubItemSku = ({ sku, asin }) => {
   return (
@@ -9,12 +9,12 @@ const SubItemSku = ({ sku, asin }) => {
       {sku && (
         <div className="flex-col gap-2 mb-2">
           <div className="flex items-center">
-            <span className="mr-2 font-medium">SKU:</span>
+            <span className="font-medium">SKU:</span>
           </div>
-          <div className="flex gap-2  items-center">
+          <div className="flex gap-2 items-center">
             <StatusComponent title={sku} color="#08969b" />
             <Link target="_blank" to={`http://amazon.com/gp/product/${asin}`}>
-              <VscLink size={15} />
+              <FaLink size={18} />
             </Link>
           </div>
         </div>
@@ -22,7 +22,7 @@ const SubItemSku = ({ sku, asin }) => {
       {asin && (
         <div className="flex-col gap-2 mb-2">
           <div className="flex items-center">
-            <span className="mr-2 font-medium">ASIN:</span>
+            <span className="font-medium">ASIN:</span>
           </div>
           <div>
             <StatusComponent title={asin} color={dataColors.pending} />
@@ -31,7 +31,7 @@ const SubItemSku = ({ sku, asin }) => {
       )}
       <div className="flex-col gap-2 mb-2">
         <div className="flex items-center">
-          <span className="mr-2 font-medium">PSD ID:</span>
+          <span className="font-medium">PSD ID:</span>
         </div>
         <div>
           <StatusComponent title="No data" color={dataColors.success} />
@@ -39,7 +39,7 @@ const SubItemSku = ({ sku, asin }) => {
       </div>
       <div className="flex-col gap-2 mb-2">
         <div className="flex items-center">
-          <span className="mr-2 font-medium">Seller:</span>
+          <span className="font-medium">Seller:</span>
         </div>
         <div>
           <StatusComponent title="No data" color={dataColors.purple} />
@@ -47,7 +47,7 @@ const SubItemSku = ({ sku, asin }) => {
       </div>
       <div className="flex-col gap-2 mb-2">
         <div className="flex items-center">
-          <span className="mr-2 font-medium">Team:</span>
+          <span className="font-medium">Team:</span>
         </div>
         <div>
           <StatusComponent title="No data" color={dataColors.process} />

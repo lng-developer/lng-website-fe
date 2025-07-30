@@ -26,6 +26,8 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { LuImport } from 'react-icons/lu';
 import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
+import ItemShippingType from './table/ItemShippingType';
+import { useOutletContext } from 'react-router-dom';
 const customLocale = {
   ...enUS,
   lang: {
@@ -41,7 +43,6 @@ const Home = () => {
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
   const [curentData, setCurentData] = useState([]);
-
   const [isShowModal, setIsShowModal] = useState(false);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState([]);
@@ -52,6 +53,16 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const { collapsed } = useOutletContext();
+
+  const handleExpand = (expanded, record) => {
+    if (expanded) {
+      setExpandedRowKeys([...expandedRowKeys, record.key]);
+    } else {
+      setExpandedRowKeys(expandedRowKeys.filter((key) => key !== record.key));
+    }
+  };
 
   const rowSelection = {
     type: 'checkbox',
@@ -192,13 +203,13 @@ const Home = () => {
   const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
       return {
-        key: index,
+        key: item?.orderId,
         order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
         customer: <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         created: <span className="font-medium">{formatDate(item?.createdAt)}</span>,
         order_date: <span className="font-medium">{formatDate(item?.purchase_date)}</span>,
-        shipping_type: <StatusComponent title="Standard" color={dataColors.success} />,
+        shipping_type: <ItemShippingType shipping_type={item?.shipping_type} />,
         config_cost_center: (
           <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
             <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
@@ -206,11 +217,11 @@ const Home = () => {
             </span>
           </div>
         ),
-        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} />,
+        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} />,
         store: (
-          <Flex justify="center" style={{ borderColor: dataColors.pending }}>
+          <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
             <FcShop size={20} />
-            <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
+            <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
               {item?.shopName}
             </span>
           </Flex>
@@ -250,10 +261,15 @@ const Home = () => {
     fetchCountStatus(orders);
   }, [isFilterStatus, orders]);
 
+  useEffect(() => {
+    // Tự động mở tất cả dòng khi component mount
+    setExpandedRowKeys(orders.map((item) => item.orderId));
+  }, [orders]);
+
   return (
     <div>
-      <div>
-        <div className="z-20 h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
+      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-20'} right-0 z-50 bg-white transition-all duration-300`}>
+        <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Orders
           </h1>
@@ -316,64 +332,63 @@ const Home = () => {
           </div>
         </div>
       </div>
-      <div>
-        <div className="px-8 py-4 h-full">
-          <div className="flex gap-3 items-center">
-            {tabFilter.map((item, index) => (
-              <ButtonFilter
-                key={index}
-                item={item}
-                isActive={isActiveFilter?.key}
-                handleFilterForStatus={handleFilterForStatus}
-                setIsActivefilter={setIsActivefilter}
-                count={item?.count}
-              />
-            ))}
-          </div>
-          <div className="flex justify-between items-center mt-4">
-            <div className="flex w-[40%] gap-2">
-              <Input
-                value={valueSearch}
-                onChange={handleSearch}
-                placeholder="Search orders by ID, Customer..."
-                className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
-              />
-              <div className="flex gap-2 items-center ">
-                <SelectFilter />
-                <SelectFilter />
-                <SelectFilter />
-              </div>
-            </div>
-            <div>
-              <Pagination
-                total={orders.length}
-                showTotal={(total) => `Total ${total} items`}
-                defaultPageSize={10}
-                defaultCurrent={1}
-                onChange={handlePageChange}
-                onShowSizeChange={handlePageChange}
-              />
+      <div className="mt-[60px] px-8 py-4 h-full">
+        <div className="flex gap-3 items-center">
+          {tabFilter.map((item, index) => (
+            <ButtonFilter
+              key={index}
+              item={item}
+              isActive={isActiveFilter?.key}
+              handleFilterForStatus={handleFilterForStatus}
+              setIsActivefilter={setIsActivefilter}
+              count={item?.count}
+            />
+          ))}
+        </div>
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex w-[40%] gap-2">
+            <Input
+              value={valueSearch}
+              onChange={handleSearch}
+              placeholder="Search orders by ID, Customer..."
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+            />
+            <div className="flex gap-2 items-center ">
+              <SelectFilter />
+              <SelectFilter />
+              <SelectFilter />
             </div>
           </div>
-          <div className="mt-4">
-            <Table
-              columns={columns}
-              dataSource={renderOrderInTable(paginatedData)}
-              expandable={{
-                expandedRowRender,
-                expandIcon: ({ expanded, onExpand, record }) =>
-                  expanded ? (
-                    <IoIosArrowUp onClick={(e) => onExpand(record, e)} style={{ fontSize: 20 }} className="cursor-pointer" />
-                  ) : (
-                    <IoIosArrowDown onClick={(e) => onExpand(record, e)} style={{ fontSize: 20 }} className="cursor-pointer" />
-                  ),
-              }}
-              rowKey="id"
-              bordered={true}
-              pagination={false}
-              rowSelection={rowSelection}
+          <div>
+            <Pagination
+              total={orders.length}
+              showTotal={(total) => `Total ${total} items`}
+              defaultPageSize={10}
+              defaultCurrent={1}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
             />
           </div>
+        </div>
+        <div className="mt-4">
+          <Table
+            columns={columns}
+            dataSource={renderOrderInTable(paginatedData)}
+            expandable={{
+              expandedRowRender,
+              expandIcon: ({ expanded, onExpand, record }) => (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
+                  {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+              expandedRowKeys: expandedRowKeys,
+              onExpand: handleExpand,
+            }}
+            rowKey="key"
+            bordered={true}
+            pagination={false}
+            rowSelection={rowSelection}
+          />
         </div>
       </div>
       <ModalImportOrder isModalOpen={isShowModal} setIsModalOpen={setIsShowModal} />

@@ -1,61 +1,16 @@
-import { Button, Image, Popconfirm } from 'antd';
-import { useState } from 'react';
-import { IoIosArrowDown } from 'react-icons/io';
-import { MdOutlineDone } from 'react-icons/md';
+import { Image } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
-import { MdDoneOutline } from 'react-icons/md';
 import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
 import { FcApproval } from 'react-icons/fc';
 
 const SubItemImage = ({ linkImage = '' }) => {
-  const [visible, setVisible] = useState(false);
-  const [selected, setSelected] = useState(null);
-
-  const productList = [
-    { id: 1, name: 'Front' },
-    { id: 2, name: 'Back' },
-  ];
-
-  const handleSelect = (product) => {
-    setSelected(product);
-    setVisible(false);
-  };
   return (
     <div>
       <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2">
         <Image width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
       </div>
-      <div className="mt-2">
-        <Popconfirm
-          title={
-            <div className="">
-              {productList.map((product) => (
-                <div
-                  key={product.id}
-                  onClick={() => handleSelect(product)}
-                  className="flex justify-between items-center cursor-pointer px-2 py-1 hover:bg-gray-100 rounded"
-                >
-                  {selected?.name === product.name ? <MdOutlineDone /> : <div></div>}
-                  <span className="ml-1">{product.name}</span>
-                </div>
-              ))}
-            </div>
-          }
-          open={visible}
-          onOpenChange={setVisible}
-          showCancel={false}
-          okButtonProps={{ style: { display: 'none' } }}
-          placement="bottom"
-          icon={null}
-        >
-          <Button className="flex justify-between items-center">
-            <span>{selected ? selected.name : productList[0].name}</span>
-            <IoIosArrowDown />
-          </Button>
-        </Popconfirm>
-      </div>
-      <div className="">
+      <div className="mt-3">
         <div className="flex-col gap-2 mt-2">
           <div className="flex items-center">
             <span className="mr-2 font-medium">PSD:</span>

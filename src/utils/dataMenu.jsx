@@ -1,17 +1,17 @@
 import { LuBox } from 'react-icons/lu';
 import { FaAmazon, FaShopify } from 'react-icons/fa';
 import { RiListIndefinite } from 'react-icons/ri';
+import { routes } from '../routes/routes';
 
 export const dataNav = [
   {
-    title: 'Orders',
-    icon: <LuBox />,
-    subMenu: [
-      { title: 'Amazon', icon: <FaAmazon />, link: '' },
-      { title: 'Shopify', icon: <FaShopify />, link: '' },
+    key: '/order',
+    label: 'Orders',
+    icon: <LuBox size={20} />,
+    children: [
+      { key: '/order/amazon', label: 'Amazon', icon: <FaAmazon size={20} /> },
+      { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
     ],
-    link: '',
-    isSubMenu: true,
   },
   // {
   //   title: 'Listings',

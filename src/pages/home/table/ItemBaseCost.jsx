@@ -1,8 +1,26 @@
 import { Button, Flex, Input, Popover } from 'antd';
 import { updateBaseCost } from '../../../apis/order';
 import { toast } from 'react-toastify';
+import { useEffect, useState } from 'react';
+import useDebounce from '../../../hooks/useDebounce';
 
-const ItemBaseCost = ({ orderId, base_cost }) => {
+const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder }) => {
+  const [value, setValue] = useState('');
+  const debounce = useDebounce(value, 600);
+  const handleChange = async () => {
+    const newValue = parseFloat(value);
+    const oldValue = parseFloat(base_cost);
+    if (!isNaN(newValue) && newValue !== oldValue) {
+      try {
+        await updateBaseCost(orderId, newValue);
+        toast.success(`Updated base cost for ${orderId}`, { autoClose: 1000 });
+        fetchAllOrder();
+      } catch (err) {
+        console.error(err);
+        toast.error(`Failed to update base cost for ${orderId}`, { autoClose: 1000 });
+      }
+    }
+  };
   const content = (
     <Input
       defaultValue={base_cost ? base_cost : 0}
@@ -11,24 +29,14 @@ const ItemBaseCost = ({ orderId, base_cost }) => {
         width: 50,
       }}
       prefix="$"
-      onBlur={async (e) => {
-        const newValue = parseFloat(e.target.value);
-        const oldValue = parseFloat(base_cost);
-        if (!isNaN(newValue) && newValue !== oldValue) {
-          try {
-            await updateBaseCost(orderId, newValue);
-            toast.success(`Updated base cost for ${orderId}`);
-          } catch (err) {
-            console.error(err);
-            toast.error(`Failed to update base cost for ${orderId}`);
-          }
-        }
-      }}
-      onPressEnter={(e) => {
-        e.target.blur();
-      }}
+      onChange={(e) => setValue(e.target.value)}
+      onPressEnter={handleChange}
     />
   );
+
+  useEffect(() => {
+    handleChange();
+  }, [debounce]);
   return (
     <Popover content={content}>
       <div className="cursor-pointer">

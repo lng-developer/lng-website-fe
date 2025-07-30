@@ -31,7 +31,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder }) => {
                   className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
                   style={{ borderColor: dataColors.process }}
                 >
-                  <span className="font-bold" style={{ color: dataColors.process }}>
+                  <span className="font-bold truncate" style={{ color: dataColors.process }}>
                     {customerInfor?.name}
                   </span>
                 </div>
