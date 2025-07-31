@@ -7,6 +7,8 @@ import { NotFound } from './pages/notfound';
 import MainLayout from './layouts/MainLayout';
 import { PrivateRoute } from './layouts/PrivateRoute';
 import { OrderProvider } from './context/OrderContext';
+import Vendor from './pages/vendor';
+import VendorProduct from './pages/vendor/VendorProduct';
 
 function App() {
   return (
@@ -22,7 +24,9 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Home />} />
+          <Route index path={routes.order_amazon} element={<Home />} />
+          <Route path={routes.vendor_list} element={<Vendor />} />
+          <Route path={routes.vendor_products} element={<VendorProduct />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

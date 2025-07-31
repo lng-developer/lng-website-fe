@@ -55,6 +55,7 @@ const Home = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const { collapsed } = useOutletContext();
+  const [totalCount, setTotalCount] = useState(0);
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
@@ -116,9 +117,10 @@ const Home = () => {
     try {
       const response = await getALlOrder();
       if (response.status === 200) {
-        setOrders(response.data);
-        setCurentData(response.data);
-        fetchCountStatus(response.data);
+        setOrders(response.data?.data);
+        setTotalCount(response.data?.totalCount);
+        setCurentData(response.data?.data);
+        fetchCountStatus(response.data?.data);
       } else {
         console.log('error');
       }
@@ -149,32 +151,54 @@ const Home = () => {
   };
 
   const columns = [
-    { title: 'Order', dataIndex: 'order', key: 'ord', align: 'center' },
-    { title: 'Status', dataIndex: 'status', key: 'customer', align: 'center' },
-    { title: 'Created', dataIndex: 'created', key: 'date', align: 'center' },
-    { title: 'Order Date', dataIndex: 'order_date', key: 'order_date', align: 'center' },
-    { title: 'Shipping Type', dataIndex: 'shipping_type', key: 'shipping_type', align: 'center' },
-    { title: 'Customer', dataIndex: 'customer', key: 'customer', align: 'center' },
-    { title: 'Config Cost Center', dataIndex: 'config_cost_center', key: 'config_cost_center', align: 'center' },
-    { title: 'Basecost', dataIndex: 'base_cost', key: 'basecost', align: 'center' },
-    { title: 'Store', dataIndex: 'store', key: 'store', align: 'center' },
-    { title: 'Delivery Date', dataIndex: 'delivery_date', key: 'delivery_date', align: 'center' },
-    { title: 'Handling Time', dataIndex: 'handling_time', key: 'handling_time', align: 'center' },
-    { title: 'Case', dataIndex: 'case', key: 'case', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Order</span>, dataIndex: 'order', key: 'ord', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'customer', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'created', key: 'date', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'order_date', key: 'order_date', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
+      dataIndex: 'shipping_type',
+      key: 'shipping_type',
+      align: 'center',
+    },
+    { title: <span style={{ color: dataColors.title }}>Customer</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Config Cost Center</span>,
+      dataIndex: 'config_cost_center',
+      key: 'config_cost_center',
+      align: 'center',
+    },
+    { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'basecost', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Delivery Date</span>,
+      dataIndex: 'delivery_date',
+      key: 'delivery_date',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Handling Time</span>,
+      dataIndex: 'handling_time',
+      key: 'handling_time',
+      align: 'center',
+    },
+    { title: <span style={{ color: dataColors.title }}>Case</span>, dataIndex: 'case', key: 'case', align: 'center' },
   ];
 
   // Cột con trong bảng mở rộng
   const expandedRowRender = (record) => {
     const subColumns = [
-      { title: 'Image & Print Side', dataIndex: 'product', key: 'product' },
-      { title: 'SKU, Variant & Seller', dataIndex: 'sku', key: 'sku' },
-      { title: 'Customization', dataIndex: 'price', key: 'price' },
-      { title: 'QTY', dataIndex: 'quantity', key: 'quantity' },
-      { title: 'Cost Center	', dataIndex: 'cost_center', key: 'cost_center' },
-      { title: 'Tracking & Note', dataIndex: 'tracking_note', key: 'tracking_note' },
+      { title: <span style={{ color: dataColors.title }}>Image & Print Side</span>, dataIndex: 'product', key: 'product' },
+      { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
+      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'price', key: 'price' },
+      { title: <span style={{ color: dataColors.title }}>QTY</span>, dataIndex: 'quantity', key: 'quantity' },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
+      { title: <span style={{ color: dataColors.title }}>Tracking & Note</span>, dataIndex: 'tracking_note', key: 'tracking_note' },
     ];
 
-    return <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" />;
+    return (
+      <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" rowClassName={() => 'table-row-center'} />
+    );
   };
 
   // Xử lý search
@@ -361,7 +385,7 @@ const Home = () => {
           </div>
           <div>
             <Pagination
-              total={orders.length}
+              total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={10}
               defaultCurrent={1}
@@ -388,6 +412,7 @@ const Home = () => {
             bordered={true}
             pagination={false}
             rowSelection={rowSelection}
+            style={{ verticalAlign: 'top !important' }}
           />
         </div>
       </div>

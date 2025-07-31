@@ -11,7 +11,7 @@
   background-color: #ffffff;
 }
 
-.ant-table-cell {
+.table-row-center td {
   vertical-align: top !important;
 }
 

@@ -17,7 +17,7 @@ export default function Login() {
       const result = await login(userName, password);
       if (result.status === 200) {
         loginUser(result.data);
-        navigate(routes.home);
+        navigate(routes.order_amazon);
         toast.success(result.data?.message);
       } else {
         toast.error(result.data?.message);

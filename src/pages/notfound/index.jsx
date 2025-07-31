@@ -15,7 +15,7 @@ export const NotFound = () => {
           <p className="mt-4 mb-8 dark:text-gray-400">{t('text_change_login')}</p>
           <button
             onClick={() => navigate(-1)}
-            className="flex justify-center items-center w-full px-8 py-3 font-semibold rounded dark:bg-violet-400 dark:text-gray-900 bg-blue-600 !text-white"
+            className="flex justify-center items-center w-full px-8 py-3 font-semibold rounded dark:bg-violet-400 dark:text-gray-900 bg-blue-600 !text-white cursor-pointer"
           >
             {t('back_to')}
           </button>
