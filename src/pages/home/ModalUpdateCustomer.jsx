@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { updateCustomerInfor } from '../../apis/order';
 import isEqual from 'lodash.isequal';
 
-const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, orderId, fetchAllOrder }) => {
+const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, orderId, fetchAllOrder, filters }) => {
   const [formData, setFormData] = useState({
     name: customerInfor?.name,
     email: customerInfor?.email,
@@ -34,7 +34,7 @@ const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, order
       const response = await updateCustomerInfor(orderId, formData);
       if (response.status === 200) {
         toast.success(response.data?.message);
-        fetchAllOrder();
+        fetchAllOrder(filters);
         setIsModalOpen(false);
       }
     } catch (error) {

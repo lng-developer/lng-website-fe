@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { useState } from 'react';
 import ModalUpdateCustomer from '../ModalUpdateCustomer';
 
-const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder }) => {
+const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters }) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
 
   const handleCopy = async (textToCopy) => {
@@ -213,6 +213,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder }) => {
         customerInfor={customerInfor}
         orderId={orderId}
         fetchAllOrder={fetchAllOrder}
+        filters={filters}
       />
     </>
   );

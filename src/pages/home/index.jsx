@@ -10,13 +10,13 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useEffect, useState } from 'react';
-import { getALlOrder } from '../../apis/order';
-import { formatDate } from '../../utils/fomatDate';
+import { getAllCountStatus, getALlOrder } from '../../apis/order';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
@@ -28,6 +28,7 @@ import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
+import dayjs from 'dayjs';
 const customLocale = {
   ...enUS,
   lang: {
@@ -55,11 +56,20 @@ const Home = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     statuses: '',
-    from: '2025-07-01T00:00:00Z',
-    to: '2025-07-31T23:59:59Z',
+    from: defaultFrom,
+    to: defaultTo,
     search: '',
     isNoCostCenter: false,
   });
+
+  const today = new Date();
+  const fromDate = startOfDay(subDays(today, 6)); // 7 ngày tính cả hôm nay
+  const toDate = endOfDay(today);
+
+  // Hàm chuyển Date → dayjs
+  const convertToDayjs = (date) => dayjs(date);
+
+  const defaultRange = [convertToDayjs(fromDate), convertToDayjs(toDate)];
 
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
@@ -95,13 +105,21 @@ const Home = () => {
   };
 
   // fetch count order by status
-  const fetchCountStatus = (data = []) => {
-    const resultTabFilter = dataFilterStatus.map((tab) => {
-      const count = tab.status === 'All' ? data.length : data.filter((item) => item.status === tab.status).length;
-
-      return { ...tab, count };
-    });
-    setTabFilter(resultTabFilter);
+  const fetchCountStatus = async () => {
+    try {
+      const response = await getAllCountStatus(filters);
+      if (response.status === 200) {
+        const resultTabFilter = dataFilterStatus.map(({ key, title, status }) => ({
+          key,
+          title,
+          status,
+          count: response.data[key] ?? 0,
+        }));
+        setTabFilter(resultTabFilter);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const fetchAllOrder = async (params) => {
@@ -110,7 +128,6 @@ const Home = () => {
       if (response.status === 200) {
         setOrders(response.data?.data);
         setTotalCount(response.data?.totalCount);
-        fetchCountStatus(response.data?.data);
       } else {
         console.log('error');
       }
@@ -119,14 +136,12 @@ const Home = () => {
     }
   };
 
-  const toUtcISOString = (date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString();
-
   const handleApply = () => {
+    const toUtcISOString = (date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString();
     setOpen(false); // ✅ chỉ đóng khi ấn Apply
     const [start, end] = [startOfDay(range[0]), endOfDay(range[1])];
     const from = toUtcISOString(start); // 👈 ISO 8601 string
     const to = toUtcISOString(end);
-
     updateFilter({ from: from, to: to });
   };
 
@@ -207,10 +222,14 @@ const Home = () => {
 
   const handleFilterForStatus = (status) => {
     if (status === 'All') {
-      updateFilter({ statuses: '' });
+      updateFilter({ statuses: '', isNoCostCenter: false });
       return;
     }
-    updateFilter({ statuses: status });
+    if (status === 'NoCostCenter') {
+      updateFilter({ statuses: '', isNoCostCenter: true });
+      return;
+    }
+    updateFilter({ statuses: status, isNoCostCenter: false });
   };
 
   // render Orders
@@ -219,7 +238,9 @@ const Home = () => {
       return {
         key: item?.orderId,
         order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
-        customer: <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
+        customer: (
+          <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
+        ),
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         created: <span className="font-medium">{formatDate(item?.createdAt)}</span>,
         order_date: <span className="font-medium">{formatDate(item?.purchase_date)}</span>,
@@ -231,7 +252,7 @@ const Home = () => {
             </span>
           </div>
         ),
-        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} />,
+        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
         store: (
           <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
             <FcShop size={20} />
@@ -255,7 +276,15 @@ const Home = () => {
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
             cost_center: <SubItemCost />,
-            tracking_note: <SubItemTracking status={item?.status} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} />,
+            tracking_note: (
+              <SubItemTracking
+                status={item?.status}
+                orderId={item?.orderId}
+                fetchAllOrder={fetchAllOrder}
+                filters={filters}
+                fetchCountStatus={fetchCountStatus}
+              />
+            ),
           };
         }),
       };
@@ -265,7 +294,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchAllOrder(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchCountStatus();
   }, [filters]);
 
   useEffect(() => {
@@ -293,6 +322,7 @@ const Home = () => {
               </div>
             </button>
             <RangePicker
+              defaultValue={defaultRange}
               locale={customLocale}
               format="MMM D, YYYY"
               value={value}

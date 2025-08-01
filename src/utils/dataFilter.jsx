@@ -1,26 +1,36 @@
 const dataFilterStatus = [
   {
-    key: 1,
+    key: 'all',
     title: 'All',
     status: 'All',
   },
   {
-    key: 2,
+    key: 'new',
     title: 'New Order',
     status: 'New',
   },
   {
-    key: 3,
+    key: 'noCostCenter',
+    title: 'No Cost Center',
+    status: 'NoCostCenter',
+  },
+  {
+    key: 'paymentPending',
+    title: 'Payment Pending',
+    status: 'paymentPending',
+  },
+  {
+    key: 'fulfilled',
     title: 'Fulfilled',
     status: 'Fulfilled',
   },
   {
-    key: 4,
+    key: 'shipped',
     title: 'Shipped',
     status: 'Shipped',
   },
   {
-    key: 5,
+    key: 'cancelled',
     title: 'Cancelled',
     status: 'Cancelled',
   },

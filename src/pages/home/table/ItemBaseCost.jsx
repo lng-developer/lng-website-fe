@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { useEffect, useState } from 'react';
 import useDebounce from '../../../hooks/useDebounce';
 
-const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder }) => {
+const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
   const [value, setValue] = useState('');
   const debounce = useDebounce(value, 600);
   const handleChange = async () => {
@@ -14,7 +14,7 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder }) => {
       try {
         await updateBaseCost(orderId, newValue);
         toast.success(`Updated base cost for ${orderId}`, { autoClose: 1000 });
-        fetchAllOrder();
+        fetchAllOrder(filters);
       } catch (err) {
         console.error(err);
         toast.error(`Failed to update base cost for ${orderId}`, { autoClose: 1000 });
@@ -26,7 +26,7 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder }) => {
       defaultValue={base_cost ? base_cost : 0}
       size="small"
       style={{
-        width: 50,
+        width: 60,
       }}
       prefix="$"
       onChange={(e) => setValue(e.target.value)}

@@ -36,4 +36,9 @@ const updateBaseCost = (orderId, base_cost) => {
     base_cost,
   });
 };
-export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile, updateCustomerInfor, updateBaseCost };
+
+const getAllCountStatus = (params) => {
+  return instance.get('/order/statistic', { params });
+};
+
+export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile, updateCustomerInfor, updateBaseCost, getAllCountStatus };
