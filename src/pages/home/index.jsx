@@ -243,8 +243,8 @@ const Home = () => {
           <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
         ),
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        created: <span className="font-medium">{formatDate(item?.createdAt)}</span>,
-        order_date: <span className="font-medium">{formatDate(item?.purchase_date)}</span>,
+        created: <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>,
+        order_date: <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>,
         shipping_type: <ItemShippingType shipping_type={item?.shipping_type} />,
         config_cost_center: (
           <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
