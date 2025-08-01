@@ -1,7 +1,7 @@
 import instance from '.';
 
-const getALlOrder = () => {
-  return instance.get('/order/fe');
+const getALlOrder = (params) => {
+  return instance.get('/order/fe', { params });
 };
 
 const updateStatusOrder = (orderId, status) => {

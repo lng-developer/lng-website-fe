@@ -16,7 +16,7 @@ import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
-import { isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
@@ -42,20 +42,32 @@ const Home = () => {
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
-  const [curentData, setCurentData] = useState([]);
   const [isShowModal, setIsShowModal] = useState(false);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState([]);
   const [range, setRange] = useState();
-  const [status, setStatus] = useState('');
-  const [valueSearch, setValueSearch] = useState('');
-  const [isFilterStatus, setIsFilterStatus] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const { collapsed } = useOutletContext();
   const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    statuses: '',
+    from: '2025-07-01T00:00:00Z',
+    to: '2025-07-31T23:59:59Z',
+    search: '',
+    isNoCostCenter: false,
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
@@ -75,11 +87,8 @@ const Home = () => {
 
   const handlePageChange = (page, pageSize) => {
     setCurrentPage(page);
-    setPageSize(pageSize);
+    updateFilter({ page: page, perPage: pageSize });
   };
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedData = orders.slice(startIndex, endIndex);
 
   const handleOnclick = () => {
     setIsShowModal((prev) => !prev);
@@ -95,31 +104,12 @@ const Home = () => {
     setTabFilter(resultTabFilter);
   };
 
-  const changeDataForFilter = (dateRange, status, search) => {
-    const filtered = curentData?.filter((order) => {
-      const orderDate = parseISO(order?.purchase_date);
-      const matchDateRange = () => {
-        if (dateRange?.length === 2) {
-          const [start, end] = [startOfDay(dateRange[0]), endOfDay(dateRange[1])];
-          return isWithinInterval(orderDate, { start, end });
-        }
-        return true;
-      };
-      const matchStatus = status ? order.status === status : true;
-      const matchSearch = search ? order.orderId.toLowerCase().includes(search.toLowerCase()) : true;
-
-      return matchDateRange() && matchStatus && matchSearch;
-    });
-    setOrders(filtered);
-  };
-
-  const fetchAllOrder = async () => {
+  const fetchAllOrder = async (params) => {
     try {
-      const response = await getALlOrder();
+      const response = await getALlOrder(params);
       if (response.status === 200) {
         setOrders(response.data?.data);
         setTotalCount(response.data?.totalCount);
-        setCurentData(response.data?.data);
         fetchCountStatus(response.data?.data);
       } else {
         console.log('error');
@@ -129,10 +119,15 @@ const Home = () => {
     }
   };
 
+  const toUtcISOString = (date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString();
+
   const handleApply = () => {
     setOpen(false); // ✅ chỉ đóng khi ấn Apply
-    changeDataForFilter(range, '', valueSearch);
-    setIsFilterStatus(false);
+    const [start, end] = [startOfDay(range[0]), endOfDay(range[1])];
+    const from = toUtcISOString(start); // 👈 ISO 8601 string
+    const to = toUtcISOString(end);
+
+    updateFilter({ from: from, to: to });
   };
 
   const handleColorStatus = (stt) => {
@@ -204,23 +199,18 @@ const Home = () => {
   // Xử lý search
   const handleSearch = (e) => {
     if (!e.target.value) {
-      setValueSearch('');
-      changeDataForFilter(range, status, '');
+      updateFilter({ search: '' });
       return;
     }
-    setValueSearch(e.target.value);
-    changeDataForFilter(range, status, e.target.value);
+    updateFilter({ search: e.target.value });
   };
 
   const handleFilterForStatus = (status) => {
-    setIsFilterStatus(true);
     if (status === 'All') {
-      setStatus('');
-      changeDataForFilter(range, '', valueSearch);
+      updateFilter({ statuses: '' });
       return;
     }
-    setStatus(status);
-    changeDataForFilter(range, status, valueSearch);
+    updateFilter({ statuses: status });
   };
 
   // render Orders
@@ -274,16 +264,9 @@ const Home = () => {
   };
 
   useEffect(() => {
-    fetchAllOrder();
+    fetchAllOrder(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (isFilterStatus) {
-      return;
-    }
-    fetchCountStatus(orders);
-  }, [isFilterStatus, orders]);
+  }, [filters]);
 
   useEffect(() => {
     // Tự động mở tất cả dòng khi component mount
@@ -372,7 +355,6 @@ const Home = () => {
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <Input
-              value={valueSearch}
               onChange={handleSearch}
               placeholder="Search orders by ID, Customer..."
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
@@ -388,7 +370,7 @@ const Home = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={10}
-              defaultCurrent={1}
+              defaultCurrent={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
@@ -397,7 +379,7 @@ const Home = () => {
         <div className="mt-4">
           <Table
             columns={columns}
-            dataSource={renderOrderInTable(paginatedData)}
+            dataSource={renderOrderInTable(orders)}
             expandable={{
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (

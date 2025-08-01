@@ -156,10 +156,11 @@ const VendorProduct = () => {
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center mt-4">
-          <Flex gap={8}>
+          <Flex gap={8} style={{ width: '40%' }}>
             <Input
               // onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search..."
+              width={200}
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <SelectFilter />
