@@ -52,6 +52,7 @@ const Home = () => {
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const { collapsed } = useOutletContext();
   const [totalCount, setTotalCount] = useState(0);
+  const [shippingType, setShippingType] = useState('');
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -390,9 +391,12 @@ const Home = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
-              <SelectFilter />
-              <SelectFilter />
-              <SelectFilter />
+              <SelectFilter
+                title={'Shipping Type'}
+                vendorList={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
+                value={shippingType}
+                onChange={(val) => setShippingType(val)}
+              />
             </div>
           </div>
           <div>
@@ -424,7 +428,6 @@ const Home = () => {
             bordered={true}
             pagination={false}
             rowSelection={rowSelection}
-            style={{ verticalAlign: 'top !important' }}
           />
         </div>
       </div>

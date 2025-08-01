@@ -9,6 +9,7 @@ import { PrivateRoute } from './layouts/PrivateRoute';
 import { OrderProvider } from './context/OrderContext';
 import Vendor from './pages/vendor';
 import VendorProduct from './pages/vendor/VendorProduct';
+import ProductCostCenter from './pages/vendor/ProductCostCenter';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route index path={routes.order_amazon} element={<Home />} />
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
+          <Route path={routes.product_const_center} element={<ProductCostCenter />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

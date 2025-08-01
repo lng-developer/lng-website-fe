@@ -9,6 +9,7 @@ const routes = {
   vendor: '/vendor',
   vendor_list: '/vendor/list-vendor',
   vendor_products: '/vendor/vendor-products',
+  product_const_center: '/vendor/vendor-products/:id',
 };
 
 export { routes };

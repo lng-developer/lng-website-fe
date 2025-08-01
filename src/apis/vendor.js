@@ -25,4 +25,8 @@ const getALlVendorProduct = () => {
   return instance.get('/vendor-product');
 };
 
-export { getALlVendor, updateVender, addVendor, deleteVendor, getALlVendorProduct };
+const getProductCostCenter = (id) => {
+  return instance.get(`/vendor-cost-center/by-product/${id}`);
+};
+
+export { getALlVendor, updateVender, addVendor, deleteVendor, getALlVendorProduct, getProductCostCenter };

@@ -5,9 +5,12 @@ import SelectFilter from '../../components/SelectFilter';
 import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
 import { getALlVendorProduct } from '../../apis/vendor';
+import NoImage from '../../assets/NoImage.jpg';
+
 const VendorProduct = () => {
   const { collapsed } = useOutletContext();
   const [vendorProducts, setVendorProducts] = useState([]);
+  const [vendor, setVendor] = useState(null);
 
   const columns = [
     {
@@ -25,13 +28,7 @@ const VendorProduct = () => {
       title: <span style={{ color: dataColors.title }}>Image</span>,
       dataIndex: 'image',
       key: 'image',
-      render: (text) => (
-        <Image
-          width={100}
-          src={'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png'}
-          className="rounded-lg overflow-hidden"
-        />
-      ),
+      render: (text) => <Image width={100} src={text ? text : NoImage} className="rounded-lg overflow-hidden" />,
       align: 'center',
     },
     {
@@ -61,7 +58,10 @@ const VendorProduct = () => {
       dataIndex: '_id',
       key: '_id',
       render: (text) => (
-        <Link className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-5 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]">
+        <Link
+          to={`/vendor/vendor-products/${text}`}
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-5 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
+        >
           View
         </Link>
       ),
@@ -85,7 +85,7 @@ const VendorProduct = () => {
       title: <span style={{ color: dataColors.title }}>Product Type For Design </span>,
       dataIndex: 'type',
       key: 'type',
-      render: (text) => (
+      render: () => (
         <Select
           defaultValue="lucy"
           style={{ width: 200 }}
@@ -102,7 +102,7 @@ const VendorProduct = () => {
       title: <span style={{ color: dataColors.title }}>Status</span>,
       dataIndex: 'status',
       key: 'status',
-      render: (text) => <Switch defaultChecked />,
+      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
       align: 'center',
     },
   ];
@@ -111,14 +111,14 @@ const VendorProduct = () => {
     try {
       const response = await getALlVendorProduct();
       if (response.status === 200) {
-        const result = response.data.map((item, index) => {
+        const result = response.data?.data?.map((item, index) => {
           return {
             key: item?._id,
             index: index + 1,
             product_name: item?.product_name,
             image: item?.image,
             product_id: item?.product_id,
-            _id: item?.product_id,
+            _id: item?._id,
             vendor_id: item?.vendor_id?.name,
             type: item?.status,
             status: item?.status,
@@ -130,6 +130,8 @@ const VendorProduct = () => {
       console.log(error);
     }
   };
+
+  const vendors = ['Beefun', 'BurgerPrint', 'Cendo', 'CustomCat', 'Dreamship', 'Fuel', 'GearLaunch'];
 
   useEffect(() => {
     fetchAllVendorProduct();
@@ -163,7 +165,7 @@ const VendorProduct = () => {
               width={200}
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
-            <SelectFilter />
+            <SelectFilter title={'Vendor'} vendorList={vendors} value={vendor} onChange={(val) => setVendor(val)} />
           </Flex>
           <Pagination total={vendorProducts.length} showTotal={(total) => `Total ${total} items`} defaultPageSize={10} defaultCurrent={1} />
         </div>
