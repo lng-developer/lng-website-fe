@@ -6,6 +6,7 @@ import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
 import { getALlVendorProduct } from '../../apis/vendor';
 import NoImage from '../../assets/NoImage.jpg';
+import ModalCreatVendorProduct from './ModalCreatVendorProduct';
 const PAGE_SIZE = 10;
 
 const VendorProduct = () => {
@@ -14,6 +15,7 @@ const VendorProduct = () => {
   const [vendor, setVendor] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [isShowModalAdd, setIsShowModalAdd] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -182,7 +184,7 @@ const VendorProduct = () => {
           <div className="flex justify-center items-center">
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              // onClick={handleClickAdd}
+              onClick={() => setIsShowModalAdd(true)}
             >
               <MdAdd size={20} />
               <span className="text-sm font-medium" style={{ color: 'black' }}>
@@ -216,6 +218,12 @@ const VendorProduct = () => {
           <Table columns={columns} dataSource={vendorProducts} pagination={false} />
         </div>
       </div>
+      <ModalCreatVendorProduct
+        isShowModalAdd={isShowModalAdd}
+        setIsShowModalAdd={setIsShowModalAdd}
+        filters={filters}
+        fetchAllProductCostCenter={fetchAllVendorProduct}
+      />
     </div>
   );
 };

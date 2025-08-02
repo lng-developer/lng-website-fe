@@ -78,6 +78,17 @@ const ProductCostCenter = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>Vendor Color</span>,
+      dataIndex: 'vendor_color',
+      key: 'vendor_color',
+      render: (text) => (
+        <div className="h-full">
+          <span className="font-medium">{text}</span>
+        </div>
+      ),
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Standard Size</span>,
       dataIndex: 'standard_size',
       key: 'standard_size',
@@ -88,10 +99,11 @@ const ProductCostCenter = () => {
       ),
       align: 'center',
     },
+
     {
       title: <span style={{ color: dataColors.title }}>Standard Color</span>,
-      dataIndex: 'vendor_color',
-      key: 'vendor_color',
+      dataIndex: 'standard_color',
+      key: 'standard_color',
       render: (text) => (
         <div className="h-full">
           <span className="font-medium">{text}</span>

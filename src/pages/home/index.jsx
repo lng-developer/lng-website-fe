@@ -16,13 +16,12 @@ import { FcShop } from 'react-icons/fc';
 import { FcPlus } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { startOfDay, endOfDay, subDays, formatDistanceToNow } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { Button, DatePicker } from 'antd';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-
 import { LuImport } from 'react-icons/lu';
 import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
@@ -243,14 +242,28 @@ const Home = () => {
           <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
         ),
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        created: <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>,
-        order_date: <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>,
+        created: (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              ({formatDistanceToNow(item?.createdAt, { addSuffix: true })})
+            </span>
+          </Flex>
+        ),
+        order_date: (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+            </span>
+          </Flex>
+        ),
         shipping_type: (
           <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
         ),
         config_cost_center: (
           <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
-            <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
+            <span className="font-medium ml-2 whitespace-nowrap" style={{ color: dataColors.pending }}>
               Re-test
             </span>
           </div>
