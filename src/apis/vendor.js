@@ -21,12 +21,33 @@ const deleteVendor = (id) => {
   return instance.delete(`/vendor/${id}`);
 };
 
-const getALlVendorProduct = () => {
-  return instance.get('/vendor-product');
+const getALlVendorProduct = (params) => {
+  return instance.get('/vendor-product', { params });
 };
 
 const getProductCostCenter = (id) => {
   return instance.get(`/vendor-cost-center/by-product/${id}`);
 };
 
-export { getALlVendor, updateVender, addVendor, deleteVendor, getALlVendorProduct, getProductCostCenter };
+const getAllProductCostCenter = (params) => {
+  return instance.get('/vendor-cost-center', { params });
+};
+
+const importCostCenter = (payload) => {
+  return instance.post('/vendor-cost-center/import', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export {
+  getALlVendor,
+  updateVender,
+  addVendor,
+  deleteVendor,
+  getALlVendorProduct,
+  getProductCostCenter,
+  getAllProductCostCenter,
+  importCostCenter,
+};

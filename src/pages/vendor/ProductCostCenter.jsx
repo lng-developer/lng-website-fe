@@ -1,19 +1,61 @@
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { Flex, Image, Input, Modal, Pagination, Popover, Select, Switch, Table } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
-import { getProductCostCenter } from '../../apis/vendor';
+import { getAllProductCostCenter } from '../../apis/vendor';
 import { MdHistory, MdOutlineArrowBack } from 'react-icons/md';
 import { LuImport } from 'react-icons/lu';
+import ModalImportCostCenter from './ModalImportCostCenter';
+const PAGE_SIZE = 10;
 
 const ProductCostCenter = () => {
   const { collapsed } = useOutletContext();
   const [productCostCenter, setProductCostCenter] = useState([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [nameProductCostCenter, setNameProductCostCenter] = useState('');
   const { id } = useParams();
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [select, setSelect] = useState('');
+  const [isShowModalImport, setIsShowModalImport] = useState(false);
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    search: '',
+    vendor_product: id,
+    status: '',
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    setCurrentPage(page);
+    updateFilter({ page: page, perPage: pageSize });
+  };
+
+  const handleSearch = (e) => {
+    if (!e.target.value) {
+      updateFilter({ search: '' });
+      return;
+    }
+    updateFilter({ search: e.target.value });
+  };
+
+  const handleFilterSelect = (val) => {
+    if (val === select) {
+      return;
+    }
+    updateFilter({ status: val });
+    setSelect(val);
+  };
 
   const rowSelection = {
     type: 'checkbox',
@@ -81,6 +123,7 @@ const ProductCostCenter = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Domestic</span>,
+      key: 'dosmetic',
       children: [
         {
           title: <span style={{ color: dataColors.title }}>Economy</span>,
@@ -108,6 +151,7 @@ const ProductCostCenter = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>International</span>,
+      key: 'international',
       children: [
         {
           title: <span style={{ color: dataColors.title }}>Economy</span>,
@@ -137,7 +181,7 @@ const ProductCostCenter = () => {
       title: <span style={{ color: dataColors.title }}>Product Type For Design </span>,
       dataIndex: 'type',
       key: 'type',
-      render: (text) => (
+      render: () => (
         <Select
           defaultValue="lucy"
           style={{ width: 200 }}
@@ -154,7 +198,7 @@ const ProductCostCenter = () => {
       title: <span style={{ color: dataColors.title }}>History</span>,
       dataIndex: 'history',
       key: 'history',
-      render: (text) => (
+      render: () => (
         <div className="flex justify-center items-center cursor-pointer ">
           <MdHistory size={20} />
         </div>
@@ -172,12 +216,12 @@ const ProductCostCenter = () => {
     },
   ];
 
-  const fetchAllProductCostCenter = async () => {
+  const fetchAllProductCostCenter = async (params) => {
     try {
-      const response = await getProductCostCenter(id);
+      const response = await getAllProductCostCenter(params);
       if (response.status === 200) {
-        setProductCostCenter(response?.data?.items);
-        setNameProductCostCenter(response?.data?.vendor_product_name);
+        setProductCostCenter(response?.data?.data);
+        setTotal(response?.data?.total);
       }
     } catch (error) {
       console.log(error);
@@ -189,20 +233,20 @@ const ProductCostCenter = () => {
   };
 
   useEffect(() => {
-    fetchAllProductCostCenter();
-  }, []);
+    fetchAllProductCostCenter(filters);
+  }, [filters]);
 
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-20'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
-            Cost Centers {nameProductCostCenter ? `- ${nameProductCostCenter}` : ''}
+            Cost Centers - {state?.name}
           </h1>
           <div className="flex justify-center items-center">
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              // onClick={handleClickAdd}
+              onClick={() => setIsShowModalImport(true)}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
                 Import Cost Center
@@ -222,18 +266,20 @@ const ProductCostCenter = () => {
               <MdOutlineArrowBack />
             </button>
             <Input
-              // onChange={(e) => handleSearch(e.target.value)}
+              onChange={handleSearch}
               placeholder="Search..."
               width={200}
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
-            <SelectFilter />
+            <SelectFilter title="Status" ListData={['Active', 'InActive']} value={select} onChange={handleFilterSelect} />
           </Flex>
           <Pagination
-            total={productCostCenter.length}
+            total={total}
             showTotal={(total) => `Total ${total} items`}
-            defaultPageSize={10}
-            defaultCurrent={1}
+            defaultPageSize={PAGE_SIZE}
+            defaultCurrent={currentPage}
+            onChange={handlePageChange}
+            onShowSizeChange={handlePageChange}
           />
         </div>
         <div className="mt-4">
@@ -247,6 +293,13 @@ const ProductCostCenter = () => {
           />
         </div>
       </div>
+      <ModalImportCostCenter
+        isModalOpen={isShowModalImport}
+        setIsModalOpen={setIsShowModalImport}
+        filters={filters}
+        fetchAllProductCostCenter={fetchAllProductCostCenter}
+        productId={id}
+      />
     </div>
   );
 };

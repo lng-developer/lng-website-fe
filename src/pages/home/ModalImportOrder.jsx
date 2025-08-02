@@ -3,7 +3,6 @@ import { CloudUploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
 import { toast } from 'react-toastify';
-import { MdOutlineCloudUpload } from 'react-icons/md';
 const { Dragger } = Upload;
 
 const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
@@ -15,6 +14,9 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
 
   const fetchAllShop = async () => {
+    if (!isModalOpen) {
+      return;
+    }
     try {
       const result = await getALlShop();
       if (result.status === 200) {
@@ -91,7 +93,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
 
   useEffect(() => {
     fetchAllShop();
-  }, []);
+  }, [isModalOpen]);
 
   return (
     <Modal
@@ -103,7 +105,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       width={400}
       onCancel={handleCancel}
     >
-      <div className="py-4">
+      <div className="py-2">
         <div>
           <span className="font-medium">Store:</span>
         </div>

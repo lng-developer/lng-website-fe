@@ -1,5 +1,5 @@
 import { dataNav } from '../utils/dataMenu';
-import { Menu } from 'antd';
+import { Dropdown, Flex, Image, Menu } from 'antd';
 import { useAuth } from '../context/AuthContext';
 import { IoLogoAmazon } from 'react-icons/io5';
 import { FcRating } from 'react-icons/fc';
@@ -7,12 +7,15 @@ import { FaAnglesLeft, FaAnglesRight } from 'react-icons/fa6';
 import { dataColors } from '../utils/dataColors';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { routes } from '../routes/routes';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import logo from '../assets/logo.png';
+import { toast } from 'react-toastify';
 
 export default function Sidebar({ collapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [openDropdown, setOpenDropdown] = useState(false);
 
   // Lấy key đang active
   const selectedKey = location.pathname;
@@ -26,6 +29,31 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     }
     return '';
   };
+
+  const handleLogout = async () => {
+    logout();
+    toast.success('Logout success');
+  };
+
+  const menu = (
+    <Flex
+      vertical={true}
+      justify="left"
+      style={{ width: 150, backgroundColor: 'white', padding: 4 }}
+      className="gap-1 py-2 shadow-sm rounded-lg border-1 border-[#d3d9e1]"
+    >
+      <div className="px-3 py-1 hover:bg-[#f1f5f9] font-medium cursor-pointer rounded-lg" style={{ color: dataColors.title }}>
+        Change Password
+      </div>
+      <div
+        className="px-3 py-1 hover:bg-[#f1f5f9] font-medium cursor-pointer rounded-lg"
+        style={{ color: dataColors.title }}
+        onClick={handleLogout}
+      >
+        Logout
+      </div>
+    </Flex>
+  );
 
   useEffect(() => {
     if (location.pathname === '/') {
@@ -43,16 +71,25 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
           className="h-[60px] items-center gap-4 bg-background flex-none sticky top-0 z-50 flex justify-between px-1 py-3 shadow-sm md:px-[10px]"
           style={{ color: 'black' }}
         >
-          <div>
-            <IoLogoAmazon size={25} />
-          </div>
+          <Image src={logo} width={35} />
           <div className="visible w-auto flex flex-col justify-end truncate">
             <span className="font-medium" style={{ color: 'black' }}>
               LNG System
             </span>
-            <span className="cursor-pointer text-xs transition hover:underline truncate block w-full" style={{ color: 'black' }}>
-              {user?.full_name}
-            </span>
+            <Dropdown
+              trigger={['click']}
+              open={openDropdown}
+              onOpenChange={setOpenDropdown}
+              popupRender={() => menu}
+              placement="bottomLeft"
+            >
+              <span
+                className="cursor-pointer text-xs font-medium transition hover:underline truncate block w-full"
+                style={{ color: dataColors.title }}
+              >
+                {user?.full_name}
+              </span>
+            </Dropdown>
           </div>
           <div className="flex items-center visible w-auto ml-auto">
             <button className="p-3 hover:bg-[#f1f5f9] rounded-3xl cursor-pointer">
@@ -62,7 +99,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
         </div>
       ) : (
         <div className="h-[60px] items-center gap-4 bg-background flex-none sticky top-0 z-50 flex justify-center px-1 py-3 shadow-sm md:px-[10px]">
-          <IoLogoAmazon size={25} />
+          <Image src={logo} width={35} />
         </div>
       )}
       <div className="py-2">

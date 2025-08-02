@@ -245,7 +245,9 @@ const Home = () => {
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         created: <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>,
         order_date: <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>,
-        shipping_type: <ItemShippingType shipping_type={item?.shipping_type} />,
+        shipping_type: (
+          <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
+        ),
         config_cost_center: (
           <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
             <span className="font-medium ml-2" style={{ color: dataColors.pending }}>
@@ -392,10 +394,13 @@ const Home = () => {
             />
             <div className="flex gap-2 items-center ">
               <SelectFilter
-                title={'Shipping Type'}
-                vendorList={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
+                title="Shipping Type"
+                ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
                 value={shippingType}
-                onChange={(val) => setShippingType(val)}
+                onChange={(val) => {
+                  setShippingType(val);
+                  updateFilter({ shippingType: val });
+                }}
               />
             </div>
           </div>
@@ -403,7 +408,7 @@ const Home = () => {
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
+              defaultPageSize={PAGE_SIZE}
               defaultCurrent={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}

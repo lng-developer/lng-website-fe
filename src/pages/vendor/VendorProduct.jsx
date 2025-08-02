@@ -6,11 +6,42 @@ import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
 import { getALlVendorProduct } from '../../apis/vendor';
 import NoImage from '../../assets/NoImage.jpg';
+const PAGE_SIZE = 10;
 
 const VendorProduct = () => {
   const { collapsed } = useOutletContext();
   const [vendorProducts, setVendorProducts] = useState([]);
   const [vendor, setVendor] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    search: '',
+    vendor: '',
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    setCurrentPage(page);
+    updateFilter({ page: page, perPage: pageSize });
+  };
+
+  // Xử lý search
+  const handleSearch = (e) => {
+    if (!e.target.value) {
+      updateFilter({ search: '' });
+      return;
+    }
+    updateFilter({ search: e.target.value });
+  };
 
   const columns = [
     {
@@ -55,12 +86,13 @@ const VendorProduct = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Cost Center</span>,
-      dataIndex: '_id',
-      key: '_id',
+      dataIndex: 'payload',
+      key: 'payload',
       render: (text) => (
         <Link
-          to={`/vendor/vendor-products/${text}`}
+          to={`/vendor/vendor-products/${text?.id}`}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-5 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
+          state={{ name: text?.name }}
         >
           View
         </Link>
@@ -107,9 +139,9 @@ const VendorProduct = () => {
     },
   ];
 
-  const fetchAllVendorProduct = async () => {
+  const fetchAllVendorProduct = async (params) => {
     try {
-      const response = await getALlVendorProduct();
+      const response = await getALlVendorProduct(params);
       if (response.status === 200) {
         const result = response.data?.data?.map((item, index) => {
           return {
@@ -118,13 +150,17 @@ const VendorProduct = () => {
             product_name: item?.product_name,
             image: item?.image,
             product_id: item?.product_id,
-            _id: item?._id,
+            payload: {
+              id: item?._id,
+              name: item?.product_name,
+            },
             vendor_id: item?.vendor_id?.name,
             type: item?.status,
             status: item?.status,
           };
         });
         setVendorProducts(result);
+        setTotal(response.data?.total);
       }
     } catch (error) {
       console.log(error);
@@ -134,8 +170,8 @@ const VendorProduct = () => {
   const vendors = ['Beefun', 'BurgerPrint', 'Cendo', 'CustomCat', 'Dreamship', 'Fuel', 'GearLaunch'];
 
   useEffect(() => {
-    fetchAllVendorProduct();
-  }, []);
+    fetchAllVendorProduct(filters);
+  }, [filters]);
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-20'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -160,14 +196,21 @@ const VendorProduct = () => {
         <div className="flex justify-between items-center mt-4">
           <Flex gap={8} style={{ width: '40%' }}>
             <Input
-              // onChange={(e) => handleSearch(e.target.value)}
+              onChange={handleSearch}
               placeholder="Search..."
               width={200}
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
-            <SelectFilter title={'Vendor'} vendorList={vendors} value={vendor} onChange={(val) => setVendor(val)} />
+            <SelectFilter title={'Vendor'} ListData={vendors} value={vendor} onChange={(val) => setVendor(val)} />
           </Flex>
-          <Pagination total={vendorProducts.length} showTotal={(total) => `Total ${total} items`} defaultPageSize={10} defaultCurrent={1} />
+          <Pagination
+            total={total}
+            showTotal={(total) => `Total ${total} items`}
+            defaultPageSize={PAGE_SIZE}
+            defaultCurrent={currentPage}
+            onChange={handlePageChange}
+            onShowSizeChange={handlePageChange}
+          />
         </div>
         <div className="mt-4">
           <Table columns={columns} dataSource={vendorProducts} pagination={false} />

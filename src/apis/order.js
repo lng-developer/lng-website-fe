@@ -41,4 +41,19 @@ const getAllCountStatus = (params) => {
   return instance.get('/order/statistic', { params });
 };
 
-export { getALlOrder, updateStatusOrder, getALlShop, importOrderByFile, updateCustomerInfor, updateBaseCost, getAllCountStatus };
+const updateShippingType = (orderId, shipping_type) => {
+  return instance.put('/order/update-shipping-type', {
+    orderId,
+    shipping_type,
+  });
+};
+export {
+  getALlOrder,
+  updateStatusOrder,
+  getALlShop,
+  importOrderByFile,
+  updateCustomerInfor,
+  updateBaseCost,
+  getAllCountStatus,
+  updateShippingType,
+};

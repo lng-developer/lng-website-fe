@@ -8,11 +8,24 @@ import { routes } from '../../routes/routes';
 export default function Login() {
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
+  const [errorUsername, setErrorUsername] = useState(false);
+  const [errorPassword, setErrorPassword] = useState(false);
   const { loginUser } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault(); // 👉 Ngăn reload trang
+
+    if (userName === '') {
+      setErrorUsername(true);
+      return;
+    }
+
+    if (password === '') {
+      setErrorPassword(true);
+      return;
+    }
+
     try {
       const result = await login(userName, password);
       if (result.status === 200) {
@@ -24,23 +37,19 @@ export default function Login() {
       }
     } catch (error) {
       console.log(error);
+      toast.error(error.response?.data?.message);
     }
   };
 
   return (
     <>
-      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+      <div className="mt-20 flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <img
-            alt="Your Company"
-            src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-            className="mx-auto h-10 w-auto"
-          />
-          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Login to your account</h2>
         </div>
 
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-          <form onSubmit={handleSubmit} method="POST" className="space-y-2">
+        <div className={` sm:mx-auto sm:w-full sm:max-w-sm bg-white shadow-sm border-2 rounded-lg p-8`} style={{ borderColor: '#d3d9e1' }}>
+          <div className="space-y-2">
             <div>
               <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
                 Username
@@ -49,11 +58,19 @@ export default function Login() {
                 <input
                   required
                   style={{ color: 'black' }}
-                  onChange={(value) => setUserName(value.target.value)}
+                  onChange={(value) => {
+                    setErrorUsername(false);
+                    setUserName(value.target.value);
+                  }}
                   autoComplete="email"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                  className="font-medium block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-black sm:text-sm/6"
                 />
               </div>
+              {errorUsername && (
+                <div className="mt-2">
+                  <span className="text-red-500 text-sm/6">Please enter username</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -67,36 +84,31 @@ export default function Login() {
                   id="password"
                   name="password"
                   type="password"
-                  style={{ color: 'black' }}
-                  onChange={(value) => setPassword(value.target.value)}
+                  onChange={(value) => {
+                    setErrorPassword(false);
+                    setPassword(value.target.value);
+                  }}
                   required
                   autoComplete="current-password"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-black sm:text-sm/6"
                 />
               </div>
+              {errorPassword && (
+                <div className="mt-2">
+                  <span className="text-red-500 text-sm/6">Please enter password</span>
+                </div>
+              )}
             </div>
-            <div className="text-sm flex justify-end">
-              <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
-                Forgot password?
-              </a>
-            </div>
-
-            <div>
+            <div className="mt-6">
               <button
                 type="submit"
-                className="!text-white flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer"
+                onClick={handleSubmit}
+                className="!text-white flex w-full justify-center rounded-md bg-black px-3 py-1.5 text-sm/6 font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer"
               >
-                Sign in
+                Login
               </button>
             </div>
-          </form>
-
-          <p className="mt-10 text-center text-sm/6 text-gray-500">
-            Not a member?{' '}
-            <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Start a 14 day free trial
-            </a>
-          </p>
+          </div>
         </div>
       </div>
     </>

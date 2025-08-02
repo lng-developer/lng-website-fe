@@ -3,15 +3,15 @@ import { useMemo, useState } from 'react';
 import { MdAddCircleOutline } from 'react-icons/md';
 import { CloseOutlined } from '@ant-design/icons';
 
-const SelectFilter = ({ vendorList = [], value, onChange, title }) => {
+const SelectFilter = ({ ListData = [], value, onChange, title }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
   // Lọc danh sách vendor theo từ khóa
   const filteredVendors = useMemo(() => {
-    if (!search.trim()) return vendorList;
-    return vendorList.filter((v) => v.toLowerCase().includes(search.toLowerCase()));
-  }, [vendorList, search]);
+    if (!search.trim()) return ListData;
+    return ListData.filter((v) => v.toLowerCase().includes(search.toLowerCase()));
+  }, [ListData, search]);
 
   const handleSelect = (val) => {
     onChange?.(val);
