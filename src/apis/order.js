@@ -47,6 +47,19 @@ const updateShippingType = (orderId, shipping_type) => {
     shipping_type,
   });
 };
+
+const getAllCaseByOrder = () => {
+  return instance.get('/case');
+};
+
+const updateOpenCase = (payload) => {
+  return instance.put('/order/open-case', payload);
+};
+
+const removeCase = (payload) => {
+  return instance.put('/order/remove-case', payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -56,4 +69,7 @@ export {
   updateBaseCost,
   getAllCountStatus,
   updateShippingType,
+  getAllCaseByOrder,
+  updateOpenCase,
+  removeCase,
 };

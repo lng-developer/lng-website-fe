@@ -1,15 +1,36 @@
 import { Flex, Input, Modal, Select } from 'antd';
 import React, { useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
+import { addVendorProduct } from '../../apis/vendor';
+import { toast } from 'react-toastify';
 
-const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd }) => {
+const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd, fetchAllProductCostCenter, filters, vendors }) => {
   const [valueProductName, setValueProductName] = useState('');
-  const [vendor, setVendor] = useState('');
   const [productId, setProductId] = useState('');
   const [image, setImage] = useState('');
-  const [productType, setProductType] = useState('');
+  const [selectVendor, setSelectVendor] = useState('');
+  // const [productType, setProductType] = useState('');
 
-  const handleAddVendorProduct = async () => {};
+  const handleAddVendorProduct = async () => {
+    try {
+      const response = await addVendorProduct({
+        vendor_id: selectVendor,
+        image: image,
+        product_id: productId,
+        product_name: valueProductName,
+      });
+
+      if (response.status === 201) {
+        toast.success('Add vendor product success!');
+        fetchAllProductCostCenter(filters);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Add vendor product error!');
+    } finally {
+      setIsShowModalAdd(false);
+    }
+  };
 
   return (
     <Modal
@@ -29,14 +50,10 @@ const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd }) => {
           </span>
           <Select
             showSearch
-            onChange={(value) => setVendor(value)}
+            onChange={(value) => setSelectVendor(value)}
             placeholder="Select Vendor"
             filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-            options={[
-              { value: 'API', label: 'API' },
-              { value: 'Manual', label: 'Manual' },
-              { value: 'Shopify', label: 'Shopify' },
-            ]}
+            options={vendors}
           />
         </Flex>
         <Flex vertical={true} gap={2}>
@@ -71,7 +88,6 @@ const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd }) => {
             Product Type For Design <span className="text-red-500">*</span>
           </span>
           <Select
-            onChange={(value) => setVendor(value)}
             placeholder="Product Type For Design"
             options={[
               { value: 'API', label: 'API' },

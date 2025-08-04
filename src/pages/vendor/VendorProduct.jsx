@@ -4,9 +4,12 @@ import { Flex, Image, Input, Modal, Pagination, Popover, Select, Switch, Table }
 import SelectFilter from '../../components/SelectFilter';
 import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
-import { getALlVendorProduct } from '../../apis/vendor';
+import { getALlVendor, getALlVendorProduct, updateVendorProduct } from '../../apis/vendor';
 import NoImage from '../../assets/NoImage.jpg';
 import ModalCreatVendorProduct from './ModalCreatVendorProduct';
+import { LuImport } from 'react-icons/lu';
+import ModalImportVendor from './ModalImportVendor';
+import { toast } from 'react-toastify';
 const PAGE_SIZE = 10;
 
 const VendorProduct = () => {
@@ -16,12 +19,28 @@ const VendorProduct = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [isShowModalAdd, setIsShowModalAdd] = useState(false);
+  const [isShowModalImport, setIsShowModalImport] = useState(false);
+  const [vendors, setVendors] = useState([]);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
     search: '',
     vendor: '',
   });
+
+  const handleChangeStatus = async (id, value) => {
+    try {
+      const status = value === true ? 'Active' : 'InActive';
+      const response = await updateVendorProduct(id, { status: status });
+      if (response.status === 200) {
+        toast.success('Update status success!');
+        fetchAllVendorProduct(filters);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Change status error!');
+    }
+  };
 
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
@@ -136,7 +155,9 @@ const VendorProduct = () => {
       title: <span style={{ color: dataColors.title }}>Status</span>,
       dataIndex: 'status',
       key: 'status',
-      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
+      render: (text) => (
+        <Switch checked={text?.status === 'Active' ? true : false} onChange={(value) => handleChangeStatus(text?._id, value)} />
+      ),
       align: 'center',
     },
   ];
@@ -156,9 +177,12 @@ const VendorProduct = () => {
               id: item?._id,
               name: item?.product_name,
             },
-            vendor_id: item?.vendor_id?.name,
+            vendor_id: item?.vendor?.name,
             type: item?.status,
-            status: item?.status,
+            status: {
+              status: item?.status,
+              _id: item?._id,
+            },
           };
         });
         setVendorProducts(result);
@@ -169,7 +193,26 @@ const VendorProduct = () => {
     }
   };
 
-  const vendors = ['Beefun', 'BurgerPrint', 'Cendo', 'CustomCat', 'Dreamship', 'Fuel', 'GearLaunch'];
+  const fetchAllVendor = async () => {
+    try {
+      const response = await getALlVendor();
+      if (response.status === 200) {
+        const result = response.data?.map((item) => {
+          return {
+            value: item?._id,
+            label: item?.name,
+          };
+        });
+        setVendors(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllVendor();
+  }, []);
 
   useEffect(() => {
     fetchAllVendorProduct(filters);
@@ -181,12 +224,21 @@ const VendorProduct = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Vendor Products
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setIsShowModalImport(true)}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Vendor Product
+              </span>
+              <LuImport size={15} />
+            </button>
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setIsShowModalAdd(true)}
             >
-              <MdAdd size={20} />
+              <MdAdd size={20} color="black" />
               <span className="text-sm font-medium" style={{ color: 'black' }}>
                 Create Vendor Product
               </span>
@@ -203,7 +255,15 @@ const VendorProduct = () => {
               width={200}
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
-            <SelectFilter title={'Vendor'} ListData={vendors} value={vendor} onChange={(val) => setVendor(val)} />
+            <SelectFilter
+              title={'Vendor'}
+              ListData={vendors.map((item) => item?.label)}
+              value={vendor}
+              onChange={(val) => {
+                updateFilter({ vendor_name: val });
+                setVendor(val);
+              }}
+            />
           </Flex>
           <Pagination
             total={total}
@@ -223,6 +283,14 @@ const VendorProduct = () => {
         setIsShowModalAdd={setIsShowModalAdd}
         filters={filters}
         fetchAllProductCostCenter={fetchAllVendorProduct}
+        vendors={vendors}
+      />
+      <ModalImportVendor
+        isModalOpen={isShowModalImport}
+        setIsModalOpen={setIsShowModalImport}
+        filters={filters}
+        fetchAllProductCostCenter={fetchAllVendorProduct}
+        vendors={vendors}
       />
     </div>
   );

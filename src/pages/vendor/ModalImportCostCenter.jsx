@@ -75,7 +75,7 @@ const ModalImportCostCenter = ({ isModalOpen, setIsModalOpen, fetchAllProductCos
             <p className="ant-upload-drag-icon">
               <CloudUploadOutlined />
             </p>
-            <p className="ant-upload-text">Click to upload or drag and drop .txt file</p>
+            <p className="ant-upload-text">Click to upload or drag and drop .xlsx file</p>
           </Dragger>
         </div>
         {checkErrorUpload && (

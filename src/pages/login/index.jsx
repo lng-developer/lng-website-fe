@@ -84,6 +84,7 @@ export default function Login() {
                   id="password"
                   name="password"
                   type="password"
+                  style={{ color: 'black' }}
                   onChange={(value) => {
                     setErrorPassword(false);
                     setPassword(value.target.value);

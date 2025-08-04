@@ -41,6 +41,26 @@ const importCostCenter = (payload) => {
   });
 };
 
+const addVendorProduct = (payload) => {
+  return instance.post('/vendor-product', payload);
+};
+
+const importVendorProduct = (payload) => {
+  return instance.post('/vendor-product/import-excel', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+const updateVendorProduct = (id, payload) => {
+  return instance.put(`/vendor-product/${id}`, payload);
+};
+
+const updateVendorProductCostCenter = (id, payload) => {
+  return instance.put(`/vendor-cost-center/${id}`, payload);
+};
+
 export {
   getALlVendor,
   updateVender,
@@ -50,4 +70,8 @@ export {
   getProductCostCenter,
   getAllProductCostCenter,
   importCostCenter,
+  addVendorProduct,
+  importVendorProduct,
+  updateVendorProduct,
+  updateVendorProductCostCenter,
 };

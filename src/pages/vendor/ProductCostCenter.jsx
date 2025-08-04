@@ -3,10 +3,11 @@ import { Flex, Image, Input, Modal, Pagination, Popover, Select, Switch, Table }
 import SelectFilter from '../../components/SelectFilter';
 import { dataColors } from '../../utils/dataColors';
 import { useEffect, useState } from 'react';
-import { getAllProductCostCenter } from '../../apis/vendor';
+import { getAllProductCostCenter, updateVendorProductCostCenter } from '../../apis/vendor';
 import { MdHistory, MdOutlineArrowBack } from 'react-icons/md';
 import { LuImport } from 'react-icons/lu';
 import ModalImportCostCenter from './ModalImportCostCenter';
+import { toast } from 'react-toastify';
 const PAGE_SIZE = 10;
 
 const ProductCostCenter = () => {
@@ -63,6 +64,20 @@ const ProductCostCenter = () => {
     onChange: (newKeys) => {
       setSelectedRowKeys(newKeys);
     },
+  };
+
+  const handleChangeStatus = async (id, value) => {
+    try {
+      const status = value === true ? 'Active' : 'InActive';
+      const response = await updateVendorProductCostCenter(id, { status: status });
+      if (response.status === 200) {
+        toast.success('Update status success!');
+        fetchAllProductCostCenter(filters);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Change status error!');
+    }
   };
 
   const columns = [
@@ -222,7 +237,9 @@ const ProductCostCenter = () => {
       title: <span style={{ color: dataColors.title }}>Status</span>,
       dataIndex: 'status',
       key: 'status',
-      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
+      render: (text) => (
+        <Switch checked={text?.status === 'Active' ? true : false} onChange={(value) => handleChangeStatus(text?._id, value)} />
+      ),
       align: 'center',
       fixed: 'right',
     },
@@ -232,7 +249,26 @@ const ProductCostCenter = () => {
     try {
       const response = await getAllProductCostCenter(params);
       if (response.status === 200) {
-        setProductCostCenter(response?.data?.data);
+        const result = response?.data?.data?.map((item) => {
+          return {
+            key: item?._id,
+            vendor_size: item?.vendor_size,
+            vendor_color: item?.vendor_color,
+            standard_size: item?.standard_size,
+            standard_color: item?.standard_color,
+            type: item?.status,
+            sku: item?.sku,
+            status: {
+              status: item?.status,
+              _id: item?._id,
+            },
+            history: item?.history,
+            dosmetic: item?.dosmetic,
+            international: item?.international,
+            base_cost: item?.base_cost,
+          };
+        });
+        setProductCostCenter(result);
         setTotal(response?.data?.total);
       }
     } catch (error) {

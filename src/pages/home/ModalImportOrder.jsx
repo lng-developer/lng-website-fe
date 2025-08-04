@@ -1,4 +1,4 @@
-import { Checkbox, Modal, Select, Spin, Upload } from 'antd';
+import { Checkbox, Modal, Radio, Select, Spin, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
@@ -12,6 +12,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [loading, setLoading] = useState(false);
   const [checkErrorShop, setCheckErrorShop] = useState(false);
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
+  const [typeOrder, setTypeOrder] = useState('New');
 
   const fetchAllShop = async () => {
     if (!isModalOpen) {
@@ -52,7 +53,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
     const formData = new FormData();
     formData.append('file', fileFormat);
     formData.append('shopId', shopId);
-
+    formData.append('type', typeOrder);
     try {
       setLoading(true); // 👉 Hiện màn chờ
       const response = await importOrderByFile(formData);
@@ -149,8 +150,12 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           </div>
           <div>
             <div className="flex gap-2 items-center">
-              <Checkbox checked>New</Checkbox>
-              <Checkbox>Latest ship date</Checkbox>
+              <Radio.Group onChange={(e) => setTypeOrder(e.target.value)} value={typeOrder} optionType="default">
+                <Radio checked={true} value="New">
+                  New
+                </Radio>
+                <Radio value="Latest ship date">Latest ship date</Radio>
+              </Radio.Group>
             </div>
           </div>
         </div>

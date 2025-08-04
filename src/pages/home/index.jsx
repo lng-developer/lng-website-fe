@@ -13,7 +13,6 @@ import { useEffect, useState } from 'react';
 import { getAllCountStatus, getALlOrder } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
-import { FcPlus } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
 import { startOfDay, endOfDay, subDays, formatDistanceToNow } from 'date-fns';
@@ -28,6 +27,7 @@ import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
 import dayjs from 'dayjs';
+import ItemCase from './table/ItemCase';
 const customLocale = {
   ...enUS,
   lang: {
@@ -192,7 +192,7 @@ const Home = () => {
       key: 'handling_time',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Case</span>, dataIndex: 'case', key: 'case', align: 'center' },
+    { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
   ];
 
   // Cột con trong bảng mở rộng
@@ -279,11 +279,7 @@ const Home = () => {
         ),
         delivery_date: <span className="font-medium">July 25, 2025</span>,
         handling_time: <span className="font-medium">6 Days</span>,
-        case: (
-          <div className="flex justify-center cursor-pointer">
-            <FcPlus size={20} />
-          </div>
-        ),
+        case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
