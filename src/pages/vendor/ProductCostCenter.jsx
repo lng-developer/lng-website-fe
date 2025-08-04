@@ -299,7 +299,7 @@ const ProductCostCenter = () => {
               <span className="text-sm font-medium" style={{ color: 'black' }}>
                 Import Cost Center
               </span>
-              <LuImport size={15} />
+              <LuImport size={15} color="black" />
             </button>
           </div>
         </div>

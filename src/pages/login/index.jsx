@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../routes/routes';
+import { Input } from 'antd';
 
 export default function Login() {
   const [userName, setUserName] = useState('');
@@ -15,17 +16,14 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault(); // 👉 Ngăn reload trang
-
     if (userName === '') {
       setErrorUsername(true);
       return;
     }
-
     if (password === '') {
       setErrorPassword(true);
       return;
     }
-
     try {
       const result = await login(userName, password);
       if (result.status === 200) {
@@ -55,15 +53,12 @@ export default function Login() {
                 Username
               </label>
               <div className="mt-2">
-                <input
-                  required
-                  style={{ color: 'black' }}
+                <Input
                   onChange={(value) => {
                     setErrorUsername(false);
                     setUserName(value.target.value);
                   }}
-                  autoComplete="email"
-                  className="font-medium block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-black sm:text-sm/6"
+                  className="font-medium"
                 />
               </div>
               {errorUsername && (
@@ -80,18 +75,15 @@ export default function Login() {
                 </label>
               </div>
               <div className="mt-2">
-                <input
-                  id="password"
-                  name="password"
+                <Input.Password
+                  size="middle"
+                  visibilityToggle={true}
                   type="password"
-                  style={{ color: 'black' }}
                   onChange={(value) => {
                     setErrorPassword(false);
                     setPassword(value.target.value);
                   }}
-                  required
-                  autoComplete="current-password"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-black sm:text-sm/6"
+                  className="font-medium"
                 />
               </div>
               {errorPassword && (

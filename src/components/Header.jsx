@@ -6,9 +6,12 @@ import ModalImportOrder from '../pages/home/ModalImportOrder';
 import { useState } from 'react';
 import locale from 'antd/es/date-picker/locale/en_US';
 import enUS from 'antd/es/date-picker/locale/en_US';
-
 import { useOrder } from '../context/OrderContext';
 import { LuImport } from 'react-icons/lu';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 const customLocale = {
   ...enUS,
   lang: {
@@ -20,7 +23,6 @@ const customLocale = {
 const { RangePicker } = DatePicker;
 const Header = () => {
   const [isShowModal, setIsShowModal] = useState(false);
-  const [isShowPop, setIsShowPop] = useState(false);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState([]);
   const [range, setRange] = useState([]);
@@ -28,7 +30,6 @@ const Header = () => {
 
   const handleOnclick = () => {
     setIsShowModal((prev) => !prev);
-    setIsShowPop(false);
   };
 
   const handleApply = () => {
@@ -44,6 +45,7 @@ const Header = () => {
   const onDateChange = (dates) => {
     setRange(dates);
   };
+
   return (
     <>
       <div className="z-20 h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
@@ -59,7 +61,7 @@ const Header = () => {
               Import Orders
             </span>
             <div style={{ color: 'black' }}>
-              <LuImport size={15} />
+              <LuImport size={15} color="black" />
             </div>
           </button>
           <RangePicker

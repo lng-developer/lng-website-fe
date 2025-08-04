@@ -10,6 +10,16 @@ const routes = {
   vendor_list: '/vendor/list-vendor',
   vendor_products: '/vendor/vendor-products',
   product_const_center: '/vendor/vendor-products/:id',
+  fulfillment: '/fulfillment',
+  design: '/design',
+  fulfillmentQc: '/fulfillment/qc',
+  fulfillmentScale: '/fulfillment/scale',
+  fulfillmentWorkingStatus: '/fulfillment/working-status',
+  fulfillmentReports: '/fulfillment/reports',
+  designPSD: '/design/psd',
+  designPNG: '/design/png',
+  designEmbroider: '/design/embroider-list',
+  designProductType: '/design/product-type',
 };
 
 export { routes };

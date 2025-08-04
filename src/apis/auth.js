@@ -7,4 +7,8 @@ const login = (username, password) => {
   });
 };
 
-export { login };
+const changePassword = (payload) => {
+  return instance.post('/auth/change-password', payload);
+};
+
+export { login, changePassword };

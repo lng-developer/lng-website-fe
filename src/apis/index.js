@@ -1,6 +1,6 @@
 import axios from 'axios';
 const instance = axios.create({
-  baseURL: 'https://lng-website-production.up.railway.app/api',
+  baseURL: 'https://api.lngmerch.co/api',
 });
 
 // instance.interceptors.request.use(
