@@ -13,46 +13,52 @@ import { BsFiletypePsd } from 'react-icons/bs';
 import { IoImageOutline } from 'react-icons/io5';
 import { RiListIndefinite } from 'react-icons/ri';
 import { BsBoxes } from 'react-icons/bs';
+import { CgShoppingBag } from 'react-icons/cg';
+import { TbReportSearch } from 'react-icons/tb';
+import { CiStar } from 'react-icons/ci';
+import { RiAdvertisementLine } from 'react-icons/ri';
+import { BsGraphUp } from 'react-icons/bs';
+import { LuLayoutList } from 'react-icons/lu';
+import { CgFileDocument } from 'react-icons/cg';
+import { LuStar } from 'react-icons/lu';
 
-export const dataNav = [
-  {
-    key: routes.order,
-    label: 'Orders',
-    icon: <LuBox size={20} />,
-    children: [
-      { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-      { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
-    ],
-  },
-  {
-    key: routes.vendor,
-    label: 'Vendor',
-    icon: <HiOutlineBuildingStorefront size={20} />,
-    children: [
-      { key: routes.vendor_list, label: 'List Vendor', icon: <CiCircleList size={20} /> },
-      { key: routes.vendor_products, label: 'Vendor Products', icon: <LiaClipboardListSolid size={20} /> },
-    ],
-  },
-  {
-    key: routes.fulfillment,
-    label: 'Fulfillment',
-    icon: <MdBalance size={20} />,
-    children: [
-      { key: routes.fulfillmentScale, label: 'Scale', icon: <FaBalanceScaleLeft size={20} /> },
-      { key: routes.fulfillmentQc, label: 'QC', icon: <MdBlender size={20} /> },
-      { key: routes.fulfillmentWorkingStatus, label: 'Working Status', icon: <TbHomeStats size={20} /> },
-      { key: routes.fulfillmentReports, label: 'Reports', icon: <TbReport size={20} /> },
-    ],
-  },
-  {
-    key: routes.design,
-    label: 'Design',
-    icon: <RiPaletteLine size={20} />,
-    children: [
-      { key: routes.designPSD, label: 'PSD Tasks', icon: <BsFiletypePsd size={20} /> },
-      { key: routes.designPNG, label: 'PNG Tasks', icon: <IoImageOutline size={20} /> },
-      { key: routes.designEmbroider, label: 'Embroider Listing', icon: <RiListIndefinite size={20} /> },
-      { key: routes.designProductType, label: 'Design Product Types', icon: <BsBoxes size={20} /> },
-    ],
-  },
+export const topMenus = [
+  { key: 'sales', icon: <TbHomeStats size={20} />, label: 'Sales' },
+  { key: 'fulfillment', icon: <MdBalance size={20} />, label: 'Fulfillment' },
+  { key: 'design', icon: <RiPaletteLine size={20} />, label: 'Design' },
+  { key: 'vendor', icon: <HiOutlineBuildingStorefront size={20} />, label: 'Vendor' },
 ];
+
+export const detailMenus = {
+  sales: [
+    {
+      key: 'orders',
+      label: 'Orders',
+      icon: <LuBox size={20} />,
+      children: [
+        { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
+        { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+      ],
+    },
+    {
+      key: routes.report,
+      label: 'Reports',
+      icon: <TbReport size={20} />,
+      children: [
+        { key: '', label: 'Orders Cost', icon: <CgShoppingBag size={20} /> },
+        { key: '/order/shopify', label: 'Listing Report', icon: <RiListIndefinite size={20} /> },
+        { key: '/order/shopify', label: 'Sale Report', icon: <TbReportSearch size={20} /> },
+        { key: '/order/shopify', label: 'Tool Scale Reports', icon: <FaBalanceScaleLeft size={20} /> },
+        { key: '/order/shopify', label: 'Amazon Store Report', icon: <LuStar size={20} /> },
+        { key: '/order/shopify', label: 'Amazon Ads Invoice', icon: <RiAdvertisementLine size={20} /> },
+        { key: '/order/shopify', label: 'Revenue & Basecost', icon: <BsGraphUp size={20} /> },
+      ],
+    },
+  ],
+  fulfillment: [],
+  design: [],
+  vendor: [
+    { key: routes.vendor_list, label: 'List Vendor', icon: <LuLayoutList size={20} /> },
+    { key: routes.vendor_products, label: 'Vendor Products', icon: <CgFileDocument size={20} /> },
+  ],
+};

@@ -1,5 +1,4 @@
 import { Outlet } from 'react-router-dom';
-import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';
 
@@ -14,7 +13,7 @@ const MainLayout = () => {
       <Sidebar collapsed={collapsed} toggleSidebar={toggleSidebar} />
       <main
         className={`h-full overflow-x-hidden pt-16 transition-[margin] md:overflow-y-hidden md:pt-0 ${
-          collapsed ? 'md:ml-64' : 'md:ml-20'
+          collapsed ? 'md:ml-64' : 'md:ml-12.5'
         } `}
       >
         <div className="h-full overflow-auto">

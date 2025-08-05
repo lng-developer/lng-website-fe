@@ -83,9 +83,8 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
         vertical={true}
         gap={4}
         style={{
-          display: 'inline-block',
+          display: caseList.length > 0 ? 'inline-block' : '',
         }}
-        justify="left"
       >
         {caseList?.map((item) => (
           <div

@@ -1,7 +1,6 @@
-import { dataNav } from '../utils/dataMenu';
-import { Dropdown, Flex, Image, Input, Menu, Modal } from 'antd';
+import { topMenus, detailMenus } from '../utils/dataMenu';
+import { Dropdown, Flex, Image, Input, Layout, Menu, Modal, Popover } from 'antd';
 import { useAuth } from '../context/AuthContext';
-import { IoLogoAmazon } from 'react-icons/io5';
 import { FcRating } from 'react-icons/fc';
 import { FaAnglesLeft, FaAnglesRight } from 'react-icons/fa6';
 import { dataColors } from '../utils/dataColors';
@@ -11,6 +10,7 @@ import { useEffect, useState } from 'react';
 import logo from '../assets/logo.png';
 import { toast } from 'react-toastify';
 import { changePassword } from '../apis/auth';
+const { Sider } = Layout;
 
 export default function Sidebar({ collapsed, toggleSidebar }) {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
   const [newPassword, setNewPassword] = useState('');
   const [errorCurrentPassword, setErrorCurrentPassword] = useState(false);
   const [errorNewPassword, setErrorNewPassword] = useState(false);
-
+  const [activeMenu, setActiveMenu] = useState('sales');
   // Lấy key đang active
   const selectedKey = location.pathname;
 
@@ -94,6 +94,17 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     </Flex>
   );
 
+  // render nội dung popup menu
+  const renderPopoverMenu = (menuKey) => {
+    const items = detailMenus[menuKey];
+    return (
+      <div style={{ width: 'auto', padding: 0 }}>
+        <div style={{ fontWeight: 600, padding: '4px' }}>{topMenus.find((m) => m.key === menuKey)?.label}</div>
+        <Menu mode="vertical" items={items} onClick={({ key }) => navigate(key)} />
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (location.pathname === '/') {
       navigate(routes.order_amazon, { replace: true });
@@ -103,58 +114,94 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     <>
       <aside
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 w-full border-r-2 border-r-[#f1f5f9] md:bottom-0 md:right-auto md:h-svh ${
-          collapsed ? 'md:w-64' : 'md:w-20'
+          collapsed ? 'md:w-64' : 'md:w-13.5'
         }`}
       >
-        {collapsed ? (
-          <div
-            className="h-[60px] items-center gap-4 bg-background flex-none sticky top-0 z-50 flex justify-between px-1 py-3 shadow-sm md:px-[10px]"
-            style={{ color: 'black' }}
-          >
-            <Image src={logo} width={35} />
-            <div className="visible w-auto flex flex-col justify-end truncate">
-              <span className="font-medium" style={{ color: 'black' }}>
-                LNG System
-              </span>
-              <Dropdown
-                trigger={['click']}
-                open={openDropdown}
-                onOpenChange={setOpenDropdown}
-                popupRender={() => menu}
-                placement="bottomLeft"
-              >
-                <span
-                  className="cursor-pointer text-xs font-medium transition hover:underline truncate block w-full"
-                  style={{ color: dataColors.title }}
-                >
-                  {user?.full_name}
+        <div
+          className="h-[60px] items-center gap-4 bg-background flex-none sticky top-0 z-50 flex justify-center px-1 py-3 shadow-sm md:px-[10px]"
+          style={{ color: 'black' }}
+        >
+          <div className="flex justify-center items-center">
+            <Image src={logo} width={30} />
+          </div>
+          {collapsed && (
+            <>
+              <div className="visible w-auto flex flex-col justify-end truncate">
+                <span className="font-medium" style={{ color: 'black' }}>
+                  LNG System
                 </span>
-              </Dropdown>
-            </div>
-            <div className="flex items-center visible w-auto ml-auto">
-              <button className="p-3 hover:bg-[#f1f5f9] rounded-3xl cursor-pointer">
-                <FcRating size={20} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="h-[60px] items-center gap-4 bg-background flex-none sticky top-0 z-50 flex justify-center px-1 py-3 shadow-sm md:px-[10px]">
-            <Image src={logo} width={35} />
-          </div>
-        )}
+                <Dropdown
+                  trigger={['click']}
+                  open={openDropdown}
+                  onOpenChange={setOpenDropdown}
+                  popupRender={() => menu}
+                  placement="bottomLeft"
+                >
+                  <span
+                    className="cursor-pointer text-xs font-medium transition hover:underline truncate block w-full"
+                    style={{ color: dataColors.title }}
+                  >
+                    {user?.full_name}
+                  </span>
+                </Dropdown>
+              </div>
+              <div className="flex items-center visible w-auto ml-auto">
+                <button className="p-3 hover:bg-[#f1f5f9] rounded-3xl cursor-pointer">
+                  <FcRating size={20} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
         <div className="py-2">
-          <Menu
-            selectedKeys={[selectedKey]}
-            defaultOpenKeys={[getOpenKey()]}
-            mode="inline"
-            items={dataNav}
-            inlineCollapsed={!collapsed}
-            onClick={({ key }) => navigate(key)}
-          />
+          <Layout style={{ height: '100vh' }}>
+            {/* Lớp 1 - Top Menu */}
+            <Flex justify="center" style={{ background: '#fff', borderRight: '1px solid #eee' }}>
+              <Menu mode="inline" selectedKeys={[activeMenu]} onClick={({ key }) => setActiveMenu(key)} style={{ borderRight: 0 }}>
+                {topMenus.map((item) => (
+                  <Menu.Item key={item.key} style={{ paddingLeft: 12, paddingRight: 12 }}>
+                    {!collapsed ? (
+                      <Popover content={renderPopoverMenu(item.key)} trigger="click" placement="rightTop" style={{ padding: 0 }}>
+                        <div
+                          onClick={() => setActiveMenu(item.key)}
+                          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                        >
+                          {item.icon}
+                        </div>
+                      </Popover>
+                    ) : (
+                      item.icon
+                    )}
+                  </Menu.Item>
+                ))}
+              </Menu>
+            </Flex>
+
+            {/* Lớp 2 - Detail Menu */}
+            <Sider
+              width={!collapsed ? 0 : 202}
+              style={{
+                background: '#fff',
+                borderRight: '1px solid #eee',
+                overflow: 'hidden',
+                transition: 'width 0.3s',
+              }}
+            >
+              <Menu
+                mode="inline"
+                defaultOpenKeys={[getOpenKey()]}
+                selectedKeys={[selectedKey]}
+                style={{ height: '100%', borderRight: 0, paddingLeft: 0 }}
+                items={detailMenus[activeMenu]}
+                className="ant-menu-submenu-title-config"
+                onClick={({ key }) => navigate(key)}
+              />
+            </Sider>
+          </Layout>
         </div>
         <button
           onClick={toggleSidebar}
-          className={`absolute bottom-60 right-[-12px] z-50 rounded-full shadow p-2 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
+          className={`absolute bottom-40 right-[-12px] z-50 rounded-full shadow p-2 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
         >
           {collapsed ? <FaAnglesLeft color="black" /> : <FaAnglesRight color="black" />}
         </button>

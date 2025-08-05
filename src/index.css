@@ -18,3 +18,39 @@
 .range-center :where(.ant-picker-input > input) {
   @apply text-center;
 }
+
+.ant-menu-item .anticon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ant-menu-submenu-title {
+  padding-left: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-menu-submenu-title-config .ant-menu-item {
+  padding-left: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.menuitem {
+  display: flex !important;
+  align-items: center !important;
+}
+
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-inline,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-inline,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-vertical,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-vertical {
+  border-inline-end: none !important;
+}
+
+.ant-menu-item .ant-menu-item-active {
+  display: flex !important;
+  align-items: center !important;
+}

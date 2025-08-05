@@ -20,6 +20,7 @@ const routes = {
   designPNG: '/design/png',
   designEmbroider: '/design/embroider-list',
   designProductType: '/design/product-type',
+  report: '/report',
 };
 
 export { routes };

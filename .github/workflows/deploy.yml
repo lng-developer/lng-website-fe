@@ -1,0 +1,60 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 🛠️ Build FE
+        run: |
+          npm ci
+          npm run build
+
+      - name: 🧹 Clear old frontend files on VPS
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: 157.245.198.212
+          username: root
+          key: ${{ secrets.FE_SSH_KEY }}
+          script: |
+            rm -rf /var/www/portal/*
+            mkdir -p /var/www/portal
+
+      - name: 📤 Upload built FE files
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: 157.245.198.212
+          username: root
+          key: ${{ secrets.FE_SSH_KEY }}
+          source: "dist/*" # 👈 Đổi từ "dist/**" sang "dist/*" để tránh lỗi khi có thư mục trống
+          target: /var/www/portal/
+          strip_components: 1  # 👈 THÊM DÒNG NÀY: tránh tạo thêm folder dist bên trong target
+
+      - name: ✅ Verify index.html exists (optional)
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: 157.245.198.212
+          username: root
+          key: ${{ secrets.FE_SSH_KEY }}
+          script: |
+            if [ ! -f /var/www/portal/index.html ]; then
+              echo "❌ index.html not found. Check build or copy step."
+              ls -la /var/www/portal
+              exit 1
+            else
+              echo "✅ index.html found successfully."
+              ls -la /var/www/portal | grep index.html
+            fi
