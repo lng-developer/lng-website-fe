@@ -10,6 +10,7 @@ import { OrderProvider } from './context/OrderContext';
 import Vendor from './pages/vendor';
 import VendorProduct from './pages/vendor/VendorProduct';
 import ProductCostCenter from './pages/vendor/ProductCostCenter';
+import FulfillmentScale from './pages/fulfillment';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
           <Route path={routes.product_const_center} element={<ProductCostCenter />} />
+          <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

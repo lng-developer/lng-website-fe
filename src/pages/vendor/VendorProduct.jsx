@@ -247,7 +247,7 @@ const VendorProduct = () => {
         </div>
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center">
           <Flex gap={8} style={{ width: '40%' }}>
             <Input
               onChange={handleSearch}

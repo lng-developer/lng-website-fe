@@ -34,6 +34,39 @@ const dataFilterStatus = [
     title: 'Cancelled',
     status: 'Cancelled',
   },
+  {
+    key: 'openCase',
+    title: 'Open Case',
+    status: 'openCase',
+  },
 ];
 
-export { dataFilterStatus };
+const dataFilterStatusFulfillment = [
+  {
+    key: 'Total',
+    title: 'Total',
+    status: 'Total',
+  },
+  {
+    key: 'Pending',
+    title: 'Pending',
+    status: 'Pending',
+  },
+  {
+    key: 'In Progress',
+    title: 'In Progress',
+    status: 'InProgress',
+  },
+  {
+    key: 'Completed',
+    title: 'Completed',
+    status: 'Completed',
+  },
+  {
+    key: 'Rejected',
+    title: 'Rejected',
+    status: 'Rejected',
+  },
+];
+
+export { dataFilterStatus, dataFilterStatusFulfillment };

@@ -10,7 +10,7 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useEffect, useState } from 'react';
-import { getAllCountStatus, getALlOrder } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
@@ -52,6 +52,9 @@ const Home = () => {
   const { collapsed } = useOutletContext();
   const [totalCount, setTotalCount] = useState(0);
   const [shippingType, setShippingType] = useState('');
+  const [shops, setShops] = useState([]);
+  const [selectShop, setSelectShop] = useState('');
+  const [loading, setLodaing] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -60,6 +63,7 @@ const Home = () => {
     to: defaultTo,
     search: '',
     isNoCostCenter: false,
+    openCase: false,
   });
 
   const today = new Date();
@@ -123,6 +127,7 @@ const Home = () => {
   };
 
   const fetchAllOrder = async (params) => {
+    setLodaing(true);
     try {
       const response = await getALlOrder(params);
       if (response.status === 200) {
@@ -133,6 +138,8 @@ const Home = () => {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLodaing(false);
     }
   };
 
@@ -222,14 +229,18 @@ const Home = () => {
 
   const handleFilterForStatus = (status) => {
     if (status === 'All') {
-      updateFilter({ statuses: '', isNoCostCenter: false });
+      updateFilter({ statuses: '', isNoCostCenter: false, openCase: false });
       return;
     }
     if (status === 'NoCostCenter') {
-      updateFilter({ statuses: '', isNoCostCenter: true });
+      updateFilter({ statuses: '', isNoCostCenter: true, openCase: false });
       return;
     }
-    updateFilter({ statuses: status, isNoCostCenter: false });
+    if (status === 'openCase') {
+      updateFilter({ statuses: '', isNoCostCenter: false, openCase: true });
+      return;
+    }
+    updateFilter({ statuses: status, isNoCostCenter: false, openCase: false });
   };
 
   // render Orders
@@ -303,6 +314,21 @@ const Home = () => {
     });
     return results;
   };
+
+  const fetchAllShop = async () => {
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        setShops(result.data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllShop();
+  }, []);
 
   useEffect(() => {
     fetchAllOrder(filters);
@@ -411,6 +437,15 @@ const Home = () => {
                   updateFilter({ shippingType: val });
                 }}
               />
+              <SelectFilter
+                title="Shop"
+                ListData={shops.map((item) => item.name)}
+                value={selectShop}
+                onChange={(val) => {
+                  setSelectShop(val);
+                  updateFilter({ shopName: val });
+                }}
+              />
             </div>
           </div>
           <div>
@@ -442,6 +477,7 @@ const Home = () => {
             bordered={true}
             pagination={false}
             rowSelection={rowSelection}
+            loading={loading}
           />
         </div>
       </div>

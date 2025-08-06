@@ -7,6 +7,7 @@ const dataColors = {
   default: '#e2e8f0',
   backgroundHover: '#f1f5f9',
   title: '#64748b',
+  yellow: '#d5b207',
 };
 
 export { dataColors };

@@ -1,6 +1,7 @@
 const routes = {
   home: '/',
   order: '/order',
+  order_listing: '/order/listing',
   order_amazon: '/order/amazon',
   order_shopify: '/order/shopify',
   register: '/register',
@@ -20,7 +21,11 @@ const routes = {
   designPNG: '/design/png',
   designEmbroider: '/design/embroider-list',
   designProductType: '/design/product-type',
-  report: '/report',
+  cost_center_config: '/cost-center/config',
+  cost_center_mapping: '/cost-center/mapping',
+  cost_center_group_standards: '/cost-center/group-standards',
+  cost_center_group_productTypes: '/cost-center/group-product-types',
+  report_ordersCost: '/report/orders-cost',
 };
 
 export { routes };

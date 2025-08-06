@@ -305,7 +305,7 @@ const ProductCostCenter = () => {
         </div>
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center">
           <Flex gap={8} style={{ width: '40%' }}>
             <button
               className="flex justify-center items-center px-3 py-2 border-1 border-[#e2e8f0] rounded-lg cursor-pointer"
