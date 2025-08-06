@@ -181,7 +181,21 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
           <Layout style={{ height: '100vh' }}>
             {/* Lớp 1 - Top Menu */}
             <Flex justify="center" style={{ background: '#fff', borderRight: '1px solid #eee' }}>
-              <Menu mode="inline" selectedKeys={[activeMenu]} onClick={({ key }) => setActiveMenu(key)} style={{ borderRight: 0 }}>
+              <Menu
+                mode="inline"
+                selectedKeys={[activeMenu]}
+                onClick={({ key }) => setActiveMenu(key)}
+                style={{ borderRight: 0 }}
+                motion={{
+                  motionName: 'ant-motion-collapse',
+                  motionAppear: false,
+                  motionEnter: true,
+                  motionLeave: true,
+                  motionLeaveImmediately: true,
+                  leavedClassName: 'menu-hidden',
+                  motionDeadline: 0, // ← giảm timeout
+                }}
+              >
                 {topMenus.map((item) => (
                   <Menu.Item key={item.key} style={{ paddingLeft: 12, paddingRight: 12 }}>
                     {!collapsed ? (
@@ -219,6 +233,15 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
                 items={detailMenus[activeMenu]}
                 className="ant-menu-submenu-title-config"
                 onClick={({ key }) => navigate(key)}
+                motion={{
+                  motionName: 'ant-motion-collapse',
+                  motionAppear: false,
+                  motionEnter: true,
+                  motionLeave: true,
+                  motionLeaveImmediately: true,
+                  leavedClassName: 'menu-hidden',
+                  motionDeadline: 0, // ← giảm timeout
+                }}
               />
             </Sider>
           </Layout>
