@@ -7,6 +7,92 @@ import { dataColors } from '../../utils/dataColors';
 import { Input, Pagination, Table } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import StatusComponent from '../../components/StatusComponent';
+import ItemDate from './table/ItemDate';
+import ItemProductInfo from './table/ItemProductInfo';
+import ItemCustom from './table/ItemCustom';
+import ItemCostCenter from './table/ItemCostCenter';
+import ItemOrderInfo from './table/ItemOrderInfo';
+import TextArea from 'antd/es/input/TextArea';
+import ItemAction from './table/ItemAction';
+import SubItemAction from './table/SubItemAction';
+
+const dataSource = [
+  {
+    key: 'TL7005798929',
+    orderDate: '28/12/2024',
+    groupId: 'TL7005798929',
+    groupType: 'Tool 95',
+    status: 'Close',
+    quality: 'Not Enough',
+    quantity: 1,
+    orderOwner: 'Nguyễn Huy Hoàng',
+    scaleBy: 'Lê Thị Phương CS',
+    express: 'No',
+    scaleStatus: 'Completed',
+    subItems: [
+      {
+        key: 'TL7005798929-1',
+        no: 1,
+        createdAt: '28/12/2024 02:08',
+        orderDateDetail: '28/12/2024 01:12',
+        type: 'Tool 95',
+        history: true,
+        product_info: {
+          imageUrl: 'https://example.com/image.jpg',
+          asin: 'BOCW1F43KX',
+          sku: 'G230185-TSBS-FO-US-20220224-165158',
+          status: 'Shipped',
+          psd: 'Download PSD',
+        },
+        customization: [
+          {
+            label: 'Custom Name',
+            value: 'Mrs. Griffin',
+          },
+          {
+            label: 'Select Product Type',
+            value: 'Unisex T-shirt',
+          },
+          {
+            label: 'Color',
+            value: 'Sport Grey',
+          },
+          {
+            label: 'Select Size',
+            value: 'L',
+          },
+          {
+            label: 'Priority Production',
+            value: 'No, Thanks.',
+          },
+          {
+            label: 'If we brought a smile to your day, then our job here is done – sprinkles on the cupcake!',
+            value: 'Thank you!!!',
+          },
+        ],
+        task_status: 'Completed',
+        cost_center: {
+          vendorProduct: 'GodGroup - Printed PET Hoodie',
+          size: 'XL',
+          color: 'Black / 2 Sides',
+        },
+        cs_note: '',
+        action: {
+          uploadBtn: true,
+        },
+        order_info: {
+          orderId: '111-4323604-8773863',
+          seller: 'Nguyễn Huy Hoàng',
+          fulfillName: '111-4323604-8773863-1184201200401081-0',
+          buyerNote: '',
+        },
+        snapshotImage:
+          'https://res.cloudinary.com/debr5x898/image/upload/v1754038955/snapshot_images/80398e95-b6b2-83ae-926c-359de9ee902d.jpg',
+      },
+    ],
+  },
+];
 
 const FulfillmentScale = () => {
   const { collapsed } = useOutletContext();
@@ -52,89 +138,43 @@ const FulfillmentScale = () => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const dataSource = [
-    {
-      key: 'TL7005798929',
-      orderDate: '28/12/2024',
-      groupId: 'TL7005798929',
-      groupType: 'Tool 95',
-      status: 'Close',
-      quality: 'Not Enough',
-      quantity: 1,
-      orderOwner: 'Nguyễn Huy Hoàng',
-      scaleBy: 'Lê Thị Phương CS',
-      express: 'No',
-      scaleStatus: 'Completed',
-
-      children: [
-        {
-          key: 'TL7005798929-1',
-          no: 1,
-          createdAt: '28/12/2024 02:08',
-          orderDateDetail: '28/12/2024 01:12',
-          type: 'Tool 95',
-          history: true,
-
-          productInfo: {
-            imageUrl: 'https://example.com/image.jpg',
-            asin: 'BOCW1F43KX',
-            sku: 'G230185-TSBS-FO-US-20220224-165158',
-            status: 'Shipped',
-            psd: 'Download PSD',
-          },
-
-          customization: {
-            style: 'Varsity + Name on sleeve',
-            nickname: 'Besties',
-            estYear: '1978',
-            text: 'Georgette Fran',
-            productType: 'Unisex Hoodie',
-            color: 'Black',
-            size: 'XL',
-            surprise: "No, I don't like it",
-            giftCard: 'Add Gift Card',
-            priority: "I don't think I need to!",
-            customUrl: 'https://example.com/customize-url',
-            customerPhoto: null,
-          },
-
-          taskStatus: 'Completed',
-
-          costCenter: {
-            vendorProduct: 'GodGroup - Printed PET Hoodie',
-            size: 'XL',
-            color: 'Black / 2 Sides',
-          },
-
-          csNote: '',
-          action: {
-            uploadBtn: true,
-          },
-
-          orderInfo: {
-            orderId: '111-4323604-8773863',
-            seller: 'Nguyễn Huy Hoàng',
-            fulfillName: '111-4323604-8773863-1184201200401081-0',
-            buyerNote: '',
-          },
-        },
-      ],
-    },
-  ];
-
   const columns = [
-    { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'orderDate', key: 'orderDate', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Group ID</span>, dataIndex: 'groupId', key: 'groupId', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Group Type</span>, dataIndex: 'groupType', key: 'groupType', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Order Date</span>,
+      dataIndex: 'orderDate',
+      key: 'orderDate',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Group ID</span>,
+      dataIndex: 'groupId',
+      key: 'groupId',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Group Type</span>,
+      dataIndex: 'groupType',
+      key: 'groupType',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Status</span>,
+      dataIndex: 'status',
+      key: 'status',
+      align: 'center',
+    },
     {
       title: <span style={{ color: dataColors.title }}>Quality</span>,
       dataIndex: 'quality',
       key: 'quality',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'quantity', key: 'quantity', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Quantity</span>,
+      dataIndex: 'quantity',
+      key: 'quantity',
+      align: 'center',
+    },
     {
       title: <span style={{ color: dataColors.title }}>Order Owner</span>,
       dataIndex: 'orderOwner',
@@ -142,7 +182,12 @@ const FulfillmentScale = () => {
       align: 'center',
     },
     { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Express</span>, dataIndex: 'express', key: 'express', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Express</span>,
+      dataIndex: 'express',
+      key: 'express',
+      align: 'center',
+    },
     {
       title: <span style={{ color: dataColors.title }}>Scale Status</span>,
       dataIndex: 'scaleStatus',
@@ -151,21 +196,64 @@ const FulfillmentScale = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Action</span>,
-      dataIndex: 'handling_time',
-      key: 'handling_time',
+      dataIndex: 'actions',
+      key: 'actions',
       align: 'center',
     },
   ];
 
+  // render Orders
+  const renderOrderInTable = (data = []) => {
+    const results = data.map((item, index) => {
+      return {
+        key: item?.key,
+        orderDate: <span className="font-medium">{item?.orderDate}</span>,
+        groupId: <StatusComponent title={item?.groupId} color={dataColors.default} isDefault={true} />,
+        groupType: <StatusComponent title={item?.groupType} color={dataColors.process} />,
+        status: <StatusComponent title={item?.status} color={dataColors.cancelled} />,
+        quality: <StatusComponent title={item?.quality} color={dataColors.yellow} />,
+        quantity: <span className="font-medium">{item?.quantity}</span>,
+        orderOwner: <span className="font-medium">{item?.orderOwner}</span>,
+        scaleBy: <span className="font-medium">{item?.scaleBy}</span>,
+        express: <StatusComponent title={item?.express} color={dataColors.cancelled} />,
+        scaleStatus: <StatusComponent title={item?.scaleStatus} color={dataColors.success} />,
+        actions: <ItemAction />,
+        subItems: item?.subItems?.map((itemSub, indexItem) => {
+          return {
+            key: `${index}-${indexItem}`,
+            date: <ItemDate />,
+            product_info: <ItemProductInfo />,
+            customization: (
+              <ItemCustom items={itemSub?.customization} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+            ),
+            task_status: <StatusComponent title="Completed" color={dataColors.success} />,
+            cost_center: <ItemCostCenter />,
+            cs_note: (
+              <div className="mb-1 w-45">
+                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
+                <TextArea placeholder="CS note" />
+              </div>
+            ),
+            action: <SubItemAction />,
+            order_info: <ItemOrderInfo />,
+          };
+        }),
+      };
+    });
+    return results;
+  };
+
   // Cột con trong bảng mở rộng
   const expandedRowRender = (record) => {
     const subColumns = [
-      { title: <span style={{ color: dataColors.title }}>Image & Print Side</span>, dataIndex: 'product', key: 'product' },
-      { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
-      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'price', key: 'price' },
-      { title: <span style={{ color: dataColors.title }}>QTY</span>, dataIndex: 'quantity', key: 'quantity' },
+      { title: <span style={{ color: dataColors.title }}>Date</span>, dataIndex: 'date', key: 'date' },
+      { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info' },
+      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
+      { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
       { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
-      { title: <span style={{ color: dataColors.title }}>Tracking & Note</span>, dataIndex: 'tracking_note', key: 'tracking_note' },
+      { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
+      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
+      { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
     ];
 
     return (
@@ -264,7 +352,7 @@ const FulfillmentScale = () => {
         <div className="mt-4">
           <Table
             columns={columns}
-            dataSource={dataSource}
+            dataSource={renderOrderInTable(dataSource)}
             expandable={{
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (

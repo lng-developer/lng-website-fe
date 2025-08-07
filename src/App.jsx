@@ -11,6 +11,7 @@ import Vendor from './pages/vendor';
 import VendorProduct from './pages/vendor/VendorProduct';
 import ProductCostCenter from './pages/vendor/ProductCostCenter';
 import FulfillmentScale from './pages/fulfillment';
+import Listing from './pages/listing';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           }
         >
           <Route index path={routes.order_amazon} element={<Home />} />
+          <Route path={routes.sale_listing} element={<Listing />} />
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
           <Route path={routes.product_const_center} element={<ProductCostCenter />} />

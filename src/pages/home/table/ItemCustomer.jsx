@@ -198,8 +198,8 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
 
   const renderWarningAddress = () => {
     if (!address_validation) return;
-    if (address_validation) {
-      return <FcApproval />;
+    if (address_validation === 'true') {
+      return <FcApproval size={18} />;
     }
     return (
       <Popover content={<div className="font-medium">Warning address</div>}>

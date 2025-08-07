@@ -187,12 +187,6 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
                 onClick={({ key }) => setActiveMenu(key)}
                 style={{ borderRight: 0 }}
                 motion={{
-                  motionName: 'ant-motion-collapse',
-                  motionAppear: false,
-                  motionEnter: true,
-                  motionLeave: true,
-                  motionLeaveImmediately: true,
-                  leavedClassName: 'menu-hidden',
                   motionDeadline: 0, // ← giảm timeout
                 }}
               >
@@ -242,7 +236,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
         </div>
         <button
           onClick={toggleSidebar}
-          className={`absolute bottom-40 right-[-12px] z-50 rounded-full shadow p-2 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
+          className={`absolute bottom-30 right-[-12px] z-50 rounded-full shadow p-2 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
         >
           {collapsed ? <FaAnglesLeft color="black" /> : <FaAnglesRight color="black" />}
         </button>

@@ -8,6 +8,7 @@ const dataColors = {
   backgroundHover: '#f1f5f9',
   title: '#64748b',
   yellow: '#d5b207',
+  asin: '#08969b',
 };
 
 export { dataColors };

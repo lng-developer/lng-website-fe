@@ -121,7 +121,7 @@ const Home = () => {
   // fetch count order by status
   const fetchCountStatus = async () => {
     try {
-      const response = await getAllCountStatus(filters);
+      const response = await getAllCountStatus({ ...filters, openCase: false });
       if (response.status === 200) {
         const resultTabFilter = dataFilterStatus.map(({ key, title, status }) => ({
           key,
@@ -460,6 +460,8 @@ const Home = () => {
                 ListData={shops.map((item) => item.name)}
                 value={selectShop}
                 onChange={(val) => {
+                  console.log(val);
+
                   setSelectShop(val);
                   updateFilter({ shopName: val });
                 }}

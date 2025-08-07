@@ -53,7 +53,7 @@ export const detailMenus = {
       ],
     },
     {
-      key: routes.order_listing,
+      key: routes.sale_listing,
       label: 'Listings',
       icon: <LuLayoutList size={20} />,
     },

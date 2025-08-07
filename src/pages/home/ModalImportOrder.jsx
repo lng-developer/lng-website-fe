@@ -1,4 +1,4 @@
-import { Checkbox, Modal, Radio, Select, Spin, Upload } from 'antd';
+import { Modal, Radio, Select, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
@@ -9,7 +9,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [shops, setShops] = useState([]);
   const [fileList, setFileList] = useState([]);
   const [shopId, setShopId] = useState('');
-  const [loading, setLoading] = useState(false);
   const [checkErrorShop, setCheckErrorShop] = useState(false);
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
   const [typeOrder, setTypeOrder] = useState('New');
@@ -55,19 +54,9 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
     formData.append('shopId', shopId);
     formData.append('type', typeOrder);
     try {
-      setLoading(true); // 👉 Hiện màn chờ
       const response = await importOrderByFile(formData);
       if (response.status === 200) {
         toast.success('Import success');
-        const results = response.data.results;
-        results.forEach((result) => {
-          if (result?.status !== 200) {
-            toast.error(`Order: ${result?.orderId} ${result.status}`, {
-              autoClose: 50000,
-            });
-            return;
-          }
-        });
       } else {
         toast.error('Import error');
       }
@@ -75,7 +64,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       console.log(error);
       toast.error('Import error');
     } finally {
-      setLoading(false); // 👉 Tắt màn chờ
       handleCancel();
     }
   };
@@ -160,7 +148,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
           </div>
         </div>
       </div>
-      {loading && <Spin tip="Đang xử lý..." size="large" style={{ color: 'white' }} fullscreen={true} />}
     </Modal>
   );
 };

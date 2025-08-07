@@ -1,7 +1,7 @@
 const routes = {
   home: '/',
   order: '/order',
-  order_listing: '/order/listing',
+  sale_listing: '/sales/listing',
   order_amazon: '/order/amazon',
   order_shopify: '/order/shopify',
   register: '/register',
