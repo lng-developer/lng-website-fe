@@ -300,7 +300,9 @@ const FulfillmentScale = () => {
               }}
               onClick={() => handleClickButton(item)}
             >
-              <span className="text-sm font-medium">{item?.title}</span>
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                {item?.title}
+              </span>
               <div
                 className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs transition-colors font-medium ml-[3px]"
                 style={{ backgroundColor: renderColor(item.status) }}

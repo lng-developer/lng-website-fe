@@ -44,3 +44,7 @@
 :where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-vertical {
   border-inline-end: none !important;
 }
+
+.ant-menu {
+  border-inline-end: none !important;
+}
