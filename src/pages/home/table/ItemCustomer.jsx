@@ -195,6 +195,20 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
       </Flex>
     </div>
   );
+
+  const renderWarningAddress = () => {
+    if (!address_validation) return;
+    if (address_validation) {
+      return <FcApproval />;
+    }
+    return (
+      <Popover content={<div className="font-medium">Warning address</div>}>
+        <button className="hover:underline cursor-pointer hover:text-blue">
+          <IoWarningOutline size={15} color={dataColors.cancelled} />
+        </button>
+      </Popover>
+    );
+  };
   return (
     <>
       <div className="flex items-center justify-center gap-2">
@@ -208,15 +222,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
             <FaEdit color={dataColors.pending} />
           </button>
         </Popover>
-        {!address_validation ? (
-          <Popover content={<div className="font-medium">Warning address</div>}>
-            <button className="hover:underline cursor-pointer hover:text-blue">
-              <IoWarningOutline size={15} color={dataColors.cancelled} />
-            </button>
-          </Popover>
-        ) : (
-          <FcApproval />
-        )}
+        {renderWarningAddress()}
       </div>
       <ModalUpdateCustomer
         isModalOpen={isShowModalUpdate}
