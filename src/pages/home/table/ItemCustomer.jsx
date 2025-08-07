@@ -5,8 +5,10 @@ import { IoClose } from 'react-icons/io5';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
 import ModalUpdateCustomer from '../ModalUpdateCustomer';
+import { IoWarningOutline } from 'react-icons/io5';
+import { FcApproval } from 'react-icons/fc';
 
-const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters }) => {
+const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_validation }) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
 
   const handleCopy = async (textToCopy) => {
@@ -206,6 +208,15 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters }) => {
             <FaEdit color={dataColors.pending} />
           </button>
         </Popover>
+        {!address_validation ? (
+          <Popover content={<div className="font-medium">Warning address</div>}>
+            <button className="hover:underline cursor-pointer hover:text-blue">
+              <IoWarningOutline size={15} color={dataColors.cancelled} />
+            </button>
+          </Popover>
+        ) : (
+          <FcApproval />
+        )}
       </div>
       <ModalUpdateCustomer
         isModalOpen={isShowModalUpdate}

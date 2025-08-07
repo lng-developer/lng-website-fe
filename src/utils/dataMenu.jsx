@@ -112,7 +112,7 @@ export const detailMenus = {
     { key: '', icon: <TbBlender size={20} />, label: 'QC' },
     { key: '', icon: <TbHomeStats size={20} />, label: 'Working Status' },
     {
-      key: 'a',
+      key: 'e',
       icon: <MdBalance size={20} />,
       label: 'Reports',
       children: [

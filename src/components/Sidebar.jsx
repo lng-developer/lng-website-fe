@@ -234,12 +234,6 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
                 className="ant-menu-submenu-title-config"
                 onClick={({ key }) => navigate(key)}
                 motion={{
-                  motionName: 'ant-motion-collapse',
-                  motionAppear: false,
-                  motionEnter: true,
-                  motionLeave: true,
-                  motionLeaveImmediately: true,
-                  leavedClassName: 'menu-hidden',
                   motionDeadline: 0, // ← giảm timeout
                 }}
               />

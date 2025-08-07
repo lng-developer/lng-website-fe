@@ -55,6 +55,7 @@ const Home = () => {
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
   const [loading, setLodaing] = useState(false);
+  const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -89,6 +90,15 @@ const Home = () => {
     } else {
       setExpandedRowKeys(expandedRowKeys.filter((key) => key !== record.key));
     }
+  };
+
+  const handleShowRowKeys = () => {
+    if (isShowRowkeys) {
+      setExpandedRowKeys([]);
+    } else {
+      setExpandedRowKeys(orders.map((item) => item.orderId));
+    }
+    setIsShowRowKeys((prev) => !prev);
   };
 
   const rowSelection = {
@@ -250,7 +260,13 @@ const Home = () => {
         key: item?.orderId,
         order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
         customer: (
-          <ItemCustomer customerInfor={item?.customer_infor} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
+          <ItemCustomer
+            customerInfor={item?.customer_infor}
+            orderId={item?.orderId}
+            fetchAllOrder={fetchAllOrder}
+            filters={filters}
+            address_validation={item?.address_validation}
+          />
         ),
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         created: (
@@ -336,9 +352,11 @@ const Home = () => {
   }, [filters]);
 
   useEffect(() => {
-    // Tự động mở tất cả dòng khi component mount
-    setExpandedRowKeys(orders.map((item) => item.orderId));
-  }, [orders]);
+    if (isShowRowkeys) {
+      // Tự động mở tất cả dòng khi component mount
+      setExpandedRowKeys(orders.map((item) => item.orderId));
+    }
+  }, [orders, isShowRowkeys]);
 
   return (
     <div>
@@ -472,6 +490,11 @@ const Home = () => {
               ),
               expandedRowKeys: expandedRowKeys,
               onExpand: handleExpand,
+              columnTitle: (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                  {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
             }}
             rowKey="key"
             bordered={true}

@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Input, Pagination, Table } from 'antd';
@@ -11,6 +11,25 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 const FulfillmentScale = () => {
   const { collapsed } = useOutletContext();
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusFulfillment[0]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const [isShowRowkeys, setIsShowRowKeys] = useState(true);
+
+  const handleExpand = (expanded, record) => {
+    if (expanded) {
+      setExpandedRowKeys([...expandedRowKeys, record.key]);
+    } else {
+      setExpandedRowKeys(expandedRowKeys.filter((key) => key !== record.key));
+    }
+  };
+
+  const handleShowRowKeys = () => {
+    if (isShowRowkeys) {
+      setExpandedRowKeys([]);
+    } else {
+      setExpandedRowKeys(dataSource.map((item) => item.key));
+    }
+    setIsShowRowKeys((prev) => !prev);
+  };
 
   const handleClickButton = (item) => {
     setIsActivefilter(item);
@@ -33,30 +52,101 @@ const FulfillmentScale = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const dataSource = [
+    {
+      key: 'TL7005798929',
+      orderDate: '28/12/2024',
+      groupId: 'TL7005798929',
+      groupType: 'Tool 95',
+      status: 'Close',
+      quality: 'Not Enough',
+      quantity: 1,
+      orderOwner: 'Nguyễn Huy Hoàng',
+      scaleBy: 'Lê Thị Phương CS',
+      express: 'No',
+      scaleStatus: 'Completed',
+
+      children: [
+        {
+          key: 'TL7005798929-1',
+          no: 1,
+          createdAt: '28/12/2024 02:08',
+          orderDateDetail: '28/12/2024 01:12',
+          type: 'Tool 95',
+          history: true,
+
+          productInfo: {
+            imageUrl: 'https://example.com/image.jpg',
+            asin: 'BOCW1F43KX',
+            sku: 'G230185-TSBS-FO-US-20220224-165158',
+            status: 'Shipped',
+            psd: 'Download PSD',
+          },
+
+          customization: {
+            style: 'Varsity + Name on sleeve',
+            nickname: 'Besties',
+            estYear: '1978',
+            text: 'Georgette Fran',
+            productType: 'Unisex Hoodie',
+            color: 'Black',
+            size: 'XL',
+            surprise: "No, I don't like it",
+            giftCard: 'Add Gift Card',
+            priority: "I don't think I need to!",
+            customUrl: 'https://example.com/customize-url',
+            customerPhoto: null,
+          },
+
+          taskStatus: 'Completed',
+
+          costCenter: {
+            vendorProduct: 'GodGroup - Printed PET Hoodie',
+            size: 'XL',
+            color: 'Black / 2 Sides',
+          },
+
+          csNote: '',
+          action: {
+            uploadBtn: true,
+          },
+
+          orderInfo: {
+            orderId: '111-4323604-8773863',
+            seller: 'Nguyễn Huy Hoàng',
+            fulfillName: '111-4323604-8773863-1184201200401081-0',
+            buyerNote: '',
+          },
+        },
+      ],
+    },
+  ];
+
   const columns = [
-    { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'order', key: 'ord', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Group ID</span>, dataIndex: 'status', key: 'customer', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Group Type</span>, dataIndex: 'created', key: 'date', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'order_date', key: 'order_date', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'orderDate', key: 'orderDate', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Group ID</span>, dataIndex: 'groupId', key: 'groupId', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Group Type</span>, dataIndex: 'groupType', key: 'groupType', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
     {
       title: <span style={{ color: dataColors.title }}>Quality</span>,
-      dataIndex: 'shipping_type',
-      key: 'shipping_type',
+      dataIndex: 'quality',
+      key: 'quality',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'quantity', key: 'quantity', align: 'center' },
     {
       title: <span style={{ color: dataColors.title }}>Order Owner</span>,
-      dataIndex: 'config_cost_center',
-      key: 'config_cost_center',
+      dataIndex: 'orderOwner',
+      key: 'orderOwner',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'base_cost', key: 'basecost', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Express</span>, dataIndex: 'store', key: 'store', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Express</span>, dataIndex: 'express', key: 'express', align: 'center' },
     {
       title: <span style={{ color: dataColors.title }}>Scale Status</span>,
-      dataIndex: 'delivery_date',
-      key: 'delivery_date',
+      dataIndex: 'scaleStatus',
+      key: 'scaleStatus',
       align: 'center',
     },
     {
@@ -82,6 +172,13 @@ const FulfillmentScale = () => {
       <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" rowClassName={() => 'table-row-center'} />
     );
   };
+
+  useEffect(() => {
+    if (isShowRowkeys) {
+      // Tự động mở tất cả dòng khi component mount
+      setExpandedRowKeys(dataSource.map((item) => item.key));
+    }
+  }, [isShowRowkeys]);
 
   return (
     <div>
@@ -167,11 +264,19 @@ const FulfillmentScale = () => {
         <div className="mt-4">
           <Table
             columns={columns}
+            dataSource={dataSource}
             expandable={{
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (
                 <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
                   {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+              expandedRowKeys: expandedRowKeys,
+              onExpand: handleExpand,
+              columnTitle: (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                  {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                 </div>
               ),
             }}
