@@ -28,6 +28,7 @@ import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
 import dayjs from 'dayjs';
 import ItemCase from './table/ItemCase';
+import DateRangePicker from '../../components/DateRangePicker';
 const customLocale = {
   ...enUS,
   lang: {
@@ -416,6 +417,20 @@ const Home = () => {
                 </div>
               )}
             />
+            {/* <DateRangePicker
+              mode="range"
+              showOutsideDays
+              modifiersClassNames={{
+                selected: 'my-selected',
+                range_middle: 'my-range-middle',
+              }}
+              modifiersStyles={{
+                range_middle: {
+                  backgroundColor: '#f3f4f6', // màu xám nhạt
+                  fontWeight: 'normal', // không in đậm
+                },
+              }}
+            /> */}
             <button
               style={{ color: 'black' }}
               className={`border-[${dataColors.default}] inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium disabled:opacity-50 border border-input h-10 px-4 py-2 cursor-pointer`}

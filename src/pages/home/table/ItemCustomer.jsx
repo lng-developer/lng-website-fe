@@ -198,7 +198,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
 
   const renderWarningAddress = () => {
     if (!address_validation) return;
-    if (address_validation === 'true') {
+    if (address_validation) {
       return <FcApproval size={18} />;
     }
     return (
