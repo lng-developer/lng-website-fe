@@ -16,7 +16,7 @@ export default function OrderInfoForm() {
     <div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Order ID:</div>
-        <StatusComponent title={orderData.orderId} color={dataColors.purple} />
+        <StatusComponent title={orderData.orderId} color={dataColors.pink} />
       </div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Seller:</div>

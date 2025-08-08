@@ -49,7 +49,7 @@ const SubItemImage = ({ linkImage = '' }) => {
             <span className="mr-2 font-medium">QC By:</span>
           </div>
           <div>
-            <StatusComponent title="No data" color={dataColors.purple} />
+            <StatusComponent title="No data" color={dataColors.pink} />
           </div>
         </div>
       </div>

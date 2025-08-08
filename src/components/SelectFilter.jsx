@@ -2,8 +2,9 @@ import { Button, Divider, Dropdown, Input, Radio } from 'antd';
 import { useMemo, useState } from 'react';
 import { MdAddCircleOutline } from 'react-icons/md';
 import { CloseOutlined } from '@ant-design/icons';
+import { LuChevronsUpDown } from 'react-icons/lu';
 
-const SelectFilter = ({ ListData = [], value, onChange, title }) => {
+const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -61,21 +62,29 @@ const SelectFilter = ({ ListData = [], value, onChange, title }) => {
   return (
     <Dropdown trigger={['click']} open={open} onOpenChange={setOpen} popupRender={() => menu} placement="bottomLeft">
       <div
-        style={{ color: 'black' }}
-        className="border-dashed inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
+        style={{
+          color: 'black',
+          borderStyle: isSeller ? 'solid' : 'dashed',
+          width: isSeller ? '190px' : 'auto',
+          justifyContent: isSeller ? 'space-between' : 'center',
+        }}
+        className="border-dashed inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
       >
-        <div className="">
-          <MdAddCircleOutline />
-        </div>
+        {!isSeller && (
+          <div className="">
+            <MdAddCircleOutline />
+          </div>
+        )}
         <span className="text-sm font-medium" style={{ color: 'black' }}>
           {title}
         </span>
-        {value && (
+        {!isSeller && value && (
           <>
             <span style={{ padding: '0 8px', color: '#d9d9d9' }}>|</span>
             <span style={{ color: '#555' }}>{value}</span>
           </>
         )}
+        {isSeller && <LuChevronsUpDown className="ml-2" />}
       </div>
     </Dropdown>
   );

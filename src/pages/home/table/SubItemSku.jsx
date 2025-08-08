@@ -42,7 +42,7 @@ const SubItemSku = ({ sku, asin }) => {
           <span className="font-medium">Seller:</span>
         </div>
         <div>
-          <StatusComponent title="No data" color={dataColors.purple} />
+          <StatusComponent title="No data" color={dataColors.pink} />
         </div>
       </div>
       <div className="flex-col gap-2 mb-2">

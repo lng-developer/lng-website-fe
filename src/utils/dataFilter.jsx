@@ -69,4 +69,57 @@ const dataFilterStatusFulfillment = [
   },
 ];
 
-export { dataFilterStatus, dataFilterStatusFulfillment };
+const dataFilterListing = [
+  {
+    key: 'All',
+    title: 'All',
+    status: 'All',
+  },
+  {
+    key: 'First Sale',
+    title: 'First Sale',
+    status: 'FirstSale',
+  },
+  {
+    key: 'Normal',
+    title: 'Normal',
+    status: 'Normal',
+  },
+  {
+    key: 'Outline',
+    title: 'Outline',
+    status: 'Outline',
+  },
+  {
+    key: 'Custom Image',
+    title: 'Custom Image',
+    status: 'CustomImage',
+  },
+  {
+    key: 'POD Lovers',
+    title: 'POD Lovers',
+    status: 'PODLovers',
+  },
+  {
+    key: 'Style',
+    title: 'Style',
+    status: 'Style',
+  },
+  {
+    key: 'Tool',
+    title: 'Tool',
+    status: 'Tool',
+  },
+  {
+    key: 'Auto Fulfill',
+    title: 'Auto Fulfill',
+    status: 'AutoFulfill',
+  },
+  {
+    key: 'Others',
+    title: 'Others',
+    status: 'Others',
+  },
+];
+
+export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing };

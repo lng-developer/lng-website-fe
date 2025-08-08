@@ -48,15 +48,3 @@
 .ant-menu {
   border-inline-end: none !important;
 }
-
-/* Ngày start và end */
-.my-selected {
-  background-color: black !important;
-  color: white !important;
-  border-radius: 9999px; /* bo tròn */
-}
-
-/* Các ngày trong khoảng range không bị in đậm */
-.my-range-middle {
-  font-weight: normal !important;
-}

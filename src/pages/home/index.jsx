@@ -15,38 +15,23 @@ import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
-import { startOfDay, endOfDay, subDays, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
-import { Button, DatePicker } from 'antd';
-import locale from 'antd/es/date-picker/locale/en_US';
-import enUS from 'antd/es/date-picker/locale/en_US';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { LuImport } from 'react-icons/lu';
 import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
-import dayjs from 'dayjs';
 import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
-const customLocale = {
-  ...enUS,
-  lang: {
-    ...locale.lang,
-    ok: 'Apply',
-  },
-};
 const PAGE_SIZE = 10;
-const { RangePicker } = DatePicker;
 
 const Home = () => {
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
   const [isShowModal, setIsShowModal] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState([]);
-  const [range, setRange] = useState();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
@@ -67,15 +52,6 @@ const Home = () => {
     isNoCostCenter: false,
     openCase: false,
   });
-
-  const today = new Date();
-  const fromDate = startOfDay(subDays(today, 6)); // 7 ngày tính cả hôm nay
-  const toDate = endOfDay(today);
-
-  // Hàm chuyển Date → dayjs
-  const convertToDayjs = (date) => dayjs(date);
-
-  const defaultRange = [convertToDayjs(fromDate), convertToDayjs(toDate)];
 
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
@@ -152,15 +128,6 @@ const Home = () => {
     } finally {
       setLodaing(false);
     }
-  };
-
-  const handleApply = () => {
-    const toUtcISOString = (date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString();
-    setOpen(false); // ✅ chỉ đóng khi ấn Apply
-    const [start, end] = [startOfDay(range[0]), endOfDay(range[1])];
-    const from = toUtcISOString(start); // 👈 ISO 8601 string
-    const to = toUtcISOString(end);
-    updateFilter({ from: from, to: to });
   };
 
   const handleColorStatus = (stt) => {
@@ -378,46 +345,7 @@ const Home = () => {
                 <LuImport size={15} />
               </div>
             </button>
-            <RangePicker
-              defaultValue={defaultRange}
-              locale={customLocale}
-              format="MMM D, YYYY"
-              value={value}
-              size="large"
-              open={open}
-              className="range-center"
-              onChange={(dates) => setRange(dates)}
-              onCalendarChange={(val) => {
-                if (val?.[0] && val?.[1]) {
-                  setValue(val);
-                  setOpen(true); // giữ popup luôn mở
-                }
-              }}
-              onOpenChange={(nextOpen) => {
-                // chỉ mở, không cho tự đóng
-                if (nextOpen) setOpen(true);
-              }}
-              panelRender={(panelNode) => (
-                <div>
-                  {panelNode}
-                  <div className="flex justify-end gap-2 border-t border-[#e2e8f0] px-4 py-2">
-                    <Button
-                      type="default"
-                      size="middle"
-                      onClick={() => {
-                        setOpen(false);
-                      }}
-                    >
-                      Close
-                    </Button>
-                    <Button type="primary" size="middle" onClick={handleApply}>
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              )}
-            />
-            {/* <DateRangePicker
+            <DateRangePicker
               mode="range"
               showOutsideDays
               modifiersClassNames={{
@@ -430,7 +358,8 @@ const Home = () => {
                   fontWeight: 'normal', // không in đậm
                 },
               }}
-            /> */}
+              updateFilter={updateFilter}
+            />
             <button
               style={{ color: 'black' }}
               className={`border-[${dataColors.default}] inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium disabled:opacity-50 border border-input h-10 px-4 py-2 cursor-pointer`}
@@ -475,8 +404,6 @@ const Home = () => {
                 ListData={shops.map((item) => item.name)}
                 value={selectShop}
                 onChange={(val) => {
-                  console.log(val);
-
                   setSelectShop(val);
                   updateFilter({ shopName: val });
                 }}
