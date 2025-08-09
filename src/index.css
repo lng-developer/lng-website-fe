@@ -87,3 +87,21 @@
 .no-indent-table .ant-table-expanded-row .ant-table {
   margin-left: 0 !important;
 }
+
+/* Giữ app ở light nếu bạn không muốn theo OS */
+:root {
+  color-scheme: light;
+}
+
+/* Khi OS bật High-Contrast/Forced Colors, đừng tự đảo màu 2 lib này */
+@media (forced-colors: active) {
+  /* Radix Popover */
+  [data-radix-popper-content-wrapper],
+  .radix-popover-content {
+    forced-color-adjust: none;
+  }
+  /* react-day-picker */
+  .rdp {
+    forced-color-adjust: none;
+  }
+}

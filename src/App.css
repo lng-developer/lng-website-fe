@@ -8,25 +8,6 @@
   --header-height: 60px;
 }
 
-:root {
-  color-scheme: light;
-}
-
-/* Khi Windows bật High Contrast/Forced Colors, ngăn trình duyệt tự đổi màu */
-@media (forced-colors: active) {
-  html {
-    forced-color-adjust: none;
-  }
-  /* nếu thấy quá “cứng”, chỉ áp cho phần app/antd */
-  .ant-btn,
-  .ant-card,
-  .ant-input,
-  .ant-select,
-  .ant-table {
-    forced-color-adjust: none;
-  }
-}
-
 .primary-hover {
   background-color: var(--primary-hover);
 }
