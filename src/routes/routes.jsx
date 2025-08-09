@@ -24,7 +24,7 @@ const routes = {
   cost_center_config: '/cost-center/config',
   cost_center_mapping: '/cost-center/mapping',
   cost_center_group_standards: '/cost-center/group-standards',
-  cost_center_group_productTypes: '/cost-center/group-product-types',
+  cost_center_productTypes: '/cost-center/product-types',
   report_ordersCost: '/report/orders-cost',
 };
 

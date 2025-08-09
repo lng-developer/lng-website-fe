@@ -275,7 +275,7 @@ const VendorProduct = () => {
           />
         </div>
         <div className="mt-4">
-          <Table columns={columns} dataSource={vendorProducts} pagination={false} />
+          <Table columns={columns} dataSource={vendorProducts} pagination={false} bordered />
         </div>
       </div>
       <ModalCreatVendorProduct

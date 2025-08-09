@@ -65,7 +65,7 @@ export const detailMenus = {
         { key: routes.cost_center_config, label: 'Config', icon: <GrDocumentConfig size={20} /> },
         { key: routes.cost_center_mapping, label: 'Mapping', icon: <RiTokenSwapLine size={20} /> },
         { key: routes.cost_center_group_standards, label: 'Group Standards', icon: <TbUsersGroup size={20} /> },
-        { key: routes.cost_center_group_productTypes, label: 'Product Types', icon: <TbPackages size={20} /> },
+        { key: routes.cost_center_productTypes, label: 'Product Types', icon: <TbPackages size={20} /> },
       ],
     },
     {

@@ -48,3 +48,38 @@
 .ant-menu {
   border-inline-end: none !important;
 }
+
+.ant-table-thead > tr > th {
+  background-color: #f1f5f9 !important; /* màu xám nhạt */
+  border-color: #e6e3e3 !important;
+}
+
+.ant-table-content {
+  overflow: hidden;
+}
+
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-pagination.ant-pagination {
+  margin-top: 36px !important; /* hoặc giá trị bạn muốn */
+}
+
+/* nếu dùng CSS thường (global) */
+.no-indent-table .ant-table-expanded-row > td {
+  padding-left: 0px !important; /* bỏ khoảng xám bên trái */
+  background: transparent !important;
+}
+
+/* antd chèn indent bằng span này – cho về 0 */
+.no-indent-table .ant-table-row-indent {
+  width: 0 !important;
+  margin: 0 !important;
+}
+
+/* nút expand không đẩy thêm khoảng trống */
+.no-indent-table .ant-table-row-expand-icon {
+  margin-inline-start: 0 !important;
+}
+
+/* đôi khi nested table bị margin-left – ép về 0 */
+.no-indent-table .ant-table-expanded-row .ant-table {
+  margin-left: 0 !important;
+}

@@ -192,7 +192,14 @@ const Home = () => {
     ];
 
     return (
-      <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" rowClassName={() => 'table-row-center'} />
+      <Table
+        columns={subColumns}
+        dataSource={record.subItems}
+        pagination={false}
+        rowKey="key"
+        rowClassName={() => 'table-row-center'}
+        style={{ padding: 10 }}
+      />
     );
   };
 
@@ -423,9 +430,11 @@ const Home = () => {
         </div>
         <div className="mt-4">
           <Table
+            className="no-indent-table"
             columns={columns}
             dataSource={renderOrderInTable(orders)}
             expandable={{
+              indentSize: 0,
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (
                 <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>

@@ -39,7 +39,7 @@ export default function DateRangePicker({ updateFilter }) {
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger>
         <div
-          className={`border-[${dataColors.default}] inline-flex gap-2 items-center justify-center whitespace-nowrap rounded-md !text-sm disabled:opacity-50 border border-input h-10 px-4 py-2 cursor-pointer text-sm`}
+          className={`border-[${dataColors.default}] inline-flex gap-2 items-center !text-back justify-center whitespace-nowrap rounded-md !text-sm disabled:opacity-50 border border-input h-10 px-4 py-2 cursor-pointer text-sm`}
         >
           <LuCalendar size={16} />
           {selectedRange?.from && selectedRange?.to
@@ -49,7 +49,7 @@ export default function DateRangePicker({ updateFilter }) {
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="bg-white rounded shadow-md p-4 flex gap-4 !text-sm z-100" side="bottom" align="start">
+        <Popover.Content className="bg-white rounded shadow-md p-4 flex gap-4 !text-sm z-100 !text-back" side="bottom" align="start">
           {/* Left: Presets */}
           <div className="w-40 flex flex-col gap-1">
             {presets.map((preset) => (
