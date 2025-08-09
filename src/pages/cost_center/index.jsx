@@ -9,6 +9,7 @@ import { BiSolidEdit } from 'react-icons/bi';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import ModalView from './ModalView';
 
 // Data cho bảng chính
 const dataLevel1 = [
@@ -35,91 +36,173 @@ const dataLevel2 = [
     productName: 'Body Suit Embroidered',
     isVariant: 'TRUE',
     status: 'Active',
+    items: [
+      {
+        key: '1',
+        sku: 'GGBSEL06MD',
+        godSize: '0-3 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '0-3 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '2',
+        sku: 'GGBSE3XL06MD',
+        godSize: '12-18 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '12-18 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '3',
+        sku: 'GGBSE4XL06MD',
+        godSize: '18-24 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '18-24 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '4',
+        sku: 'GGBSEXL06MD',
+        godSize: '3-6 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '3-6 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '5',
+        sku: 'GGBSE2XL06MD',
+        godSize: '6-12 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '6-12 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '6',
+        sku: 'GGBSEM06MD',
+        godSize: 'Newborn / Middle',
+        godColor: 'Blue Bell',
+        standardSize: 'NEWBORN',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '7',
+        sku: 'GGBSES06MD',
+        godSize: 'Preemie / Middle',
+        godColor: 'Blue Bell',
+        standardSize: 'PREEMIE',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '8',
+        sku: 'GGBSEL07MD',
+        godSize: '0-3 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '0-3 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+      {
+        key: '9',
+        sku: 'GGBSE3XL07MD',
+        godSize: '12-18 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '12-18 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+      {
+        key: '10',
+        sku: 'GGBSE4XL07MD',
+        godSize: '18-24 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '18-24 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+      {
+        key: '1',
+        sku: 'GGBSEL06MD',
+        godSize: '0-3 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '0-3 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '2',
+        sku: 'GGBSE3XL06MD',
+        godSize: '12-18 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '12-18 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '3',
+        sku: 'GGBSE4XL06MD',
+        godSize: '18-24 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '18-24 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '4',
+        sku: 'GGBSEXL06MD',
+        godSize: '3-6 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '3-6 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '5',
+        sku: 'GGBSE2XL06MD',
+        godSize: '6-12 months / Middle',
+        godColor: 'Blue Bell',
+        standardSize: '6-12 MONTHS',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '6',
+        sku: 'GGBSEM06MD',
+        godSize: 'Newborn / Middle',
+        godColor: 'Blue Bell',
+        standardSize: 'NEWBORN',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '7',
+        sku: 'GGBSES06MD',
+        godSize: 'Preemie / Middle',
+        godColor: 'Blue Bell',
+        standardSize: 'PREEMIE',
+        standardColor: 'Blue Bell',
+      },
+      {
+        key: '8',
+        sku: 'GGBSEL07MD',
+        godSize: '0-3 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '0-3 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+      {
+        key: '9',
+        sku: 'GGBSE3XL07MD',
+        godSize: '12-18 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '12-18 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+      {
+        key: '10',
+        sku: 'GGBSE4XL07MD',
+        godSize: '18-24 months / Middle',
+        godColor: 'Blue Depths',
+        standardSize: '18-24 MONTHS',
+        standardColor: 'Blue Depths',
+      },
+    ],
   },
 ];
 
 // // Data cho bảng con (SKU details)
 const skuData = [
-  {
-    key: '1',
-    sku: 'GGBSEL06MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '2',
-    sku: 'GGBSE3XL06MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '3',
-    sku: 'GGBSE4XL06MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '4',
-    sku: 'GGBSEXL06MD',
-    godSize: '3-6 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '3-6 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '5',
-    sku: 'GGBSE2XL06MD',
-    godSize: '6-12 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '6-12 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '6',
-    sku: 'GGBSEM06MD',
-    godSize: 'Newborn / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'NEWBORN',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '7',
-    sku: 'GGBSES06MD',
-    godSize: 'Preemie / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'PREEMIE',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '8',
-    sku: 'GGBSEL07MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '9',
-    sku: 'GGBSE3XL07MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '10',
-    sku: 'GGBSE4XL07MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Depths',
-  },
   {
     key: '1',
     sku: 'GGBSEL06MD',
@@ -286,6 +369,8 @@ const CostCenterProductTypes = () => {
   const { collapsed } = useOutletContext();
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
+  const [isOpenModal, setIsOpenModal] = useState(false);
+  const [dataView, setDataView] = useState({});
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
@@ -378,10 +463,17 @@ const CostCenterProductTypes = () => {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
       key: 'actions',
       align: 'center',
-      render: () => (
+      render: (record) => (
         <Flex gap={10} justify="center">
           <Tooltip placement="top" title="View">
-            <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
+            <button
+              className="cursor-pointer border rounded"
+              style={{ padding: 6, borderColor: dataColors.default }}
+              onClick={() => {
+                setDataView(record?.items);
+                setIsOpenModal(true);
+              }}
+            >
               <MdOutlineRemoveRedEye size={20} />
             </button>
           </Tooltip>
@@ -529,6 +621,7 @@ const CostCenterProductTypes = () => {
           />
         </div>
       </div>
+      <ModalView isOpenModal={isOpenModal} setIsOpenModal={setIsOpenModal} dataSource={dataView || []} />
     </div>
   );
 };

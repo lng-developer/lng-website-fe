@@ -316,22 +316,13 @@ const FulfillmentScale = () => {
           <div className="flex w-[40%] gap-2">
             <Input
               // onChange={handleSearch}
-              placeholder="Search orders by ID, Customer..."
+              placeholder="Search..."
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
               <SelectFilter
-                title="Shipping Type"
-                ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
-                // value={shippingType}
-                // onChange={(val) => {
-                //   setShippingType(val);
-                //   updateFilter({ shippingType: val });
-                // }}
-              />
-              <SelectFilter
-                title="Shop"
-                ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
+                title="Type"
+                ListData={['Outline', 'Custom Image', 'Manual Scale', 'Tool']}
                 // value={selectShop}
                 // onChange={(val) => {
                 //   setSelectShop(val);
