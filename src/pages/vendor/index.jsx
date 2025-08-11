@@ -20,6 +20,7 @@ const Vendor = () => {
   const [vendors, setVendors] = useState([]);
   const [fulfillmentType, setFulfillmentType] = useState('');
   const [valueAdd, setValueAdd] = useState('');
+  const [dataFilter, setDataFilter] = useState([]);
 
   const columns = [
     {
@@ -107,6 +108,7 @@ const Vendor = () => {
           };
         });
         setVendors(result);
+        setDataFilter(result);
       }
     } catch (error) {
       console.log(error);
@@ -170,10 +172,10 @@ const Vendor = () => {
 
   const handleSearch = (value) => {
     if (!value) {
-      fetchAllVendor();
+      setVendors(dataFilter);
       return;
     }
-    const results = vendors.filter((item) => item.name.toLowerCase().includes(value.toLowerCase()));
+    const results = dataFilter.filter((item) => item.name.toLowerCase().includes(value.toLowerCase()));
     setVendors(results);
   };
 

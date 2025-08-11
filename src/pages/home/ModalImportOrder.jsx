@@ -13,6 +13,12 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
   const [typeOrder, setTypeOrder] = useState('New');
 
+  const handleResetValue = () => {
+    setShops([]);
+    setFileList([]);
+    setIsModalOpen(false);
+  };
+
   const fetchAllShop = async () => {
     if (!isModalOpen) {
       return;
@@ -32,10 +38,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
     } catch (error) {
       console.log(error);
     }
-  };
-
-  const handleCancel = () => {
-    setIsModalOpen((prev) => !prev);
   };
 
   const handleOk = async () => {
@@ -64,7 +66,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       console.log(error);
       toast.error('Import error');
     } finally {
-      handleCancel();
+      handleResetValue();
     }
   };
 
@@ -92,7 +94,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       open={isModalOpen}
       onOk={handleOk}
       width={400}
-      onCancel={handleCancel}
+      onCancel={handleResetValue}
     >
       <div className="py-2">
         <div>

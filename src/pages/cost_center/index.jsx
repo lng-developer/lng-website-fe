@@ -7,370 +7,22 @@ import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
-
-// Data cho bảng chính
-const dataLevel1 = [
-  {
-    key: '1',
-    name: 'Embroidered Body Suit / Middle (SwaddleAn)',
-    date: 'Jul 28, 14:03 PM',
-  },
-  {
-    key: '1',
-    name: 'Embroidered Body Suit / Middle (SwaddleAn)',
-    date: 'Jul 28, 14:03 PM',
-  },
-];
-
-const dataLevel2 = [
-  {
-    no: 1,
-    key: '1',
-    name: 'Embroidered Body Suit / Middle (SwaddleAn)',
-    date: 'Jul 28, 14:03 PM',
-    vendor: 'GodGroup',
-    productId: 'BSE',
-    productName: 'Body Suit Embroidered',
-    isVariant: 'TRUE',
-    status: 'Active',
-    items: [
-      {
-        key: '1',
-        sku: 'GGBSEL06MD',
-        godSize: '0-3 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '0-3 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '2',
-        sku: 'GGBSE3XL06MD',
-        godSize: '12-18 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '12-18 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '3',
-        sku: 'GGBSE4XL06MD',
-        godSize: '18-24 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '18-24 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '4',
-        sku: 'GGBSEXL06MD',
-        godSize: '3-6 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '3-6 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '5',
-        sku: 'GGBSE2XL06MD',
-        godSize: '6-12 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '6-12 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '6',
-        sku: 'GGBSEM06MD',
-        godSize: 'Newborn / Middle',
-        godColor: 'Blue Bell',
-        standardSize: 'NEWBORN',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '7',
-        sku: 'GGBSES06MD',
-        godSize: 'Preemie / Middle',
-        godColor: 'Blue Bell',
-        standardSize: 'PREEMIE',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '8',
-        sku: 'GGBSEL07MD',
-        godSize: '0-3 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '0-3 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-      {
-        key: '9',
-        sku: 'GGBSE3XL07MD',
-        godSize: '12-18 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '12-18 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-      {
-        key: '10',
-        sku: 'GGBSE4XL07MD',
-        godSize: '18-24 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '18-24 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-      {
-        key: '1',
-        sku: 'GGBSEL06MD',
-        godSize: '0-3 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '0-3 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '2',
-        sku: 'GGBSE3XL06MD',
-        godSize: '12-18 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '12-18 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '3',
-        sku: 'GGBSE4XL06MD',
-        godSize: '18-24 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '18-24 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '4',
-        sku: 'GGBSEXL06MD',
-        godSize: '3-6 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '3-6 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '5',
-        sku: 'GGBSE2XL06MD',
-        godSize: '6-12 months / Middle',
-        godColor: 'Blue Bell',
-        standardSize: '6-12 MONTHS',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '6',
-        sku: 'GGBSEM06MD',
-        godSize: 'Newborn / Middle',
-        godColor: 'Blue Bell',
-        standardSize: 'NEWBORN',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '7',
-        sku: 'GGBSES06MD',
-        godSize: 'Preemie / Middle',
-        godColor: 'Blue Bell',
-        standardSize: 'PREEMIE',
-        standardColor: 'Blue Bell',
-      },
-      {
-        key: '8',
-        sku: 'GGBSEL07MD',
-        godSize: '0-3 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '0-3 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-      {
-        key: '9',
-        sku: 'GGBSE3XL07MD',
-        godSize: '12-18 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '12-18 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-      {
-        key: '10',
-        sku: 'GGBSE4XL07MD',
-        godSize: '18-24 months / Middle',
-        godColor: 'Blue Depths',
-        standardSize: '18-24 MONTHS',
-        standardColor: 'Blue Depths',
-      },
-    ],
-  },
-];
-
-// // Data cho bảng con (SKU details)
-const skuData = [
-  {
-    key: '1',
-    sku: 'GGBSEL06MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '2',
-    sku: 'GGBSE3XL06MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '3',
-    sku: 'GGBSE4XL06MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '4',
-    sku: 'GGBSEXL06MD',
-    godSize: '3-6 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '3-6 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '5',
-    sku: 'GGBSE2XL06MD',
-    godSize: '6-12 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '6-12 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '6',
-    sku: 'GGBSEM06MD',
-    godSize: 'Newborn / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'NEWBORN',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '7',
-    sku: 'GGBSES06MD',
-    godSize: 'Preemie / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'PREEMIE',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '8',
-    sku: 'GGBSEL07MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '9',
-    sku: 'GGBSE3XL07MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '10',
-    sku: 'GGBSE4XL07MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '1',
-    sku: 'GGBSEL06MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '2',
-    sku: 'GGBSE3XL06MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '3',
-    sku: 'GGBSE4XL06MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '4',
-    sku: 'GGBSEXL06MD',
-    godSize: '3-6 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '3-6 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '5',
-    sku: 'GGBSE2XL06MD',
-    godSize: '6-12 months / Middle',
-    godColor: 'Blue Bell',
-    standardSize: '6-12 MONTHS',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '6',
-    sku: 'GGBSEM06MD',
-    godSize: 'Newborn / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'NEWBORN',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '7',
-    sku: 'GGBSES06MD',
-    godSize: 'Preemie / Middle',
-    godColor: 'Blue Bell',
-    standardSize: 'PREEMIE',
-    standardColor: 'Blue Bell',
-  },
-  {
-    key: '8',
-    sku: 'GGBSEL07MD',
-    godSize: '0-3 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '0-3 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '9',
-    sku: 'GGBSE3XL07MD',
-    godSize: '12-18 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '12-18 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-  {
-    key: '10',
-    sku: 'GGBSE4XL07MD',
-    godSize: '18-24 months / Middle',
-    godColor: 'Blue Depths',
-    standardSize: '18-24 MONTHS',
-    standardColor: 'Blue Depths',
-  },
-];
+import { formatDate } from '../../utils/fomatDate';
+import { getAllConfig } from '../../apis/config';
 
 const CostCenterProductTypes = () => {
   const { collapsed } = useOutletContext();
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const [expandedRowKeys2, setExpandedRowKeys2] = useState([]);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
+  const [isShowRowkeys2, setIsShowRowKeys2] = useState(true);
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [dataView, setDataView] = useState({});
+  const [dataSource, setDataSource] = useState([]);
+  const [dataFilter, setDataFilter] = useState([]);
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
@@ -384,9 +36,26 @@ const CostCenterProductTypes = () => {
     if (isShowRowkeys) {
       setExpandedRowKeys([]);
     } else {
-      setExpandedRowKeys(dataLevel1.map((item) => item.key));
+      setExpandedRowKeys(dataSource.map((item) => item.key));
     }
     setIsShowRowKeys((prev) => !prev);
+  };
+
+  const handleExpand2 = (expanded, record) => {
+    if (expanded) {
+      setExpandedRowKeys2([...expandedRowKeys2, record.key]);
+    } else {
+      setExpandedRowKeys2(expandedRowKeys2.filter((key) => key !== record.key));
+    }
+  };
+
+  const handleShowRowKeys2 = () => {
+    if (isShowRowkeys2) {
+      setExpandedRowKeys2([]);
+    } else {
+      setExpandedRowKeys2(dataSource?.items?.map((item) => item.key));
+    }
+    setIsShowRowKeys2((prev) => !prev);
   };
 
   const columnLevel1 = [
@@ -398,9 +67,9 @@ const CostCenterProductTypes = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Date</span>,
-      dataIndex: 'date',
-      key: 'date',
-      render: (text) => <span className="font-medium text-md">{text}</span>,
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (text) => <span className="font-medium text-md">{formatDate(text)}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -426,31 +95,31 @@ const CostCenterProductTypes = () => {
   const columnsLevel2 = [
     {
       title: <span style={{ color: dataColors.title }}>No</span>,
-      dataIndex: 'no',
-      key: 'no',
+      dataIndex: 'order',
+      key: 'order',
       align: 'center',
       render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Vendor</span>,
-      dataIndex: 'vendor',
-      key: 'vendor',
+      dataIndex: 'vendor_name',
+      key: 'vendor_name',
       align: 'center',
       render: (text) => <span className="font-medium text-md">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Product ID</span>,
-      dataIndex: 'productId',
-      key: 'productId',
+      dataIndex: 'product_id',
+      key: 'product_id',
       align: 'center',
       render: (text) => <span className="font-medium text-md">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Is Variant</span>,
-      dataIndex: 'isVariant',
-      key: 'isVariant',
+      dataIndex: 'is_variant',
+      key: 'is_variant',
       align: 'center',
-      render: (text) => <span className="font-medium text-md">{text}</span>,
+      render: (text) => <span className="font-medium text-md">{text === true ? 'TRUE' : 'FALSE'}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Status</span>,
@@ -461,6 +130,7 @@ const CostCenterProductTypes = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
+      dataIndex: 'cost_centers',
       key: 'actions',
       align: 'center',
       render: (record) => (
@@ -470,7 +140,7 @@ const CostCenterProductTypes = () => {
               className="cursor-pointer border rounded"
               style={{ padding: 6, borderColor: dataColors.default }}
               onClick={() => {
-                setDataView(record?.items);
+                setDataView(record?.map((item, index) => ({ ...item, stt: index + 1 })));
                 setIsOpenModal(true);
               }}
             >
@@ -498,28 +168,31 @@ const CostCenterProductTypes = () => {
       title: <span style={{ color: dataColors.title }}>SKU</span>,
       dataIndex: 'sku',
       width: 150,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>LNG Size</span>,
-      dataIndex: 'godSize',
+      dataIndex: 'vendor_size',
       width: 200,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>LNG Color</span>,
-      dataIndex: 'godColor',
+      dataIndex: 'vendor_color',
       width: 150,
-      render: (color) => <span>{color}</span>,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Standard Size</span>,
-      dataIndex: 'standardSize',
+      dataIndex: 'standard_size',
       width: 150,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Standard Color</span>,
-      dataIndex: 'standardColor',
+      dataIndex: 'standard_color',
       width: 150,
-      render: (color) => <span>{color}</span>,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -534,6 +207,31 @@ const CostCenterProductTypes = () => {
       ),
     },
   ];
+
+  const fetchAllConfig = async () => {
+    try {
+      const response = await getAllConfig();
+      if (response.status === 200) {
+        setDataSource(response.data?.items);
+        setDataFilter(response.data?.items);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleSearch = (value) => {
+    if (!value) {
+      setDataSource(dataFilter);
+      return;
+    }
+    const results = dataFilter.filter((item) => item.name.toLowerCase().includes(value.toLowerCase()));
+    setDataSource(results);
+  };
+
+  useEffect(() => {
+    fetchAllConfig();
+  }, []);
 
   return (
     <div>
@@ -554,7 +252,7 @@ const CostCenterProductTypes = () => {
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
         <Input
-          //   onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search..."
           className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
         />
@@ -562,26 +260,26 @@ const CostCenterProductTypes = () => {
           <Table
             className="no-indent-table"
             columns={columnLevel1}
-            dataSource={dataLevel1}
+            dataSource={dataSource}
             expandable={{
               indentSize: 0,
-              expandedRowRender: () => (
+              expandedRowRender: (r, index) => (
                 <Table
                   className="no-indent-table"
                   columns={columnsLevel2}
-                  dataSource={dataLevel2}
+                  dataSource={dataSource[index]?.items}
                   pagination={false}
                   expandable={{
                     indentSize: 0,
-                    expandedRowRender: () => (
+                    expandedRowRender: (r, index) => (
                       <Table
                         className="no-indent-table"
                         columns={skuColumns}
-                        dataSource={skuData}
+                        dataSource={dataSource[index]?.items[index]?.cost_centers}
                         pagination={true}
                         bordered={true}
                         rowKey="key"
-                        style={{ padding: 10, paddingBottom: 0 }}
+                        style={{ padding: 10 }}
                       />
                     ),
                     expandIcon: ({ expanded, onExpand, record }) => (
@@ -589,17 +287,17 @@ const CostCenterProductTypes = () => {
                         {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                       </div>
                     ),
-                    expandedRowKeys: expandedRowKeys,
-                    onExpand: handleExpand,
+                    expandedRowKeys: expandedRowKeys2,
+                    onExpand: handleExpand2,
                     columnTitle: (
-                      <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
-                        {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                      <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys2}>
+                        {isShowRowkeys2 ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                       </div>
                     ),
                   }}
                   bordered={true}
                   rowKey="key"
-                  style={{ padding: 10, paddingBottom: 0 }}
+                  style={{ padding: 10 }}
                 />
               ),
               expandIcon: ({ expanded, onExpand, record }) => (

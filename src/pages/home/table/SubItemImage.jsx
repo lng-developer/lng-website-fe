@@ -42,7 +42,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
     <>
       <div>
         <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2">
-          <Image width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
+          <Image height={130} width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
         </div>
         <div
           className="w-[60px] mt-2 flex items-center justify-between rounded-md px-2 py-1 border border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"

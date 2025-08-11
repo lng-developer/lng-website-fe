@@ -4,7 +4,8 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../routes/routes';
-import { Input } from 'antd';
+import { Image, Input } from 'antd';
+import lng from '../../assets/LNG.png';
 
 export default function Login() {
   const [userName, setUserName] = useState('');
@@ -14,8 +15,7 @@ export default function Login() {
   const { loginUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (event) => {
-    event.preventDefault(); // 👉 Ngăn reload trang
+  const handleSubmit = async () => {
     if (userName === '') {
       setErrorUsername(true);
       return;
@@ -40,9 +40,12 @@ export default function Login() {
   };
 
   return (
-    <>
-      <div className="mt-20 flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+    <div className="flex justify-center items-center">
+      <div className="mt-20 flex min-h-full flex-1 flex-col justify-center px-6 py-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+          <div className="flex justify-center items-center">
+            <Image width={150} src={lng} preview={false} />
+          </div>
           <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Login to your account</h2>
         </div>
 
@@ -59,6 +62,7 @@ export default function Login() {
                     setUserName(value.target.value);
                   }}
                   className="font-medium"
+                  onPressEnter={handleSubmit}
                 />
               </div>
               {errorUsername && (
@@ -104,6 +108,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

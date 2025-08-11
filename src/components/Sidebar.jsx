@@ -122,7 +122,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
           style={{ color: 'black' }}
         >
           <div className="flex justify-center items-center ml-0.5">
-            <Image src={logo} width={30} />
+            <Image src={logo} width={35} />
           </div>
           <Flex width={!collapsed ? 0 : 202} flex={1} justify="space-between" align="center">
             <div className="visible flex flex-col justify-end truncate">
@@ -148,34 +148,6 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
               <FcRating size={20} />
             </button>
           </Flex>
-          {/* {collapsed && (
-            <>
-              <div className="visible w-auto flex flex-col justify-end truncate">
-                <span className="font-medium" style={{ color: 'black' }}>
-                  LNG System
-                </span>
-                <Dropdown
-                  trigger={['click']}
-                  open={openDropdown}
-                  onOpenChange={setOpenDropdown}
-                  popupRender={() => menu}
-                  placement="bottomLeft"
-                >
-                  <span
-                    className="cursor-pointer text-xs font-medium transition hover:underline truncate block w-full"
-                    style={{ color: dataColors.title }}
-                  >
-                    {user?.full_name}
-                  </span>
-                </Dropdown>
-              </div>
-              <div className="flex items-center visible w-auto ml-auto">
-                <button className="p-3 hover:bg-[#f1f5f9] rounded-3xl cursor-pointer">
-                  <FcRating size={20} />
-                </button>
-              </div>
-            </>
-          )} */}
         </div>
         <div className="py-2">
           <Layout style={{ height: '100vh' }}>
