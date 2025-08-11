@@ -285,7 +285,15 @@ const Home = () => {
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
-            product: <SubItemImage linkImage={itemSub?.baseImageUrl} />,
+            product: (
+              <SubItemImage
+                linkImage={itemSub?.baseImageUrl}
+                fetchAllOrder={fetchAllOrder}
+                filters={filters}
+                orderId={item?.orderId}
+                orderItemId={itemSub?.orderItemId}
+              />
+            ),
             sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} />,
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,

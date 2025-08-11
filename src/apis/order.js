@@ -60,6 +60,10 @@ const removeCase = (payload) => {
   return instance.put('/order/remove-case', payload);
 };
 
+const updateImage = (payload) => {
+  return instance.put('/order/update-base-image', payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -72,4 +76,5 @@ export {
   getAllCaseByOrder,
   updateOpenCase,
   removeCase,
+  updateImage,
 };

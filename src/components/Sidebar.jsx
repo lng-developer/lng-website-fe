@@ -100,7 +100,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     return (
       <div style={{ width: 'auto', padding: 0 }}>
         <div style={{ fontWeight: 600, padding: '4px' }}>{topMenus.find((m) => m.key === menuKey)?.label}</div>
-        <Menu mode="vertical" items={items} onClick={({ key }) => navigate(key)} />
+        <Menu mode="vertical" items={items} onClick={({ key }) => navigate(key)} className="ant-menu-submenu-title-config" />
       </div>
     );
   };
