@@ -1,17 +1,19 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
-import { Button, Flex, Input, Modal, Popover, Select, Tooltip } from 'antd';
-import { Space, Table, Tag } from 'antd';
+import { Flex, Input, Tooltip, Table, Modal, Select } from 'antd';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
-import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
 import { formatDate } from '../../utils/fomatDate';
-import { getAllConfig } from '../../apis/config';
+import { deleteProductType, deleteProductTypeItem, getAllConfig, updateProductType } from '../../apis/config';
+import ModalAddProductType from './ModalAddProductType';
+import { toast } from 'react-toastify';
+import ModalDelete from '../../components/ModalDelete';
+import { getALlVendorProduct } from '../../apis/vendor';
 
 const CostCenterProductTypes = () => {
   const { collapsed } = useOutletContext();
@@ -20,15 +22,26 @@ const CostCenterProductTypes = () => {
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [isShowRowkeys2, setIsShowRowKeys2] = useState(true);
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [dataView, setDataView] = useState({});
+  const [dataView, setDataView] = useState([]);
   const [dataSource, setDataSource] = useState([]);
   const [dataFilter, setDataFilter] = useState([]);
+  const [dataViewFilter, setDataViewFilter] = useState([]);
+  const [openModalAdd, setOpenModalAdd] = useState(false);
+  const [isShowModalDelete, setIsShowModalDelete] = useState(false);
+  const [idDelete, setIdDelete] = useState('');
+  const [isShowModalDeleteItem, setIsShowModalDeleteItem] = useState(false);
+  const [idDeleteItem, setIdDeleteItem] = useState('');
+  const [vendorProducts, setVendorProducts] = useState([]);
+  const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
+  const [idSelectVendor, setIdSelectVendor] = useState('');
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
-      setExpandedRowKeys([...expandedRowKeys, record.key]);
+      if (expandedRowKeys) {
+        setExpandedRowKeys([...expandedRowKeys, record.key]);
+      }
     } else {
-      setExpandedRowKeys(expandedRowKeys.filter((key) => key !== record.key));
+      setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
     }
   };
 
@@ -43,17 +56,19 @@ const CostCenterProductTypes = () => {
 
   const handleExpand2 = (expanded, record) => {
     if (expanded) {
-      setExpandedRowKeys2([...expandedRowKeys2, record.key]);
+      if (expandedRowKeys2) {
+        setExpandedRowKeys2([...expandedRowKeys2, record.key]);
+      }
     } else {
-      setExpandedRowKeys2(expandedRowKeys2.filter((key) => key !== record.key));
+      setExpandedRowKeys2(expandedRowKeys2?.filter((key) => key !== record.key));
     }
   };
 
-  const handleShowRowKeys2 = () => {
+  const handleShowRowKeys2 = (index) => {
     if (isShowRowkeys2) {
       setExpandedRowKeys2([]);
     } else {
-      setExpandedRowKeys2(dataSource?.items?.map((item) => item.key));
+      setExpandedRowKeys2(dataSource[index]?.items?.map((item) => item.key));
     }
     setIsShowRowKeys2((prev) => !prev);
   };
@@ -73,17 +88,32 @@ const CostCenterProductTypes = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
+      dataIndex: '_id',
       key: 'actions',
       align: 'center',
-      render: () => (
+      render: (record) => (
         <Flex gap={10} justify="center">
-          <Tooltip placement="top" title="Edit">
-            <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
-              <BiSolidEdit size={20} />
+          <Tooltip placement="top" title="Create">
+            <button
+              className="cursor-pointer border rounded"
+              style={{ padding: 6, borderColor: dataColors.default }}
+              onClick={() => {
+                setIdDelete(record);
+                setIsShowModalUpdate(true);
+              }}
+            >
+              <MdAdd size={20} />
             </button>
           </Tooltip>
           <Tooltip placement="top" title="Delete">
-            <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
+            <button
+              className="cursor-pointer border rounded"
+              style={{ padding: 6, borderColor: dataColors.default }}
+              onClick={() => {
+                setIdDelete(record);
+                setIsShowModalDelete(true);
+              }}
+            >
               <MdDeleteOutline size={20} />
             </button>
           </Tooltip>
@@ -130,7 +160,7 @@ const CostCenterProductTypes = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
-      dataIndex: 'cost_centers',
+      dataIndex: 'payload',
       key: 'actions',
       align: 'center',
       render: (record) => (
@@ -140,7 +170,9 @@ const CostCenterProductTypes = () => {
               className="cursor-pointer border rounded"
               style={{ padding: 6, borderColor: dataColors.default }}
               onClick={() => {
-                setDataView(record?.map((item, index) => ({ ...item, stt: index + 1 })));
+                const result = record?.cost_centers?.map((item, index) => ({ ...item, stt: index + 1 }));
+                setDataView(result);
+                setDataViewFilter(result);
                 setIsOpenModal(true);
               }}
             >
@@ -149,11 +181,19 @@ const CostCenterProductTypes = () => {
           </Tooltip>
           <Tooltip placement="top" title="Edit">
             <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
-              <BiSolidEdit size={20} />
+              <MdAdd size={20} />
             </button>
           </Tooltip>
           <Tooltip placement="top" title="Delete">
-            <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
+            <button
+              className="cursor-pointer border rounded"
+              style={{ padding: 6, borderColor: dataColors.default }}
+              onClick={() => {
+                setIdDelete(record?.productTypeId);
+                setIdDeleteItem(record?._id);
+                setIsShowModalDeleteItem(true);
+              }}
+            >
               <MdDeleteOutline size={20} />
             </button>
           </Tooltip>
@@ -212,8 +252,25 @@ const CostCenterProductTypes = () => {
     try {
       const response = await getAllConfig();
       if (response.status === 200) {
-        setDataSource(response.data?.items);
-        setDataFilter(response.data?.items);
+        const result = response.data?.items?.map((k) => {
+          return {
+            ...k,
+            key: k._id,
+            items: k?.items?.map((j) => {
+              return {
+                ...j,
+                key: j._id,
+                payload: {
+                  productTypeId: k._id,
+                  cost_centers: j.cost_centers,
+                  _id: j._id,
+                },
+              };
+            }),
+          };
+        });
+        setDataSource(result);
+        setDataFilter(result);
       }
     } catch (error) {
       console.log(error);
@@ -229,6 +286,76 @@ const CostCenterProductTypes = () => {
     setDataSource(results);
   };
 
+  const handleDeleteProductType = async () => {
+    try {
+      const response = await deleteProductType(idDelete);
+      if (response.status === 200) {
+        toast.success('Delete success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Delete error!');
+    } finally {
+      fetchAllConfig();
+      setIsShowModalDelete(false);
+    }
+  };
+
+  const handleDeleteProductTypeItem = async () => {
+    try {
+      const response = await deleteProductTypeItem(idDelete, idDeleteItem);
+      if (response.status === 200) {
+        toast.success('Delete success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Delete error!');
+    } finally {
+      fetchAllConfig();
+      setIsShowModalDeleteItem(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const response = await updateProductType(idDelete, {
+        vendor_product: idSelectVendor,
+      });
+      if (response.status === 201) {
+        toast.success('Create product type success');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Create error!');
+    } finally {
+      fetchAllConfig();
+      setIsShowModalUpdate(false);
+    }
+  };
+
+  const fetchAllVendor = async () => {
+    try {
+      const response = await getALlVendorProduct({
+        all: true,
+      });
+      if (response.status === 200) {
+        const result = response.data?.data?.map((item) => {
+          return {
+            value: item?._id,
+            label: `${item?.vendor?.name} - ${item?.product_name}`,
+          };
+        });
+        setVendorProducts(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllVendor();
+  }, []);
+
   useEffect(() => {
     fetchAllConfig();
   }, []);
@@ -241,7 +368,10 @@ const CostCenterProductTypes = () => {
             Product Type Groups
           </h1>
           <div className="flex justify-center items-center">
-            <button className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer">
+            <button
+              className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setOpenModalAdd(true)}
+            >
               <MdAdd size={20} color="black" />
               <span className="text-sm font-medium" style={{ color: 'black' }}>
                 Create Product Type
@@ -271,11 +401,11 @@ const CostCenterProductTypes = () => {
                   pagination={false}
                   expandable={{
                     indentSize: 0,
-                    expandedRowRender: (r, index) => (
+                    expandedRowRender: (r, index2) => (
                       <Table
                         className="no-indent-table"
                         columns={skuColumns}
-                        dataSource={dataSource[index]?.items[index]?.cost_centers}
+                        dataSource={dataSource[index]?.items[index2]?.cost_centers}
                         pagination={true}
                         bordered={true}
                         rowKey="key"
@@ -284,14 +414,17 @@ const CostCenterProductTypes = () => {
                     ),
                     expandIcon: ({ expanded, onExpand, record }) => (
                       <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
-                        {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                        {!expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                       </div>
                     ),
                     expandedRowKeys: expandedRowKeys2,
                     onExpand: handleExpand2,
                     columnTitle: (
-                      <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys2}>
-                        {isShowRowkeys2 ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                      <div
+                        className="flex justify-center items-center  h-full w-full cursor-pointer"
+                        onClick={() => handleShowRowKeys2(index)}
+                      >
+                        <IoIosArrowDown style={{ fontSize: 15 }} />
                       </div>
                     ),
                   }}
@@ -319,7 +452,50 @@ const CostCenterProductTypes = () => {
           />
         </div>
       </div>
-      <ModalView isOpenModal={isOpenModal} setIsOpenModal={setIsOpenModal} dataSource={dataView || []} />
+      <ModalView
+        isOpenModal={isOpenModal}
+        setIsOpenModal={setIsOpenModal}
+        dataSource={dataViewFilter}
+        setDataView={setDataView}
+        dataView={dataView}
+      />
+      <ModalAddProductType open={openModalAdd} onCancel={() => setOpenModalAdd(false)} fetchAllConfig={fetchAllConfig} />
+      <ModalDelete
+        title="Delete Product Type"
+        isShowModalDelete={isShowModalDelete}
+        setIsShowModalDelete={setIsShowModalDelete}
+        handleDelete={handleDeleteProductType}
+      />
+      <ModalDelete
+        title="Delete Vendor Product"
+        isShowModalDelete={isShowModalDeleteItem}
+        setIsShowModalDelete={setIsShowModalDeleteItem}
+        handleDelete={handleDeleteProductTypeItem}
+      />
+      <Modal
+        open={isShowModalUpdate}
+        title="Add New Vendor Product"
+        onCancel={() => setIsShowModalUpdate(false)}
+        onOk={handleUpdate}
+        okText="Save"
+        cancelText="Cancel"
+        width={500}
+        maskClosable={false}
+        style={{ top: '20%' }}
+      >
+        <div>
+          <span className="font-medium">Vendor product:</span>
+          <Select
+            placeholder="Select Vendor Product"
+            options={vendorProducts}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+            style={{ width: 450, marginTop: 5 }}
+            onChange={(value) => setIdSelectVendor(value)}
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

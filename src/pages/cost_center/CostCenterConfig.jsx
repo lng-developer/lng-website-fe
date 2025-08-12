@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import SelectFilter from '../../components/SelectFilter';
@@ -8,128 +8,43 @@ import { MdHistory, MdOutlineArrowBack } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { IoCopyOutline } from 'react-icons/io5';
 import StatusComponent from '../../components/StatusComponent';
-
-const dataSource = [
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-  {
-    configId: '12321312',
-    status: 'Active',
-    code: 'WS',
-    customize_size_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_color_key: ['Size', 'Choose Size', 'Select Size', 'Choose Your Size'],
-    customize_product_type_size_key: ['Size', 'Choose Size', 'Select Size'],
-    customize_product_type_key: ['Select Product Type'],
-    customize_product_type_color_key: ['Select Product Type & Color'],
-    combination_product_type_key: ['Select Product Type/Select print type'],
-    isSet: 'InActive',
-    isPack: 'InActive',
-    sizePosition: 0,
-    colorPosition: 0,
-    product_for_seller: 'Custom 2 Layer Wooden Art',
-    country: 'United States',
-    product_type_from: 'Women Jersey/Front Side',
-  },
-];
+import { getAllConfig, getConfigCost } from '../../apis/config';
+import SelectProductType from '../../components/SelectProductType';
+const PAGE_SIZE = 10;
 
 const CostCenterConfig = () => {
   const { collapsed } = useOutletContext();
+  const [activeTab, setActiveTab] = useState('amazon');
+  const [configs, setConfigs] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [productTypes, setProductTypes] = useState([]);
+  const [valueFilter, setValueFilter] = useState('');
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    search: '',
+    product_for_seller: '',
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    setCurrentPage(page);
+    updateFilter({ page: page, perPage: pageSize });
+  };
 
   const tabs = [
     { id: 'amazon', label: 'Amazon', value: 'amazon' },
     { id: 'etsy', label: 'Etsy', value: 'etsy' },
     { id: 'shopify', label: 'Shopify', value: 'shopify' },
   ];
-
-  const [activeTab, setActiveTab] = useState('amazon');
 
   const handleTabClick = (tabValue) => {
     setActiveTab(tabValue);
@@ -179,8 +94,8 @@ const CostCenterConfig = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Code</span>,
-      dataIndex: 'code',
-      key: 'code',
+      dataIndex: 'config_code',
+      key: 'config_code',
       align: 'center',
       fixed: 'left',
       render: (text) => <span className="font-medium">{text}</span>,
@@ -252,29 +167,29 @@ const CostCenterConfig = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Is Set</span>,
-      dataIndex: 'isSet',
-      key: 'isSet',
+      dataIndex: 'is_set',
+      key: 'is_set',
       align: 'center',
-      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
+      render: (text) => <Switch checked={text} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Is Pack</span>,
-      dataIndex: 'isPack',
-      key: 'isPack',
+      dataIndex: 'is_pack',
+      key: 'is_pack',
       align: 'center',
-      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
+      render: (text) => <Switch checked={text} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Size Position</span>,
-      dataIndex: 'sizePosition',
-      key: 'sizePosition',
+      dataIndex: 'size_position',
+      key: 'size_position',
       align: 'center',
       render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Color Position</span>,
-      dataIndex: 'colorPosition',
-      key: 'colorPosition',
+      dataIndex: 'color_position',
+      key: 'color_position',
       align: 'center',
       render: (text) => <span className="font-medium">{text}</span>,
     },
@@ -283,7 +198,7 @@ const CostCenterConfig = () => {
       dataIndex: 'product_for_seller',
       key: 'product_for_seller',
       align: 'center',
-      render: (text) => <span className="font-medium">{text}</span>,
+      render: (text) => <span className="font-medium">{text?.name}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Country</span>,
@@ -294,15 +209,61 @@ const CostCenterConfig = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Product Type From Platform</span>,
-      dataIndex: 'product_type_from',
-      key: 'product_type_from',
+      dataIndex: 'product_type_from_platform',
+      key: 'product_type_from_platform',
       align: 'center',
       fixed: 'right',
       render: (text) => <StatusComponent title={text} color={dataColors.default} isDefault={true} />,
     },
   ];
 
-  const handleSearch = () => {};
+  const fetchAllConfig = async (params) => {
+    try {
+      const response = await getConfigCost(params);
+      if (response.status === 200) {
+        setConfigs(response.data?.items);
+        setTotalCount(response.data?.total);
+      } else {
+        console.log('error');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleSearch = (e) => {
+    if (!e.target.value) {
+      updateFilter({ search: '' });
+      return;
+    }
+    updateFilter({ search: e.target.value });
+  };
+
+  const fetchAllProductType = async () => {
+    try {
+      const response = await getAllConfig();
+      if (response.status === 200) {
+        const result = response.data?.items?.map((k) => {
+          return {
+            value: k?._id,
+            label: k?.name,
+          };
+        });
+        setProductTypes(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllProductType();
+  }, []);
+
+  useEffect(() => {
+    fetchAllConfig(filters);
+  }, [filters]);
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -345,25 +306,25 @@ const CostCenterConfig = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
-              <SelectFilter
+              <SelectProductType
                 title="Product Type"
-                ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
-                value={'Second Day'}
-                // onChange={(val) => {
-                //   setShippingType(val);
-                //   updateFilter({ shippingType: val });
-                // }}
+                ListData={productTypes}
+                value={valueFilter}
+                onChange={(val) => {
+                  setValueFilter(val);
+                  updateFilter({ product_for_seller: val });
+                }}
               />
             </div>
           </div>
           <div>
             <Pagination
-              total={40}
+              total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
-              defaultCurrent={1}
-              // onChange={handlePageChange}
-              // onShowSizeChange={handlePageChange}
+              defaultPageSize={PAGE_SIZE}
+              defaultCurrent={currentPage}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
             />
           </div>
         </div>
@@ -371,7 +332,7 @@ const CostCenterConfig = () => {
           <Table
             className="no-indent-table"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={configs}
             rowKey="key"
             bordered={true}
             pagination={false}

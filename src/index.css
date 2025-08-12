@@ -155,3 +155,7 @@
 .pill {
   flex: 0 0 200px; /* chiều ngang cố định 200px */
 }
+
+:where(.css-dev-only-do-not-override-7t2xvq).ant-form-item {
+  margin-bottom: 0px !important;
+}

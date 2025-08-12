@@ -29,7 +29,7 @@ const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false 
   const menu = (
     <div style={{ width: 240, backgroundColor: 'white' }} className="shadow-sm rounded-lg">
       <div style={{ padding: '8px 8px 4px' }}>
-        <Input allowClear value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search vendor" />
+        <Input allowClear value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${title}`} />
       </div>
       <div style={{ maxHeight: 300, overflowY: 'auto', padding: '8px' }}>
         <Radio.Group
@@ -48,7 +48,7 @@ const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false 
             </Radio>
           ))}
         </Radio.Group>
-        {filteredVendors.length === 0 && <div style={{ paddingTop: 8, textAlign: 'center', color: '#aaa' }}>No vendor found</div>}
+        {filteredVendors.length === 0 && <div style={{ paddingTop: 8, textAlign: 'center', color: '#aaa' }}>Not found</div>}
       </div>
       <Divider style={{ margin: '8px 0' }} />
       <div style={{ textAlign: 'center', paddingBottom: 8 }}>

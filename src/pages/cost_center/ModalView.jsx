@@ -1,11 +1,8 @@
 import { Flex, Input, Modal, Pagination, Table } from 'antd';
-import { useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
 
-const ModalView = ({ isOpenModal, setIsOpenModal, dataSource = [] }) => {
-  const [data, setData] = useState(dataSource);
-
+const ModalView = ({ isOpenModal, setIsOpenModal, dataSource = [], setDataView, dataView = [] }) => {
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>STT</span>,
@@ -48,19 +45,19 @@ const ModalView = ({ isOpenModal, setIsOpenModal, dataSource = [] }) => {
 
   const handleSearch = (value) => {
     if (!value) {
-      setData(dataSource);
+      setDataView(dataSource);
       return;
     }
     const qn = value.trim().toLowerCase();
 
-    const filtered = dataSource.filter((item) =>
-      Object.values(item).some((v) =>
+    const filtered = dataSource?.filter((item) =>
+      Object.values(item)?.some((v) =>
         String(v ?? '')
           .toLowerCase()
           .includes(qn)
       )
     );
-    setData(filtered);
+    setDataView(filtered);
   };
 
   return (
@@ -71,7 +68,7 @@ const ModalView = ({ isOpenModal, setIsOpenModal, dataSource = [] }) => {
             <span className="font-medium">Body Suit Embroidered</span>
             <span className="font-medium" style={{ color: dataColors.title }}>
               {' '}
-              (Total: {data?.length || 0} variants)
+              (Total: {dataView?.length || 0} variants)
             </span>
           </div>
         </Flex>
@@ -84,7 +81,14 @@ const ModalView = ({ isOpenModal, setIsOpenModal, dataSource = [] }) => {
             />
           </div>
         </Flex>
-        <Table dataSource={data} columns={columns} style={{ height: 650, width: 'auto' }} bordered pagination={true} scroll={{ y: 500 }} />
+        <Table
+          dataSource={dataView}
+          columns={columns}
+          style={{ height: 650, width: 'auto' }}
+          bordered
+          pagination={true}
+          scroll={{ y: 500 }}
+        />
       </Flex>
     </Modal>
   );

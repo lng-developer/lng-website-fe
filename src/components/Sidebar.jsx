@@ -122,7 +122,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
           style={{ color: 'black' }}
         >
           <div className="flex justify-center items-center ml-0.5">
-            <Image src={logo} width={35} />
+            <Image src={logo} width={35} preview={false} />
           </div>
           <Flex width={!collapsed ? 0 : 202} flex={1} justify="space-between" align="center">
             <div className="visible flex flex-col justify-end truncate">
