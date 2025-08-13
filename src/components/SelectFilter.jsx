@@ -29,7 +29,7 @@ const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false 
   const menu = (
     <div style={{ width: 240, backgroundColor: 'white' }} className="shadow-sm rounded-lg">
       <div style={{ padding: '8px 8px 4px' }}>
-        <Input allowClear value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${title}`} />
+        <Input allowClear value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search`} />
       </div>
       <div style={{ maxHeight: 300, overflowY: 'auto', padding: '8px' }}>
         <Radio.Group

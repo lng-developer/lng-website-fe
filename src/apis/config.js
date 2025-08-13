@@ -24,4 +24,26 @@ const getConfigCost = (params) => {
   return instance.get('/config-cost-center', { params });
 };
 
-export { getAllConfig, createProductType, deleteProductType, deleteProductTypeItem, updateProductType, getConfigCost };
+const getConfigCostById = (id) => {
+  return instance.get(`/config-cost-center/${id}`);
+};
+
+const createConfigCost = (payload) => {
+  return instance.post('/config-cost-center', payload);
+};
+
+const updateConfigCost = (id, payload) => {
+  return instance.patch(`/config-cost-center/${id}`, payload);
+};
+
+export {
+  getAllConfig,
+  createProductType,
+  deleteProductType,
+  deleteProductTypeItem,
+  updateProductType,
+  getConfigCost,
+  createConfigCost,
+  getConfigCostById,
+  updateConfigCost,
+};

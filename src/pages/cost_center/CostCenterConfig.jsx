@@ -8,8 +8,11 @@ import { MdHistory, MdOutlineArrowBack } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { IoCopyOutline } from 'react-icons/io5';
 import StatusComponent from '../../components/StatusComponent';
-import { getAllConfig, getConfigCost } from '../../apis/config';
+import { createConfigCost, getAllConfig, getConfigCost, updateConfigCost } from '../../apis/config';
 import SelectProductType from '../../components/SelectProductType';
+import ModalAddConfig from './ModalAddConfig';
+import { toast } from 'react-toastify';
+import ModalEditConfig from './ModalEditConfig';
 const PAGE_SIZE = 10;
 
 const CostCenterConfig = () => {
@@ -20,6 +23,9 @@ const CostCenterConfig = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [productTypes, setProductTypes] = useState([]);
   const [valueFilter, setValueFilter] = useState('');
+  const [openModalAdd, setOpenModalAdd] = useState(false);
+  const [idEdit, setIdEdit] = useState('');
+  const [openModalEdit, setOpenModalEdit] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -54,10 +60,11 @@ const CostCenterConfig = () => {
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
+      dataIndex: '_id',
       key: 'actions',
       align: 'center',
       fixed: 'left',
-      render: () => (
+      render: (record) => (
         <Flex gap={10} justify="center">
           <Tooltip placement="top" title="View History">
             <button
@@ -72,7 +79,14 @@ const CostCenterConfig = () => {
             </button>
           </Tooltip>
           <Tooltip placement="top" title="Edit">
-            <button className="cursor-pointer border rounded" style={{ padding: 6, borderColor: dataColors.default }}>
+            <button
+              className="cursor-pointer border rounded"
+              style={{ padding: 6, borderColor: dataColors.default }}
+              onClick={() => {
+                setOpenModalEdit(true);
+                setIdEdit(record);
+              }}
+            >
               <BiSolidEdit size={20} />
             </button>
           </Tooltip>
@@ -90,7 +104,12 @@ const CostCenterConfig = () => {
       key: 'status',
       align: 'center',
       fixed: 'left',
-      render: (text) => <Switch checked={text === 'Active' ? true : false} />,
+      render: (text) => (
+        <Switch
+          checked={text?.status === 'Active' ? true : false}
+          onChange={(val) => handleUpdateStatus(text?._id, { status: val === true ? 'Active' : 'inActive' })}
+        />
+      ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Code</span>,
@@ -170,14 +189,14 @@ const CostCenterConfig = () => {
       dataIndex: 'is_set',
       key: 'is_set',
       align: 'center',
-      render: (text) => <Switch checked={text} />,
+      render: (text) => <Switch checked={text?.is_set} onChange={(val) => handleUpdateStatus(text?._id, { is_set: val })} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Is Pack</span>,
       dataIndex: 'is_pack',
       key: 'is_pack',
       align: 'center',
-      render: (text) => <Switch checked={text} />,
+      render: (text) => <Switch checked={text?.is_pack} onChange={(val) => handleUpdateStatus(text?._id, { is_pack: val })} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Size Position</span>,
@@ -213,7 +232,9 @@ const CostCenterConfig = () => {
       key: 'product_type_from_platform',
       align: 'center',
       fixed: 'right',
-      render: (text) => <StatusComponent title={text} color={dataColors.default} isDefault={true} />,
+      render: (text) => {
+        return text ? <StatusComponent title={text} color={dataColors.default} isDefault={true} /> : <></>;
+      },
     },
   ];
 
@@ -221,7 +242,24 @@ const CostCenterConfig = () => {
     try {
       const response = await getConfigCost(params);
       if (response.status === 200) {
-        setConfigs(response.data?.items);
+        const result = response.data?.items?.map((item) => {
+          return {
+            ...item,
+            status: {
+              _id: item?._id,
+              status: item?.status,
+            },
+            is_set: {
+              _id: item?._id,
+              is_set: item?.is_set,
+            },
+            is_pack: {
+              _id: item?._id,
+              is_pack: item?.is_pack,
+            },
+          };
+        });
+        setConfigs(result);
         setTotalCount(response.data?.total);
       } else {
         console.log('error');
@@ -256,6 +294,87 @@ const CostCenterConfig = () => {
     }
   };
 
+  const handleAddConfig = async (values) => {
+    const arrayFields = [
+      'customize_size_key',
+      'customize_color_key',
+      'customize_product_type_key',
+      'customize_product_type_size_key',
+      'customize_product_type_color_key',
+      'combination_product_type_key',
+    ];
+
+    arrayFields.forEach((field) => {
+      if (typeof values[field] === 'string') {
+        values[field] = values[field]
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean);
+      }
+    });
+
+    try {
+      const response = await createConfigCost(values);
+      if (response.status === 201) {
+        toast.success('Create success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Create error!');
+    } finally {
+      setOpenModalAdd(false);
+      fetchAllConfig();
+    }
+  };
+
+  const handleEditConfig = async (values) => {
+    const arrayFields = [
+      'customize_size_key',
+      'customize_color_key',
+      'customize_product_type_key',
+      'customize_product_type_size_key',
+      'customize_product_type_color_key',
+      'combination_product_type_key',
+    ];
+
+    arrayFields.forEach((field) => {
+      if (typeof values[field] === 'string') {
+        values[field] = values[field]
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean);
+      }
+    });
+
+    try {
+      const response = await updateConfigCost(idEdit, values);
+      if (response.status === 200) {
+        toast.success('Update success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Update error!');
+    } finally {
+      setOpenModalEdit(false);
+      fetchAllConfig();
+    }
+  };
+
+  const handleUpdateStatus = async (id, params) => {
+    try {
+      const response = await updateConfigCost(id, params);
+      if (response.status === 200) {
+        toast.success('Update success!', { autoClose: 500 });
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Update error!');
+    } finally {
+      setOpenModalEdit(false);
+      fetchAllConfig();
+    }
+  };
+
   useEffect(() => {
     fetchAllProductType();
   }, []);
@@ -274,7 +393,7 @@ const CostCenterConfig = () => {
           <div className="flex justify-center items-center">
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              //   onClick={handleClickAdd}
+              onClick={() => setOpenModalAdd(true)}
             >
               <MdAdd size={20} color="black" />
               <span className="text-sm font-medium" style={{ color: 'black' }}>
@@ -340,6 +459,19 @@ const CostCenterConfig = () => {
           />
         </div>
       </div>
+      <ModalAddConfig
+        open={openModalAdd}
+        onCancel={() => setOpenModalAdd(false)}
+        onSubmit={handleAddConfig}
+        sellerProductOptions={productTypes}
+      />
+      <ModalEditConfig
+        open={openModalEdit}
+        onCancel={() => setOpenModalEdit(false)}
+        onSubmit={handleEditConfig}
+        sellerProductOptions={productTypes}
+        idEdit={idEdit}
+      />
     </div>
   );
 };
