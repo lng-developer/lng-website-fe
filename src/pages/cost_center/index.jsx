@@ -459,7 +459,12 @@ const CostCenterProductTypes = () => {
         setDataView={setDataView}
         dataView={dataView}
       />
-      <ModalAddProductType open={openModalAdd} onCancel={() => setOpenModalAdd(false)} fetchAllConfig={fetchAllConfig} />
+      <ModalAddProductType
+        open={openModalAdd}
+        onCancel={() => setOpenModalAdd(false)}
+        vendorProducts={vendorProducts}
+        fetchAllConfig={fetchAllConfig}
+      />
       <ModalDelete
         title="Delete Product Type"
         isShowModalDelete={isShowModalDelete}

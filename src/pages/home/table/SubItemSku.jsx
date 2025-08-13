@@ -1,7 +1,8 @@
 import StatusComponent from '../../../components/StatusComponent';
 import { Link } from 'react-router-dom';
 import { dataColors } from '../../../utils/dataColors';
-import { FaLink } from 'react-icons/fa6';
+import { RiLinkM } from 'react-icons/ri';
+import { Tooltip } from 'antd';
 
 const SubItemSku = ({ sku, asin }) => {
   return (
@@ -11,11 +12,13 @@ const SubItemSku = ({ sku, asin }) => {
           <div className="flex items-center">
             <span className="font-medium">SKU:</span>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-1 items-center">
             <StatusComponent title={sku} color="#08969b" />
-            <Link target="_blank" to={`http://amazon.com/gp/product/${asin}`}>
-              <FaLink size={18} />
-            </Link>
+            <Tooltip title="Open Link">
+              <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${asin}`}>
+                <RiLinkM size={18} />
+              </Link>
+            </Tooltip>
           </div>
         </div>
       )}

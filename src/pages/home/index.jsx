@@ -10,7 +10,7 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useEffect, useState } from 'react';
-import { getAllCountStatus, getALlOrder, getALlShop } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop, retestBasecode } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
@@ -25,6 +25,7 @@ import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
 import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
+import { toast } from 'react-toastify';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -228,6 +229,23 @@ const Home = () => {
     updateFilter({ statuses: status, isNoCostCenter: false, openCase: false });
   };
 
+  const handleRetest = async (id) => {
+    try {
+      const response = await retestBasecode({
+        orderId: id,
+      });
+      if (response.status === 200) {
+        toast.success('Retest success!');
+        console.log(response.data);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Retest error!');
+    } finally {
+      fetchAllOrder(filters);
+    }
+  };
+
   // render Orders
   const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
@@ -264,8 +282,12 @@ const Home = () => {
           <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
         ),
         config_cost_center: (
-          <div className="border-1 rounded-full px-2 cursor-pointer" style={{ borderColor: dataColors.pending }}>
-            <span className="font-medium ml-2 whitespace-nowrap" style={{ color: dataColors.pending }}>
+          <div
+            className="border-1 rounded-full px-2 cursor-pointer"
+            style={{ borderColor: dataColors.pending }}
+            onClick={() => handleRetest(item?.orderId)}
+          >
+            <span className="font-medium whitespace-nowrap" style={{ color: dataColors.pending }}>
               Re-test
             </span>
           </div>

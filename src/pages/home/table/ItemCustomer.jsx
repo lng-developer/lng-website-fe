@@ -1,6 +1,6 @@
-import { Col, Flex, Popover } from 'antd';
+import { Col, Flex, Popover, Tooltip } from 'antd';
 import { dataColors } from '../../../utils/dataColors';
-import { FaEdit } from 'react-icons/fa';
+import { BiSolidEdit } from 'react-icons/bi';
 import { IoClose } from 'react-icons/io5';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
@@ -202,11 +202,11 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
       return <FcApproval size={18} />;
     }
     return (
-      <Popover content={<div className="font-medium">Warning address</div>}>
+      <Tooltip title="Warning address">
         <button className="hover:underline cursor-pointer hover:text-blue">
           <IoWarningOutline size={15} color={dataColors.cancelled} />
         </button>
-      </Popover>
+      </Tooltip>
     );
   };
   return (
@@ -217,11 +217,11 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
             <span className="font-medium hover:text-blue-600 ">{customerInfor?.name}</span>
           </button>
         </Popover>
-        <Popover content={<div className="font-medium">Edit</div>} title="">
+        <Tooltip title="Edit">
           <button className="cursor-pointer" onClick={() => setIsShowModalUpdate(true)}>
-            <FaEdit color={dataColors.pending} />
+            <BiSolidEdit size={16} color={dataColors.pending} />
           </button>
-        </Popover>
+        </Tooltip>
         {renderWarningAddress()}
       </div>
       <ModalUpdateCustomer

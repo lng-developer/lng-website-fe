@@ -1,13 +1,10 @@
 // AddSellerProductTypeModal.jsx
-import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, Checkbox, Button, Card, Space } from 'antd';
 import { PlusOutlined, CloseOutlined } from '@ant-design/icons';
-import { getALlVendorProduct } from '../../apis/vendor';
 import { createProductType } from '../../apis/config';
 import { toast } from 'react-toastify';
 
-function ModalAddProductType({ open, loading, onCancel, fetchAllConfig }) {
-  const [vendorProduct, setVendorProduct] = useState([]);
+function ModalAddProductType({ open, loading, onCancel, fetchAllConfig, vendorProducts }) {
   const [form] = Form.useForm();
 
   const handleOk = () => form.submit();
@@ -27,27 +24,6 @@ function ModalAddProductType({ open, loading, onCancel, fetchAllConfig }) {
       fetchAllConfig();
     }
   };
-
-  const fetchAllVendor = async () => {
-    try {
-      const response = await getALlVendorProduct();
-      if (response.status === 200) {
-        const result = response.data?.data?.map((item) => {
-          return {
-            value: item?._id,
-            label: item?.product_name,
-          };
-        });
-        setVendorProduct(result);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllVendor();
-  }, []);
 
   return (
     <Modal
@@ -83,7 +59,7 @@ function ModalAddProductType({ open, loading, onCancel, fetchAllConfig }) {
                   }
                 >
                   <Form.Item name={[field.name, 'vendor_product']} rules={[{ required: true, message: 'Please select vendor product' }]}>
-                    <Select placeholder="Select Vendor Product" options={vendorProduct} showSearch optionFilterProp="label" allowClear />
+                    <Select placeholder="Select Vendor Product" options={vendorProducts} showSearch optionFilterProp="label" allowClear />
                   </Form.Item>
 
                   <Form.Item valuePropName="checked" style={{ marginTop: 10 }}>

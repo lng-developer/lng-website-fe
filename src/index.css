@@ -19,6 +19,31 @@
   @apply text-center;
 }
 
+/* Active item */
+.ant-menu-item-selected {
+  background-color: #f1f5f9 !important; /* nền */
+  color: #000 !important; /* chữ */
+}
+
+/* Icon trong item active */
+.ant-menu-item-selected .ant-menu-item-icon {
+  color: #000 !important;
+}
+
+/* Hover */
+.ant-menu-item:hover {
+  color: #000 !important;
+}
+
+/* Nền trắng cho toàn bộ phần submenu */
+.ant-menu-submenu .ant-menu-sub {
+  background-color: #ffffff !important; /* trắng */
+}
+
+.ant-menu-submenu-title {
+  color: #000 !important;
+}
+
 .ant-menu-item .anticon {
   display: flex;
   align-items: center;
@@ -30,12 +55,14 @@
   padding-left: 12px !important;
   display: flex !important;
   align-items: center !important;
+  font-weight: 500 !important;
 }
 
 .ant-menu-submenu-title {
   padding-left: 12px !important;
   display: flex !important;
   align-items: center !important;
+  font-weight: 500 !important;
 }
 
 :where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-inline,

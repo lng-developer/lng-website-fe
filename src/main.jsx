@@ -9,6 +9,7 @@ import en from './locales/en/translation.json';
 import vi from './locales/vi/translation.json';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastContainer } from 'react-toastify';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -20,9 +21,14 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+// Tạo một instance QueryClient
+const queryClient = new QueryClient();
+
 createRoot(document.getElementById('root')).render(
-  <AuthProvider>
-    <App />
-    <ToastContainer />
-  </AuthProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <App />
+      <ToastContainer />
+    </AuthProvider>
+  </QueryClientProvider>
 );

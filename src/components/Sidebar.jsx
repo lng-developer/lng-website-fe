@@ -118,7 +118,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
         }`}
       >
         <div
-          className="h-[60px] flex items-center gap-4 bg-background flex-none sticky top-0 z-50 px-1 py-3 shadow-sm md:px-[10px]"
+          className="h-[60px] flex items-center gap-4 bg-background flex-none sticky top-0 z-50 py-3 shadow-sm md:px-[7.5px]"
           style={{ color: 'black' }}
         >
           <div className="flex justify-center items-center ml-0.5">
@@ -208,9 +208,9 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
         </div>
         <button
           onClick={toggleSidebar}
-          className={`absolute bottom-30 right-[-12px] z-50 rounded-full shadow p-2 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
+          className={`absolute bottom-30 right-[-16px] z-50 rounded-full shadow p-3 bg-white cursor-pointer border-1 border-[${dataColors.default}]`}
         >
-          {collapsed ? <FaAnglesLeft color="black" /> : <FaAnglesRight color="black" />}
+          {collapsed ? <FaAnglesLeft color="black" size={15} /> : <FaAnglesRight color="black" size={15} />}
         </button>
       </aside>
       <Modal

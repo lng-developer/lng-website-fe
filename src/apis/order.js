@@ -64,6 +64,10 @@ const updateImage = (payload) => {
   return instance.put('/order/update-base-image', payload);
 };
 
+const retestBasecode = (payload) => {
+  return instance.post('/order/compute-base-cost', payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -77,4 +81,5 @@ export {
   updateOpenCase,
   removeCase,
   updateImage,
+  retestBasecode,
 };

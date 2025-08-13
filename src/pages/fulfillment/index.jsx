@@ -257,7 +257,14 @@ const FulfillmentScale = () => {
     ];
 
     return (
-      <Table columns={subColumns} dataSource={record.subItems} pagination={false} rowKey="key" rowClassName={() => 'table-row-center'} />
+      <Table
+        columns={subColumns}
+        dataSource={record.subItems}
+        pagination={false}
+        rowKey="key"
+        rowClassName={() => 'table-row-center'}
+        bordered
+      />
     );
   };
 

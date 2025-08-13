@@ -1,4 +1,4 @@
-import { Flex, Modal, Popover, Select } from 'antd';
+import { Flex, Modal, Select, Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 import { FaEdit } from 'react-icons/fa';
@@ -7,6 +7,7 @@ import { dataShippingType } from '../../../utils/dataShippingType';
 import { MdNotificationsActive } from 'react-icons/md';
 import { updateShippingType } from '../../../apis/order';
 import { toast } from 'react-toastify';
+import { BiSolidEdit } from 'react-icons/bi';
 
 const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
@@ -31,11 +32,11 @@ const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) =>
     <>
       <Flex gap={5} justify="center" align="center">
         <StatusComponent title={shipping_type} color={dataColors.success} />
-        <Popover content={<div className="font-medium">Edit</div>} title="">
+        <Tooltip title="Edit">
           <button className="cursor-pointer" onClick={() => setIsShowModalUpdate(true)}>
-            <FaEdit color={dataColors.pending} />
+            <BiSolidEdit size={16} color={dataColors.pending} />
           </button>
-        </Popover>
+        </Tooltip>
       </Flex>
       <Modal
         title="Update Shipping Type"

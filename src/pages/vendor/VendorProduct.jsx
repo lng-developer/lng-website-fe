@@ -1,4 +1,4 @@
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext, useNavigationType } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Image, Input, Modal, Pagination, Popover, Select, Switch, Table } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
@@ -27,6 +27,7 @@ const VendorProduct = () => {
     search: '',
     vendor: '',
   });
+  const navType = useNavigationType();
 
   const handleChangeStatus = async (id, value) => {
     try {
@@ -215,6 +216,9 @@ const VendorProduct = () => {
   }, []);
 
   useEffect(() => {
+    if (navType === 'POP') {
+      return;
+    }
     fetchAllVendorProduct(filters);
   }, [filters]);
   return (
