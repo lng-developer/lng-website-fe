@@ -8,8 +8,8 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en/translation.json';
 import vi from './locales/vi/translation.json';
 import { AuthProvider } from './context/AuthContext.jsx';
-import { ToastContainer } from 'react-toastify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -28,7 +28,7 @@ createRoot(document.getElementById('root')).render(
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <App />
-      <ToastContainer />
+      <Toaster position="top-right" richColors closeButton />
     </AuthProvider>
   </QueryClientProvider>
 );

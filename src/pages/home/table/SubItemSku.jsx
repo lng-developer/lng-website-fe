@@ -13,7 +13,7 @@ const SubItemSku = ({ sku, asin }) => {
             <span className="font-medium">SKU:</span>
           </div>
           <div className="flex gap-1 items-center">
-            <StatusComponent title={sku} color="#08969b" />
+            <StatusComponent title={sku} color={dataColors.asin} />
             <Tooltip title="Open Link">
               <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${asin}`}>
                 <RiLinkM size={18} />

@@ -1,8 +1,8 @@
-import { Button, Flex, Input, Popover } from 'antd';
+import { Input, Popover } from 'antd';
 import { updateBaseCost } from '../../../apis/order';
-import { toast } from 'react-toastify';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import useDebounce from '../../../hooks/useDebounce';
+import { toast } from 'sonner';
 
 const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
   const [value, setValue] = useState('');
@@ -13,11 +13,11 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
     if (!isNaN(newValue) && newValue !== oldValue) {
       try {
         await updateBaseCost(orderId, newValue);
-        toast.success(`Updated base cost for ${orderId}`, { autoClose: 1000 });
+        toast.success(`Updated base cost for ${orderId}`);
         fetchAllOrder(filters);
       } catch (err) {
         console.error(err);
-        toast.error(`Failed to update base cost for ${orderId}`, { autoClose: 1000 });
+        toast.error(`Failed to update base cost for ${orderId}`);
       }
     }
   };
@@ -26,7 +26,7 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
       defaultValue={base_cost ? base_cost : 0}
       size="small"
       style={{
-        width: 60,
+        width: 70,
       }}
       prefix="$"
       onChange={(e) => setValue(e.target.value)}
@@ -46,4 +46,4 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
   );
 };
 
-export default ItemBaseCost;
+export default memo(ItemBaseCost);

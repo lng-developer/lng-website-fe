@@ -22,7 +22,7 @@ const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
           <div>
             <span className="font-medium">Customer Photo: </span>
           </div>
-          <div className="w-[80px] h-[80px] mt-2 rounded-lg overflow-hidden shadow-xl">
+          <div className="w-[80px] h-[80px] mt-2 rounded-lg overflow-hidden shadow-md">
             <Image width={80} src={linkImage} />
           </div>
         </div>

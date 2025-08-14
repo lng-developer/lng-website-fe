@@ -8,8 +8,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { routes } from '../routes/routes';
 import { useEffect, useState } from 'react';
 import logo from '../assets/logo.png';
-import { toast } from 'react-toastify';
 import { changePassword } from '../apis/auth';
+import { toast } from 'sonner';
 const { Sider } = Layout;
 
 export default function Sidebar({ collapsed, toggleSidebar }) {

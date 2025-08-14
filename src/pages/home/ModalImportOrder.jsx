@@ -2,7 +2,7 @@ import { Modal, Radio, Select, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getALlShop, importOrderByFile } from '../../apis/order';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 const { Dragger } = Upload;
 
 const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {

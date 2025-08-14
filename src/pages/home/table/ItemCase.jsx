@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { FcPlus } from 'react-icons/fc';
 import { getAllCaseByOrder, removeCase, updateOpenCase } from '../../../apis/order';
-import { Checkbox, Flex, Modal, Popover, Select } from 'antd';
-import { toast } from 'react-toastify';
+import { Checkbox, Flex, Modal, Select, Tooltip } from 'antd';
 import { dataColors } from '../../../utils/dataColors';
+import { toast } from 'sonner';
 
 const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
   const [isShowModal, setIsShowModal] = useState(false);
@@ -77,6 +77,7 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
   useEffect(() => {
     fetchAllCase();
   }, [isShowModal]);
+
   return (
     <>
       <Flex
@@ -98,11 +99,11 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
             <span style={{ color: dataColors.cancelled, whiteSpace: 'nowrap', fontSize: 12 }}>{item?.name}</span>
           </div>
         ))}
-        <Popover content={<div className="font-medium">Open case</div>}>
+        <Tooltip title="Open case">
           <div className="flex justify-center cursor-pointer" onClick={() => setIsShowModal(true)}>
             <FcPlus size={20} />
           </div>
-        </Popover>
+        </Tooltip>
       </Flex>
       <Modal
         title="Open case"
@@ -167,4 +168,4 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
   );
 };
 
-export default ItemCase;
+export default memo(ItemCase);

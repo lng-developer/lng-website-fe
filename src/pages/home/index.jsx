@@ -1,4 +1,4 @@
-import { Flex, Input, Pagination, Table } from 'antd';
+import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -9,7 +9,7 @@ import SubItemCustom from './table/SubItemCustom';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getAllCountStatus, getALlOrder, getALlShop, retestBasecode } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
@@ -23,9 +23,10 @@ import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
+import { MdOutlineRefresh } from 'react-icons/md';
 import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -88,8 +89,8 @@ const Home = () => {
   };
 
   const handlePageChange = (page, pageSize) => {
-    setCurrentPage(page);
     updateFilter({ page: page, perPage: pageSize });
+    setCurrentPage(page);
   };
 
   const handleOnclick = () => {
@@ -97,7 +98,7 @@ const Home = () => {
   };
 
   // fetch count order by status
-  const fetchCountStatus = async () => {
+  const fetchCountStatus = useCallback(async () => {
     try {
       const response = await getAllCountStatus({ ...filters, openCase: false });
       if (response.status === 200) {
@@ -112,9 +113,11 @@ const Home = () => {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, [filters]);
 
-  const fetchAllOrder = async (params) => {
+  console.log('render');
+
+  const fetchAllOrder = useCallback(async (params) => {
     setLodaing(true);
     try {
       const response = await getALlOrder(params);
@@ -129,7 +132,7 @@ const Home = () => {
     } finally {
       setLodaing(false);
     }
-  };
+  }, []);
 
   const handleColorStatus = (stt) => {
     switch (stt) {
@@ -247,11 +250,15 @@ const Home = () => {
   };
 
   // render Orders
-  const renderOrderInTable = (data = []) => {
+  const renderOrderInTable = useCallback((data = []) => {
     const results = data.map((item, index) => {
       return {
         key: item?.orderId,
-        order: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
+        order: (
+          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+            <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
+          </button>
+        ),
         customer: (
           <ItemCustomer
             customerInfor={item?.customer_infor}
@@ -334,7 +341,7 @@ const Home = () => {
       };
     });
     return results;
-  };
+  }, []);
 
   const fetchAllShop = async () => {
     try {
@@ -347,13 +354,26 @@ const Home = () => {
     }
   };
 
+  const handleCopy = async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.log(err);
+      toast.error('Failed to copy!');
+    }
+  };
+
   useEffect(() => {
     fetchAllShop();
   }, []);
 
   useEffect(() => {
-    fetchAllOrder(filters);
     fetchCountStatus();
+  }, []);
+
+  useEffect(() => {
+    fetchAllOrder(filters);
   }, [filters]);
 
   useEffect(() => {
@@ -446,6 +466,17 @@ const Home = () => {
                 }}
               />
             </div>
+            <Tooltip title="Refresh">
+              <button
+                className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                onClick={() => {
+                  fetchAllOrder(filters);
+                  toast.success('Refresh success!');
+                }}
+              >
+                <MdOutlineRefresh size={20} />
+              </button>
+            </Tooltip>
           </div>
           <div>
             <Pagination

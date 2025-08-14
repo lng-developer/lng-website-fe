@@ -1,13 +1,12 @@
 import { Flex, Modal, Select, Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
-import { FaEdit } from 'react-icons/fa';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { dataShippingType } from '../../../utils/dataShippingType';
 import { MdNotificationsActive } from 'react-icons/md';
 import { updateShippingType } from '../../../apis/order';
-import { toast } from 'react-toastify';
 import { BiSolidEdit } from 'react-icons/bi';
+import { toast } from 'sonner';
 
 const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
@@ -18,13 +17,14 @@ const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) =>
     try {
       const response = await updateShippingType(orderId, shippingType);
       if (response.status === 200) {
-        toast.success(`Updated shipping type success!`, { autoClose: 1000 });
-        fetchAllOrder(filters);
-        setIsShowModalUpdate(false);
+        toast.success(`Updated shipping type success!`);
       }
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to update shipping type!`, { autoClose: 1000 });
+      toast.error(`Failed to update shipping type!`);
+    } finally {
+      setIsShowModalUpdate(false);
+      fetchAllOrder(filters);
     }
   };
 
@@ -91,4 +91,4 @@ const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) =>
   );
 };
 
-export default ItemShippingType;
+export default memo(ItemShippingType);

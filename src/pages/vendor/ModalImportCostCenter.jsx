@@ -1,10 +1,10 @@
 import { Modal, Spin, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import { importCostCenter } from '../../apis/vendor';
+import { toast } from 'sonner';
 const { Dragger } = Upload;
 
 const ModalImportCostCenter = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCenter, filters, productId }) => {

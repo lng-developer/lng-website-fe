@@ -1,8 +1,8 @@
 import { Col, Flex, Input, Modal } from 'antd';
 import { useState } from 'react';
-import { toast } from 'react-toastify';
 import { updateCustomerInfor } from '../../apis/order';
 import isEqual from 'lodash.isequal';
+import { toast } from 'sonner';
 
 const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, orderId, fetchAllOrder, filters }) => {
   const [formData, setFormData] = useState({

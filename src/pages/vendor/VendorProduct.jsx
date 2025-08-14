@@ -1,4 +1,4 @@
-import { Link, useOutletContext, useNavigationType } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Image, Input, Modal, Pagination, Popover, Select, Switch, Table } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
@@ -9,7 +9,7 @@ import NoImage from '../../assets/NoImage.jpg';
 import ModalCreatVendorProduct from './ModalCreatVendorProduct';
 import { LuImport } from 'react-icons/lu';
 import ModalImportVendor from './ModalImportVendor';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 const PAGE_SIZE = 10;
 
 const VendorProduct = () => {
@@ -27,7 +27,6 @@ const VendorProduct = () => {
     search: '',
     vendor: '',
   });
-  const navType = useNavigationType();
 
   const handleChangeStatus = async (id, value) => {
     try {
@@ -216,9 +215,6 @@ const VendorProduct = () => {
   }, []);
 
   useEffect(() => {
-    if (navType === 'POP') {
-      return;
-    }
     fetchAllVendorProduct(filters);
   }, [filters]);
   return (

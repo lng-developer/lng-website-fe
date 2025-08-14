@@ -1,14 +1,14 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
-import { Flex, Input, Modal, Popover, Select } from 'antd';
+import { Flex, Input, Modal, Select, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
-import { Space, Table, Tag } from 'antd';
+import { Table } from 'antd';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { addVendor, deleteVendor, getALlVendor, updateVender } from '../../apis/vendor';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const Vendor = () => {
   const { collapsed } = useOutletContext();
@@ -66,7 +66,7 @@ const Vendor = () => {
       render: (_, record) => {
         return (
           <Flex gap={10}>
-            <Popover content={<div className="font-medium">Edit</div>} title="">
+            <Tooltip title="Edit">
               <button
                 className="cursor-pointer"
                 onClick={() => {
@@ -77,8 +77,8 @@ const Vendor = () => {
               >
                 <BiSolidEdit size={20} />
               </button>
-            </Popover>
-            <Popover content={<div className="font-medium">Delete</div>} title="">
+            </Tooltip>
+            <Tooltip title="Delete">
               <button
                 className="cursor-pointer"
                 onClick={() => {
@@ -88,7 +88,7 @@ const Vendor = () => {
               >
                 <MdDeleteOutline size={20} />
               </button>
-            </Popover>
+            </Tooltip>
           </Flex>
         );
       },

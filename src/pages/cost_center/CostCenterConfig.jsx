@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
-import SelectFilter from '../../components/SelectFilter';
-import { Col, Flex, Input, Pagination, Row, Switch, Table, Tooltip } from 'antd';
+import { Flex, Input, Pagination, Switch, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
-import { MdHistory, MdOutlineArrowBack } from 'react-icons/md';
+import { MdHistory } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { IoCopyOutline } from 'react-icons/io5';
 import StatusComponent from '../../components/StatusComponent';
 import { createConfigCost, getAllConfig, getConfigCost, updateConfigCost } from '../../apis/config';
 import SelectProductType from '../../components/SelectProductType';
 import ModalAddConfig from './ModalAddConfig';
-import { toast } from 'react-toastify';
 import ModalEditConfig from './ModalEditConfig';
+import { toast } from 'sonner';
 const PAGE_SIZE = 10;
 
 const CostCenterConfig = () => {
@@ -364,7 +363,7 @@ const CostCenterConfig = () => {
     try {
       const response = await updateConfigCost(id, params);
       if (response.status === 200) {
-        toast.success('Update success!', { autoClose: 500 });
+        toast.success('Update success!');
       }
     } catch (error) {
       console.log(error);

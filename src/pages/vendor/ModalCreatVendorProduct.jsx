@@ -2,7 +2,7 @@ import { Flex, Input, Modal, Select } from 'antd';
 import React, { useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
 import { addVendorProduct } from '../../apis/vendor';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd, fetchAllProductCostCenter, filters, vendors }) => {
   const [valueProductName, setValueProductName] = useState('');

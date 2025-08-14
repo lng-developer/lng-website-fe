@@ -44,7 +44,7 @@ export const topMenus = [
 export const detailMenus = {
   sales: [
     {
-      key: routes.order_amazon,
+      key: 'orders',
       label: 'Orders',
       icon: <LuBox size={20} />,
       children: [

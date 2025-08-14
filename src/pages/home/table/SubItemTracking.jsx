@@ -1,7 +1,8 @@
 import { Input, Select } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { updateStatusOrder } from '../../../apis/order';
-import { toast } from 'react-toastify';
+import { memo } from 'react';
+import { toast } from 'sonner';
 
 const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, filters, fetchCountStatus }) => {
   const handleSelect = async (value) => {
@@ -10,9 +11,9 @@ const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, filters, fe
       if (result.status === 200) {
         fetchAllOrder(filters);
         fetchCountStatus();
-        toast.success(result.data?.message, { autoClose: 1500 });
+        toast.success(result.data?.message);
       } else {
-        toast.error(result.data?.message, { autoClose: 1500 });
+        toast.error(result.data?.message);
       }
     } catch (error) {
       toast.error(error.response.data?.message);
@@ -45,4 +46,4 @@ const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, filters, fe
   );
 };
 
-export default SubItemTracking;
+export default memo(SubItemTracking);

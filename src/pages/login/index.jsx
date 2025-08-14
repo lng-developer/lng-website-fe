@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { login } from '../../apis/auth';
-import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../routes/routes';
 import { Image, Input } from 'antd';
 import lng from '../../assets/LNG.png';
+import { toast } from 'sonner';
 
 export default function Login() {
   const [userName, setUserName] = useState('');
@@ -62,7 +62,6 @@ export default function Login() {
                     setUserName(value.target.value);
                   }}
                   className="font-medium"
-                  onPressEnter={handleSubmit}
                 />
               </div>
               {errorUsername && (
@@ -88,6 +87,7 @@ export default function Login() {
                     setPassword(value.target.value);
                   }}
                   className="font-medium"
+                  onPressEnter={handleSubmit}
                 />
               </div>
               {errorPassword && (

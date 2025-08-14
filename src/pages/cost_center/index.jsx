@@ -4,16 +4,15 @@ import { Flex, Input, Tooltip, Table, Modal, Select } from 'antd';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
-import { BiSolidEdit } from 'react-icons/bi';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
 import { formatDate } from '../../utils/fomatDate';
 import { deleteProductType, deleteProductTypeItem, getAllConfig, updateProductType } from '../../apis/config';
 import ModalAddProductType from './ModalAddProductType';
-import { toast } from 'react-toastify';
 import ModalDelete from '../../components/ModalDelete';
 import { getALlVendorProduct } from '../../apis/vendor';
+import { toast } from 'sonner';
 
 const CostCenterProductTypes = () => {
   const { collapsed } = useOutletContext();
@@ -248,7 +247,7 @@ const CostCenterProductTypes = () => {
     },
   ];
 
-  const fetchAllConfig = async () => {
+  const fetchAllConfig = useCallback(async () => {
     try {
       const response = await getAllConfig();
       if (response.status === 200) {
@@ -275,7 +274,7 @@ const CostCenterProductTypes = () => {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
   const handleSearch = (value) => {
     if (!value) {

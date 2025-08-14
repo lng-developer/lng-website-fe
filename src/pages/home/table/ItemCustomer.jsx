@@ -2,11 +2,11 @@ import { Col, Flex, Popover, Tooltip } from 'antd';
 import { dataColors } from '../../../utils/dataColors';
 import { BiSolidEdit } from 'react-icons/bi';
 import { IoClose } from 'react-icons/io5';
-import { toast } from 'react-toastify';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import ModalUpdateCustomer from '../ModalUpdateCustomer';
 import { IoWarningOutline } from 'react-icons/io5';
 import { FcApproval } from 'react-icons/fc';
+import { toast } from 'sonner';
 
 const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_validation }) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
@@ -14,7 +14,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
   const handleCopy = async (textToCopy) => {
     try {
       await navigator.clipboard.writeText(textToCopy);
-      toast.success('Copied!', { autoClose: 800 });
+      toast.info('Copied to clipboard');
     } catch (err) {
       console.log(err);
       toast.error('Failed to copy!');
@@ -236,4 +236,4 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
   );
 };
 
-export default ItemCustomer;
+export default memo(ItemCustomer);

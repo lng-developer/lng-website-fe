@@ -2,7 +2,8 @@
 import { Modal, Form, Input, Select, Checkbox, Button, Card, Space } from 'antd';
 import { PlusOutlined, CloseOutlined } from '@ant-design/icons';
 import { createProductType } from '../../apis/config';
-import { toast } from 'react-toastify';
+import { memo } from 'react';
+import { toast } from 'sonner';
 
 function ModalAddProductType({ open, loading, onCancel, fetchAllConfig, vendorProducts }) {
   const [form] = Form.useForm();
@@ -79,4 +80,4 @@ function ModalAddProductType({ open, loading, onCancel, fetchAllConfig, vendorPr
   );
 }
 
-export default ModalAddProductType;
+export default memo(ModalAddProductType);
