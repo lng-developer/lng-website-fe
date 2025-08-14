@@ -65,10 +65,10 @@ const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false 
         style={{
           color: 'black',
           borderStyle: isSeller ? 'solid' : 'dashed',
-          width: isSeller ? '190px' : 'auto',
+          width: isSeller ? '220px' : 'auto',
           justifyContent: isSeller ? 'space-between' : 'center',
         }}
-        className="border-dashed inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
+        className="border-dashed inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9] whitespace-nowrap"
       >
         {!isSeller && (
           <div className="">

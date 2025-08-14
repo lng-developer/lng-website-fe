@@ -49,7 +49,7 @@ export const detailMenus = {
       icon: <LuBox size={20} />,
       children: [
         { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-        { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+        // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
       ],
     },
     {

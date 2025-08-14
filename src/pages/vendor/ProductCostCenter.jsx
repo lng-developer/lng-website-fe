@@ -143,7 +143,7 @@ const ProductCostCenter = () => {
       key: 'base_cost',
       render: (text) => (
         <div className="h-full">
-          <span className="font-medium">{text}</span>
+          <span className="font-medium">{Number(text.toFixed(2))}</span>
         </div>
       ),
       align: 'center',
@@ -209,14 +209,10 @@ const ProductCostCenter = () => {
       dataIndex: 'type',
       key: 'type',
       render: () => (
-        <Select
-          defaultValue="lucy"
-          style={{ width: 200 }}
-          options={[
-            { value: 'jack', label: 'Jack' },
-            { value: 'lucy', label: 'Lucy' },
-            { value: 'Yiminghe', label: 'yiminghe' },
-          ]}
+        <SelectFilter
+          title={'3D Custom Name Light'}
+          ListData={['3D Custom Name Light', 'T-shirt Gildan', 'License Plate Cover']}
+          isSeller={true}
         />
       ),
       align: 'center',

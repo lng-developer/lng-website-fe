@@ -24,9 +24,11 @@ import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import { useOutletContext } from 'react-router-dom';
 import { MdOutlineRefresh } from 'react-icons/md';
+import { BiRefresh } from 'react-icons/bi';
 import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
+import { getALlVendorProduct } from '../../apis/vendor';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -44,6 +46,7 @@ const Home = () => {
   const [selectShop, setSelectShop] = useState('');
   const [loading, setLodaing] = useState(false);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
+  const [vendorProduct, setVendorProduct] = useState([]);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -115,9 +118,7 @@ const Home = () => {
     }
   }, [filters]);
 
-  console.log('render');
-
-  const fetchAllOrder = useCallback(async (params) => {
+  const fetchAllOrder = async (params) => {
     setLodaing(true);
     try {
       const response = await getALlOrder(params);
@@ -132,7 +133,7 @@ const Home = () => {
     } finally {
       setLodaing(false);
     }
-  }, []);
+  };
 
   const handleColorStatus = (stt) => {
     switch (stt) {
@@ -162,12 +163,21 @@ const Home = () => {
     },
     { title: <span style={{ color: dataColors.title }}>Customer</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
     {
-      title: <span style={{ color: dataColors.title }}>Config Cost Center</span>,
+      title: (
+        <Flex vertical>
+          <span style={{ color: dataColors.title }}>Config Cost</span> <span style={{ color: dataColors.title }}>Center</span>
+        </Flex>
+      ),
       dataIndex: 'config_cost_center',
       key: 'config_cost_center',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'basecost', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title, marginLeft: !collapsed ? 0 : -5 }}>Basecost</span>,
+      dataIndex: 'base_cost',
+      key: 'basecost',
+      align: 'center',
+    },
     { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
     {
       title: <span style={{ color: dataColors.title }}>Delivery Date</span>,
@@ -176,7 +186,11 @@ const Home = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Handling Time</span>,
+      title: (
+        <Flex vertical style={{ marginLeft: !collapsed ? 0 : -5 }}>
+          <span style={{ color: dataColors.title }}>Handling</span> <span style={{ color: dataColors.title }}>Time</span>
+        </Flex>
+      ),
       dataIndex: 'handling_time',
       key: 'handling_time',
       align: 'center',
@@ -250,7 +264,7 @@ const Home = () => {
   };
 
   // render Orders
-  const renderOrderInTable = useCallback((data = []) => {
+  const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
       return {
         key: item?.orderId,
@@ -290,12 +304,15 @@ const Home = () => {
         ),
         config_cost_center: (
           <div
-            className="border-1 rounded-full px-2 cursor-pointer"
+            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center"
             style={{ borderColor: dataColors.pending }}
             onClick={() => handleRetest(item?.orderId)}
           >
-            <span className="font-medium whitespace-nowrap" style={{ color: dataColors.pending }}>
-              Re-test
+            <div>
+              <BiRefresh size={18} color={dataColors.pending} />
+            </div>
+            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+              Re-Test
             </span>
           </div>
         ),
@@ -326,7 +343,7 @@ const Home = () => {
             sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} />,
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-            cost_center: <SubItemCost />,
+            cost_center: <SubItemCost data={itemSub?.cost_center} vendorProduct={vendorProduct} />,
             tracking_note: (
               <SubItemTracking
                 status={item?.status}
@@ -341,7 +358,7 @@ const Home = () => {
       };
     });
     return results;
-  }, []);
+  };
 
   const fetchAllShop = async () => {
     try {
@@ -364,15 +381,35 @@ const Home = () => {
     }
   };
 
+  const fetchAllVendorProduct = async () => {
+    try {
+      const response = await getALlVendorProduct({
+        all: true,
+      });
+      if (response.status === 200) {
+        const result = response.data?.data?.map((item) => {
+          return {
+            value: item?._id,
+            label: `${item?.vendor?.name} - ${item?.product_name}`,
+          };
+        });
+        setVendorProduct(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllVendorProduct();
+  }, []);
+
   useEffect(() => {
     fetchAllShop();
   }, []);
 
   useEffect(() => {
     fetchCountStatus();
-  }, []);
-
-  useEffect(() => {
     fetchAllOrder(filters);
   }, [filters]);
 
@@ -384,7 +421,7 @@ const Home = () => {
   }, [orders, isShowRowkeys]);
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
@@ -491,7 +528,7 @@ const Home = () => {
         </div>
         <div className="mt-4">
           <Table
-            className="no-indent-table"
+            className="no-indent-table no-backgroud-title"
             columns={columns}
             dataSource={renderOrderInTable(orders)}
             expandable={{
@@ -515,6 +552,9 @@ const Home = () => {
             pagination={false}
             rowSelection={rowSelection}
             loading={loading}
+            sticky={{ offsetHeader: 0 }}
+            scroll={{ y: 670 }}
+            tableLayout="auto"
           />
         </div>
       </div>

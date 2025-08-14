@@ -12,6 +12,7 @@ const ModalCreatVendorProduct = ({ isShowModalAdd, setIsShowModalAdd, fetchAllPr
   // const [productType, setProductType] = useState('');
 
   const handleAddVendorProduct = async () => {
+    if (!selectVendor) return;
     try {
       const response = await addVendorProduct({
         vendor_id: selectVendor,

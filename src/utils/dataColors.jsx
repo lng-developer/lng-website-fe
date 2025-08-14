@@ -1,5 +1,5 @@
 const dataColors = {
-  success: '#38a00b',
+  success: '#39a00d',
   process: '#d46a08',
   pending: '#0958d7',
   purple: '#7248BA',
