@@ -106,6 +106,17 @@
   border-top: 1px solid #f0f0f0 !important;
 }
 
+:where(.css-7t2xvq).ant-table-wrapper
+  .ant-table-thead
+  > tr
+  > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before,
+:where(.css-7t2xvq).ant-table-wrapper
+  .ant-table-thead
+  > tr
+  > td:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
+  background-color: transparent !important;
+}
+
 .ant-table-row-level-0 tr {
   border-top: none !important;
 }
