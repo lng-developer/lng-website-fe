@@ -553,7 +553,7 @@ const Home = () => {
             rowSelection={rowSelection}
             loading={loading}
             sticky={{ offsetHeader: 0 }}
-            scroll={{ y: 750 }}
+            scroll={{ y: 850 }}
             tableLayout="auto"
           />
         </div>
