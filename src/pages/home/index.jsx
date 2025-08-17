@@ -47,6 +47,7 @@ const Home = () => {
   const [loading, setLodaing] = useState(false);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [vendorProduct, setVendorProduct] = useState([]);
+  const [tableHeight, setTableHeight] = useState(0);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -170,12 +171,14 @@ const Home = () => {
       ),
       dataIndex: 'config_cost_center',
       key: 'config_cost_center',
+      width: 100,
       align: 'center',
     },
     {
       title: <span style={{ color: dataColors.title, marginLeft: !collapsed ? 0 : -5 }}>Basecost</span>,
       dataIndex: 'base_cost',
       key: 'basecost',
+      width: 80,
       align: 'center',
     },
     { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
@@ -401,6 +404,23 @@ const Home = () => {
   };
 
   useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 265; // Chiều cao header nếu có
+      const marginBottom = 20;
+
+      const availableHeight = window.innerHeight - headerHeight - marginBottom;
+      setTableHeight(availableHeight);
+    };
+
+    handleResize(); // Gọi lần đầu
+    window.addEventListener('resize', handleResize); // Lắng nghe resize
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
     fetchAllVendorProduct();
   }, []);
 
@@ -553,7 +573,7 @@ const Home = () => {
             rowSelection={rowSelection}
             loading={loading}
             sticky={{ offsetHeader: 0 }}
-            scroll={{ y: 970 }}
+            scroll={{ y: tableHeight }}
             tableLayout="auto"
           />
         </div>

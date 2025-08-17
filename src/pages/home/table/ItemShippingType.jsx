@@ -28,10 +28,29 @@ const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) =>
     }
   };
 
+  const handleColor = (stt) => {
+    switch (stt) {
+      case 'Standard':
+        return dataColors.success;
+      case 'Expedited':
+        return dataColors.process;
+      case 'Overnight':
+        return dataColors.pending;
+      case 'Ground':
+        return dataColors.asin;
+      case 'Second Day':
+        return dataColors.process;
+      case 'Economy':
+        return dataColors.pending;
+      default:
+        return dataColors.default;
+    }
+  };
+
   return (
     <>
       <Flex gap={5} justify="center" align="center">
-        <StatusComponent title={shipping_type} color={dataColors.success} />
+        <StatusComponent title={shipping_type} color={handleColor(shipping_type)} />
         <Tooltip title="Edit">
           <button className="cursor-pointer" onClick={() => setIsShowModalUpdate(true)}>
             <BiSolidEdit size={16} color={dataColors.pending} />
