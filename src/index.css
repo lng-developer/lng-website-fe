@@ -29,8 +29,18 @@
   border-inline-start: none !important;
 }
 
+:where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > th,
+:where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > td {
+  border-bottom: none !important;
+}
+
+:where(.css-7t2xvq).ant-table-wrapper .ant-table.ant-table-bordered > .ant-table-container {
+  border-inline-start: none !important;
+  border-top: none !important;
+}
+
 .ant-table-content {
-  border: 1.5px solid #f0f0f0 !important;
+  border: 1px solid #f0f0f0 !important;
   border-radius: 8px;
   overflow: hidden;
 }
