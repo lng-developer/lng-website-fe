@@ -1,38 +1,57 @@
-import { Input, Select } from 'antd';
+import { Button, Input, Select } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
-import { updateStatusOrder } from '../../../apis/order';
-import { memo } from 'react';
+import { trackingOrder } from '../../../apis/order';
+import { memo, useState } from 'react';
 import { toast } from 'sonner';
 
-const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, filters, fetchCountStatus }) => {
-  const handleSelect = async (value) => {
+const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filters, fetchCountStatus, orderItemId }) => {
+  const [fulfillment, setFulfilment] = useState(tracking_info?.fulfillment);
+  const [tracking, setTracking] = useState(tracking_info?.tracking);
+  const [note, setNote] = useState(tracking_info?.note);
+  const [statusSelect, setStatusSelect] = useState(tracking_info?.status);
+  const [changeTracking, setChangeTracking] = useState(false);
+
+  const handleTracking = async () => {
+    if (changeTracking) {
+      setStatusSelect('Shipped');
+    }
     try {
-      const result = await updateStatusOrder(orderId, value);
-      if (result.status === 200) {
-        fetchAllOrder(filters);
-        fetchCountStatus();
-        toast.success(result.data?.message);
-      } else {
-        toast.error(result.data?.message);
+      const response = await trackingOrder(orderId, orderItemId, {
+        fulfillment: fulfillment,
+        tracking: tracking,
+        status: statusSelect,
+        note: note,
+      });
+
+      if (response.status == 200) {
+        toast.success('Update tracking success!');
       }
     } catch (error) {
-      toast.error(error.response.data?.message);
       console.log(error);
+      toast.error('Update tracking error!');
+    } finally {
+      fetchAllOrder(filters);
+      fetchCountStatus();
     }
   };
+
   return (
     <div>
       <div className="mb-2">
-        <Input style={{ width: 220 }} placeholder="Fulfillment" />
+        <Input value={fulfillment} style={{ width: 220 }} placeholder="Fulfillment" onChange={(e) => setFulfilment(e.target.value)} />
       </div>
       <div className="mb-2">
-        <Input style={{ width: 220 }} placeholder="Tracking" />
+        <Input value={tracking} style={{ width: 220 }} placeholder="Tracking" onChange={(e) => setTracking(e.target.value)} />
       </div>
       <div className="mb-2">
         <Select
-          defaultValue={status}
+          defaultValue={tracking_info?.status}
+          value={statusSelect}
           style={{ width: 220 }}
-          onChange={(value) => handleSelect(value)}
+          onChange={(value) => {
+            setChangeTracking(true);
+            setStatusSelect(value);
+          }}
           options={[
             { value: 'New', label: 'New' },
             { value: 'Fulfilled', label: 'Fulfilled' },
@@ -41,7 +60,19 @@ const SubItemTracking = ({ orderId = '', status = '', fetchAllOrder, filters, fe
           ]}
         />
       </div>
-      <TextArea rows={2} placeholder="Note" maxLength={200} style={{ width: 220 }} />
+      <div className="mb-2">
+        <TextArea
+          value={note}
+          rows={2}
+          placeholder="Note"
+          maxLength={200}
+          style={{ width: 220 }}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
+      <Button color="primary" onClick={handleTracking}>
+        Update tracking
+      </Button>
     </div>
   );
 };

@@ -68,6 +68,10 @@ const retestBasecode = (payload) => {
   return instance.post('/order/compute-base-cost', payload);
 };
 
+const trackingOrder = (orderId, orderItemId, payload) => {
+  return instance.put(`/order/${orderId}/items/${orderItemId}/tracking`, payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -82,4 +86,5 @@ export {
   removeCase,
   updateImage,
   retestBasecode,
+  trackingOrder,
 };

@@ -349,7 +349,8 @@ const Home = () => {
             cost_center: <SubItemCost data={itemSub?.cost_center} vendorProduct={vendorProduct} />,
             tracking_note: (
               <SubItemTracking
-                status={item?.status}
+                tracking_info={itemSub?.tracking_info}
+                orderItemId={itemSub?.orderItemId}
                 orderId={item?.orderId}
                 fetchAllOrder={fetchAllOrder}
                 filters={filters}
