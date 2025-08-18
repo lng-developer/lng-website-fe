@@ -71,7 +71,7 @@ const ModalEditConfig = ({ open, loading, onCancel, onSubmit, sellerProductOptio
           Cancel
         </Button>,
         <Button key="ok" type="primary" onClick={handleOk} loading={!!loading}>
-          update
+          Update
         </Button>,
       ]}
     >

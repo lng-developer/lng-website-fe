@@ -96,6 +96,15 @@
   font-weight: 500 !important;
 }
 
+.ant-menu-item:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Nếu là submenu item */
+.ant-menu-submenu-title:hover {
+  background-color: #f1f5f9 !important;
+}
+
 .ant-menu-submenu-title {
   padding-left: 12px !important;
   display: flex !important;
@@ -191,6 +200,8 @@
 
 .no-backgroud-title .ant-table-body {
   border-inline-start: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 8px;
 }
 
 .no-backgroud-title .ant-table-tbody > tr > td {
@@ -267,4 +278,12 @@
 
 :where(.css-dev-only-do-not-override-7t2xvq).ant-form-item {
   margin-bottom: 0px !important;
+}
+
+.ant-menu-submenu .ant-menu-sub {
+  margin-left: 12px;
+}
+
+.ant-menu-title-content {
+  font-weight: 500;
 }

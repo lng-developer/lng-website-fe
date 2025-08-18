@@ -14,6 +14,7 @@ import FulfillmentScale from './pages/fulfillment';
 import Listing from './pages/listing';
 import CostCenterProductTypes from './pages/cost_center';
 import CostCenterConfig from './pages/cost_center/CostCenterConfig';
+import ReportOrderCost from './pages/report/ReportOrderCost';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
+          <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

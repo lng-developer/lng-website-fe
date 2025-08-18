@@ -44,13 +44,13 @@ export const topMenus = [
 export const detailMenus = {
   sales: [
     {
-      key: 'orders',
+      key: routes.order_amazon,
       label: 'Orders',
       icon: <LuBox size={20} />,
-      children: [
-        { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-        // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
-      ],
+      // children: [
+      //   { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
+      //   // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+      // ],
     },
     {
       key: routes.sale_listing,
@@ -73,16 +73,16 @@ export const detailMenus = {
       label: 'Reports',
       icon: <TbReport size={20} />,
       children: [
-        { key: '', label: 'Orders Cost', icon: <CgShoppingBag size={20} /> },
+        { key: routes.report_ordersCost, label: 'Orders Cost', icon: <CgShoppingBag size={20} /> },
         { key: '', label: 'Listing Report', icon: <RiListIndefinite size={20} /> },
         {
           key: '',
           label: 'Sale Report',
           icon: <TbReportSearch size={20} />,
-          children: [
-            { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-            { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
-          ],
+          // children: [
+          //   { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
+          //   { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+          // ],
         },
         { key: '', label: 'Tool Scale Reports', icon: <FaBalanceScaleLeft size={20} /> },
         { key: '', label: 'Amazon Store Report', icon: <LuStar size={20} /> },

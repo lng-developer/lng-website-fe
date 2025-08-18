@@ -149,7 +149,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
             </button>
           </Flex>
         </div>
-        <div className="py-2">
+        <div className="py-2 font-medium">
           <Layout style={{ height: '100vh' }}>
             {/* Lớp 1 - Top Menu */}
             <Flex justify="center" style={{ background: '#fff', borderRight: '1px solid #eee' }}>
