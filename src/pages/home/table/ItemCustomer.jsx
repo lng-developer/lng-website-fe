@@ -212,7 +212,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
   return (
     <>
       <div className="flex items-center justify-center gap-2">
-        <Popover content={content} title={<span className="text-xl font-medium">Customer Information</span>}>
+        <Popover trigger="click" content={content} title={<span className="text-xl font-medium">Customer Information</span>}>
           <button className="hover:underline cursor-pointer hover:text-blue">
             <span className="font-medium hover:text-blue-600 ">{customerInfor?.name}</span>
           </button>

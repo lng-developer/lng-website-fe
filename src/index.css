@@ -201,7 +201,8 @@
 .no-backgroud-title .ant-table-body {
   border-inline-start: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
 }
 
 .no-backgroud-title .ant-table-tbody > tr > td {
