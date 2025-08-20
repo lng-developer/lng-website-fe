@@ -3,18 +3,15 @@ import TextArea from 'antd/es/input/TextArea';
 import { trackingOrder } from '../../../apis/order';
 import { memo, useState } from 'react';
 import { toast } from 'sonner';
+import { TbEdit } from 'react-icons/tb';
 
-const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filters, fetchCountStatus, orderItemId }) => {
+const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filters, fetchCountStatus, orderItemId, status }) => {
   const [fulfillment, setFulfilment] = useState(tracking_info?.fulfillment);
   const [tracking, setTracking] = useState(tracking_info?.tracking);
   const [note, setNote] = useState(tracking_info?.note);
   const [statusSelect, setStatusSelect] = useState(tracking_info?.status);
-  const [changeTracking, setChangeTracking] = useState(false);
 
   const handleTracking = async () => {
-    if (changeTracking) {
-      setStatusSelect('Shipped');
-    }
     try {
       const response = await trackingOrder(orderId, orderItemId, {
         fulfillment: fulfillment,
@@ -45,13 +42,10 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
       </div>
       <div className="mb-2">
         <Select
-          defaultValue={tracking_info?.status}
+          defaultValue={status}
           value={statusSelect}
           style={{ width: 220 }}
-          onChange={(value) => {
-            setChangeTracking(true);
-            setStatusSelect(value);
-          }}
+          onChange={(value) => setStatusSelect(value)}
           options={[
             { value: 'New', label: 'New' },
             { value: 'Fulfilled', label: 'Fulfilled' },
@@ -71,7 +65,8 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
         />
       </div>
       <Button color="primary" onClick={handleTracking}>
-        Update tracking
+        <TbEdit />
+        <span>Update</span>
       </Button>
     </div>
   );

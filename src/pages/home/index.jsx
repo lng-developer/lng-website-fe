@@ -352,6 +352,7 @@ const Home = () => {
                 tracking_info={itemSub?.tracking_info}
                 orderItemId={itemSub?.orderItemId}
                 orderId={item?.orderId}
+                status={item?.status}
                 fetchAllOrder={fetchAllOrder}
                 filters={filters}
                 fetchCountStatus={fetchCountStatus}
