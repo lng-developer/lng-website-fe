@@ -1,24 +1,38 @@
-import { Button, Input, Select } from 'antd';
-import TextArea from 'antd/es/input/TextArea';
+import React, { useMemo } from 'react';
+import { Form, Input, Select, Button } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
 import { trackingOrder } from '../../../apis/order';
-import { memo, useState } from 'react';
 import { toast } from 'sonner';
 import { TbEdit } from 'react-icons/tb';
+const { TextArea } = Input;
 
 const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filters, fetchCountStatus, orderItemId, status }) => {
-  const [fulfillment, setFulfilment] = useState(tracking_info?.fulfillment);
-  const [tracking, setTracking] = useState(tracking_info?.tracking);
-  const [note, setNote] = useState(tracking_info?.note);
-  const [statusSelect, setStatusSelect] = useState(tracking_info?.status);
+  const [form] = Form.useForm();
 
-  const handleTracking = async () => {
+  // Giá trị mặc định (giống ảnh: Status = New)
+  const initialValues = {
+    fulfillment: tracking_info?.fulfillment,
+    tracking: tracking_info?.tracking,
+    status: status,
+    note: tracking_info?.note,
+  };
+
+  // Watch toàn bộ field để tính "dirty"
+  const allValues = Form.useWatch([], form);
+
+  const hasErrors = useMemo(
+    () => form.getFieldsError().some(({ errors }) => errors.length),
+    [allValues] // mỗi lần đổi giá trị, antd sẽ tính lại validate
+  );
+
+  // so sánh nông các key trong object
+  const isSame = (a = {}, b = {}) => Object.keys({ ...a, ...b }).every((k) => String(a[k] ?? '') === String(b[k] ?? ''));
+
+  const isDirty = useMemo(() => !isSame(initialValues, allValues || {}), [allValues]);
+
+  const onFinish = async (values) => {
     try {
-      const response = await trackingOrder(orderId, orderItemId, {
-        fulfillment: fulfillment,
-        tracking: tracking,
-        status: statusSelect,
-        note: note,
-      });
+      const response = await trackingOrder(orderId, orderItemId, values);
 
       if (response.status == 200) {
         toast.success('Update tracking success!');
@@ -33,43 +47,43 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
   };
 
   return (
-    <div>
-      <div className="mb-2">
-        <Input value={fulfillment} style={{ width: 220 }} placeholder="Fulfillment" onChange={(e) => setFulfilment(e.target.value)} />
-      </div>
-      <div className="mb-2">
-        <Input value={tracking} style={{ width: 220 }} placeholder="Tracking" onChange={(e) => setTracking(e.target.value)} />
-      </div>
-      <div className="mb-2">
-        <Select
-          defaultValue={status}
-          value={statusSelect}
-          style={{ width: 220 }}
-          onChange={(value) => setStatusSelect(value)}
-          options={[
-            { value: 'New', label: 'New' },
-            { value: 'Fulfilled', label: 'Fulfilled' },
-            { value: 'Shipped', label: 'Shipped' },
-            { value: 'Cancelled', label: 'Cancelled' },
-          ]}
-        />
-      </div>
-      <div className="mb-2">
-        <TextArea
-          value={note}
-          rows={2}
-          placeholder="Note"
-          maxLength={200}
-          style={{ width: 220 }}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
-      <Button color="primary" onClick={handleTracking}>
-        <TbEdit />
-        <span>Update</span>
-      </Button>
+    <div style={{ maxWidth: 320 }}>
+      <Form form={form} layout="vertical" initialValues={initialValues} onFinish={onFinish} size="middle">
+        <Form.Item name="fulfillment" rules={[{ max: 100, message: 'Tối đa 100 ký tự' }]}>
+          <Input placeholder="Fulfillment" allowClear style={{ marginBottom: 10 }} />
+        </Form.Item>
+
+        <Form.Item name="tracking" rules={[{ max: 100, message: 'Tối đa 100 ký tự' }]}>
+          <Input placeholder="Tracking" allowClear style={{ marginBottom: 10 }} />
+        </Form.Item>
+
+        <Form.Item name="status" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
+          <Select
+            options={[
+              { value: 'New', label: 'New' },
+              { value: 'Fulfilled', label: 'Fulfilled' },
+              { value: 'Shipped', label: 'Shipped' },
+              { value: 'Cancelled', label: 'Cancelled' },
+            ]}
+            placeholder="Status"
+            style={{ marginBottom: 10 }}
+          />
+        </Form.Item>
+
+        <Form.Item name="note" rules={[{ max: 500, message: 'Tối đa 500 ký tự' }]}>
+          <TextArea rows={2} placeholder="Note" maxLength={200} allowClear style={{ marginBottom: 10 }} />
+        </Form.Item>
+
+        <Form.Item shouldUpdate>
+          {() => (
+            <Button block icon={<TbEdit />} htmlType="submit" disabled={!isDirty || hasErrors} style={{ width: '33%' }}>
+              Update
+            </Button>
+          )}
+        </Form.Item>
+      </Form>
     </div>
   );
 };
 
-export default memo(SubItemTracking);
+export default SubItemTracking;

@@ -76,7 +76,7 @@ export const detailMenus = {
         { key: routes.report_ordersCost, label: 'Orders Cost', icon: <CgShoppingBag size={20} /> },
         { key: '', label: 'Listing Report', icon: <RiListIndefinite size={20} /> },
         {
-          key: '',
+          key: routes.report_sale,
           label: 'Sale Report',
           icon: <TbReportSearch size={20} />,
           // children: [

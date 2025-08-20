@@ -263,6 +263,7 @@ const Home = () => {
       toast.error('Retest error!');
     } finally {
       fetchAllOrder(filters);
+      fetchCountStatus();
     }
   };
 

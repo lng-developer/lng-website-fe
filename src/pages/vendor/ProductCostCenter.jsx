@@ -205,6 +205,45 @@ const ProductCostCenter = () => {
       ],
     },
     {
+      title: <span style={{ color: dataColors.title }}>Additional Cost</span>,
+      key: 'additional_costs',
+      children: [
+        {
+          title: <span style={{ color: dataColors.title }}>Embroidery</span>,
+          dataIndex: 'additional_costs',
+          key: 'additional_costs_economy',
+          align: 'center',
+          render: (text) => (
+            <div className="h-full">
+              <span className="font-medium">{text?.embroidery || 0}</span>
+            </div>
+          ),
+        },
+        {
+          title: <span style={{ color: dataColors.title }}>Two-Side Print</span>,
+          dataIndex: 'additional_costs',
+          key: 'additional_costs_two_sided_print',
+          align: 'center',
+          render: (text) => (
+            <div className="h-full">
+              <span className="font-medium">{text?.two_sided_print || 0}</span>
+            </div>
+          ),
+        },
+        {
+          title: <span style={{ color: dataColors.title }}>Two Position Print</span>,
+          dataIndex: 'additional_costs',
+          key: 'additional_costs_two_position_print',
+          align: 'center',
+          render: (text) => (
+            <div className="h-full">
+              <span className="font-medium">{text?.two_position_print || 0}</span>
+            </div>
+          ),
+        },
+      ],
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Product Type For Design </span>,
       dataIndex: 'type',
       key: 'type',
@@ -262,6 +301,7 @@ const ProductCostCenter = () => {
             dosmetic: item?.dosmetic,
             international: item?.international,
             base_cost: item?.base_cost,
+            additional_costs: item?.additional_costs,
           };
         });
         setProductCostCenter(result);
@@ -334,6 +374,7 @@ const ProductCostCenter = () => {
             bordered={true}
             pagination={false}
             rowSelection={rowSelection}
+            scroll={{ x: 'max-content' }}
           />
         </div>
       </div>

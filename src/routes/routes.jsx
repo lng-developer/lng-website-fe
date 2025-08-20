@@ -26,6 +26,7 @@ const routes = {
   cost_center_group_standards: '/cost-center/group-standards',
   cost_center_productTypes: '/cost-center/product-types',
   report_ordersCost: '/report/orders-cost',
+  report_sale: '/report/sale',
 };
 
 export { routes };
