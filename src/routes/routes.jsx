@@ -7,6 +7,7 @@ const routes = {
   register: '/register',
   login: '/login',
   verify: '/verify',
+  unauthorized: '/unauthorized',
   vendor: '/vendor',
   vendor_list: '/vendor/list-vendor',
   vendor_products: '/vendor/vendor-products',

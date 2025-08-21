@@ -16,6 +16,7 @@ import CostCenterProductTypes from './pages/cost_center';
 import CostCenterConfig from './pages/cost_center/CostCenterConfig';
 import ReportOrderCost from './pages/report/ReportOrderCost';
 import SaleReport from './pages/report/SaleReport';
+import UnauthorizedPage from './pages/unauthorized';
 
 function App() {
   return (
@@ -35,12 +36,13 @@ function App() {
           <Route path={routes.sale_listing} element={<Listing />} />
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
-          <Route path={routes.product_const_center} element={<ProductCostCenter />} />
+          <Route path={routes.product_cost_center} element={<ProductCostCenter />} />
           <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
+          <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />
