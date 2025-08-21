@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       const parsed = JSON.parse(stored);
       setUser(parsed.user);
       setAccessToken(parsed.accessToken);
-      const roleUser = [parsed.user.role];
+      const roleUser = [parsed.user?.role];
       setRoles(roleUser || []);
     }
     setIsLoading(false);
