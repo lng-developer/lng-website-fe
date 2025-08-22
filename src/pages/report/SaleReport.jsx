@@ -5,7 +5,7 @@ import SelectFilter from '../../components/SelectFilter';
 import { Flex, Table, Tag } from 'antd';
 import { LuBoxes } from 'react-icons/lu';
 import { FaSackDollar, FaArrowTrendUp, FaMoneyBillWave } from 'react-icons/fa6';
-import { eachDayOfInterval, format, set, subDays } from 'date-fns';
+import { eachDayOfInterval, format, subDays } from 'date-fns';
 import { useState } from 'react';
 
 const today = new Date();

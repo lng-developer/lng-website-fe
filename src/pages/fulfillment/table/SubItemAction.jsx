@@ -1,74 +1,206 @@
 import React, { useState } from 'react';
-import { Upload, Button, message } from 'antd';
+import { Upload, Button, Image, Tooltip, Flex } from 'antd';
 import { UploadOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { toast } from 'sonner';
+import { IoClose } from 'react-icons/io5';
+import { scaleFulfill, uploadScale } from '../../../apis/order';
+import { FcApproval } from 'react-icons/fc';
+import { FaBan } from 'react-icons/fa';
 
 const { Dragger } = Upload;
 
-export default function SubItemAction() {
-  const [imageList, setImageList] = useState([]);
+export default function SubItemAction({ filters, fetchAllFulfill, orderId, orderItemId, fulfillment_file, scale_status }) {
+  const [imageList, setImageList] = useState(null);
+  const [fileList, setFileList] = useState([]);
 
-  const uploadProps = {
-    name: 'file',
-    multiple: true,
-    accept: 'image/*',
-    fileList: imageList,
-    beforeUpload: () => false, // Prevent auto upload
-    onChange: (info) => {
-      setImageList(info.fileList);
-    },
-    onDrop: (e) => {
-      console.log('Dropped files', e.dataTransfer.files);
-    },
-    showUploadList: {
-      showPreviewIcon: true,
-      showRemoveIcon: true,
-    },
-    listType: 'picture',
+  const getBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+    });
   };
 
-  const handleUpload = () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.multiple = true;
-    fileInput.click();
+  const uploadProps = {
+    name: 'imageList',
+    multiple: false,
+    maxCount: 1,
+    accept: 'image/*',
+    fileList,
+    beforeUpload: async (imageList) => {
+      const preview = await getBase64(imageList);
+      setImageList({
+        uid: imageList.uid,
+        name: imageList.name,
+        originFileObj: imageList,
+        thumbUrl: preview,
+      });
+      setFileList([{ uid: imageList.uid, name: imageList.name, status: 'done' }]);
+      return false; // không upload tự động
+    },
+  };
 
-    fileInput.onchange = (e) => {
-      const files = Array.from(e.target.files);
-      const newFileList = files.map((file, index) => ({
-        uid: Date.now() + index,
-        name: file.name,
-        status: 'done',
-        originFileObj: file,
-        url: URL.createObjectURL(file),
-      }));
-      setImageList((prev) => [...prev, ...newFileList]);
-    };
+  const handleUpload = async () => {
+    if (!imageList) return;
+    const formData = new FormData();
+    formData.append('file', imageList?.originFileObj);
+    try {
+      const response = await uploadScale(orderId, orderItemId, formData);
+      if (response.status === 200) {
+        toast.success('Import success!');
+      } else {
+        toast.error('Import error');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Import error');
+    } finally {
+      fetchAllFulfill(filters);
+    }
   };
 
   const handleDownload = () => {
-    message.info('Download functionality');
+    if (!fulfillment_file) return;
+    const a = document.createElement('a');
+    a.href = fulfillment_file; // url ảnh bạn đang hiển thị
+    a.download = 'image.jpg'; // tên file tải về
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
+  const handleRemove = () => {
+    setImageList(null);
+    setFileList([]);
+  };
+
+  const handlePassed = async () => {
+    try {
+      const response = await scaleFulfill(orderId, orderItemId, {
+        decision: 'approve',
+      });
+      if (response.status === 200) {
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error');
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      const response = await scaleFulfill(orderId, orderItemId, {
+        decision: 'reject',
+      });
+      if (response.status === 200) {
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error');
+    }
+  };
   return (
-    <div style={{ width: 150, margin: '0 auto', padding: '16px' }}>
+    <div style={{ width: 150, margin: '0 auto' }}>
       {/* Action Buttons */}
-      <div style={{ display: 'flex', marginBottom: '16px', gap: 10 }}>
-        <Button type="default" icon={<UploadOutlined />} onClick={handleUpload} style={{ flex: 1, height: '25px' }}></Button>
-        <Button type="default" icon={<DownloadOutlined />} onClick={handleDownload} style={{ flex: 1, height: '25px' }}></Button>
+      <div style={{ display: 'flex', marginBottom: '16px', gap: 20 }}>
+        <Tooltip title="Upload">
+          <Button type="default" icon={<UploadOutlined />} onClick={handleUpload} style={{ flex: 1, height: '35px' }}></Button>
+        </Tooltip>
+        <Tooltip title="Download">
+          <Button type="default" icon={<DownloadOutlined />} onClick={handleDownload} style={{ flex: 1, height: '35px' }}></Button>
+        </Tooltip>
       </div>
 
       {/* Drag & Drop Area */}
-      <Dragger {...uploadProps} style={{ marginBottom: '16px' }}>
-        <div style={{ padding: ' 0', height: 60 }}>
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined style={{ fontSize: '24px', color: '#bfbfbf' }} />
-          </p>
-          <p className="ant-upload-text" style={{ fontSize: '14px', fontWeight: '500', color: '#8c8c8c' }}>
-            {imageList.length === 0 ? 'NO IMAGES' : 'Drop images here'}
-          </p>
+      <Dragger {...uploadProps} disabled={!!imageList || !!fulfillment_file}>
+        <div
+          style={{
+            width: '100%',
+            height: 100, // cố định chiều cao khung
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          {imageList || fulfillment_file ? (
+            <div style={{ width: '100%', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+              <Image
+                src={imageList?.thumbUrl || fulfillment_file}
+                alt={imageList?.name}
+                style={{
+                  width: 120,
+                  height: 100,
+                  objectFit: 'cover',
+                }}
+                className="rounded-lg"
+              />
+            </div>
+          ) : (
+            <div>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined style={{ fontSize: 30, color: '#bfbfbf' }} />
+              </p>
+              <p className="ant-upload-text" style={{ fontSize: 14, fontWeight: 500, color: '#8c8c8c' }}>
+                NO IMAGES
+              </p>
+            </div>
+          )}
+
+          {imageList && (
+            <Button
+              size="small"
+              type="text"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemove();
+              }}
+              style={{
+                position: 'absolute',
+                top: -10,
+                right: -10,
+                background: 'rgba(0,0,0,0.55)',
+                color: '#fff',
+                height: 24,
+                lineHeight: '20px',
+                borderRadius: 25,
+              }}
+            >
+              <IoClose size={10} />
+            </Button>
+          )}
         </div>
       </Dragger>
+
+      {scale_status === 'Pending' && (
+        <Flex vertical gap={10} style={{ marginTop: 10 }}>
+          <button
+            type="default"
+            iconPosition="end"
+            className="w-full flex justify-center items-center border border-[#d9d9d9] rounded-md py-1 gap-2 cursor-pointer hover:bg-[#f1f5f9]"
+            onClick={handlePassed}
+          >
+            <span className="font-medium">Passed</span>
+            <span>
+              <FcApproval size={18} />
+            </span>
+          </button>
+          <button
+            type="default"
+            iconPosition="end"
+            className="w-full flex justify-center items-center border border-[#d9d9d9] rounded-md py-1 gap-2 cursor-pointer hover:bg-[#f1f5f9]"
+            onClick={handleReject}
+          >
+            <span className="font-medium">Reject</span>
+            <span>
+              <FaBan color="red" />
+            </span>
+          </button>
+        </Flex>
+      )}
     </div>
   );
 }

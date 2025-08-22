@@ -3,20 +3,14 @@ import { LinkOutlined } from '@ant-design/icons';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 
-const ItemProductInfo = ({
-  imageUrl = 'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-  asin = 'B0CW1F43KX',
-  sku = 'G230185-TSBS-FO-US-20220224-165158',
-  status = 'Shipped',
-  showPsdButton = true,
-}) => {
+const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) => {
   return (
     <div className="">
       {/* Product Image */}
       <div className="flex-shrink-0 ">
         <Image
-          width={140}
-          height={140}
+          width={130}
+          height={130}
           src={imageUrl}
           className="rounded-lg object-cover shadow-sm"
           alt="Product"
@@ -32,7 +26,7 @@ const ItemProductInfo = ({
         <div className="mb-1">
           <div className="font-semibold text-gray-800 ">ASIN:</div>
           <div className="flex items-center gap-1">
-            <StatusComponent title={asin} color="#08969b" />
+            <StatusComponent title={asin} color={dataColors.pending} />
             <LinkOutlined className="text-blue-600 " />
           </div>
         </div>
@@ -40,7 +34,7 @@ const ItemProductInfo = ({
         {/* SKU Section */}
         <div className="mb-1">
           <div className="font-semibold text-gray-800 ">SKU:</div>
-          <StatusComponent title={sku} color="#D46A08" />
+          <StatusComponent title={sku} color={dataColors.asin} />
         </div>
 
         {/* Status Section */}

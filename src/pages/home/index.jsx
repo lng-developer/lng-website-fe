@@ -44,7 +44,7 @@ const Home = () => {
   const [shippingType, setShippingType] = useState('');
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
-  const [loading, setLodaing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [vendorProduct, setVendorProduct] = useState([]);
   const [tableHeight, setTableHeight] = useState(0);
@@ -120,7 +120,7 @@ const Home = () => {
   }, [filters]);
 
   const fetchAllOrder = async (params) => {
-    setLodaing(true);
+    setLoading(true);
     try {
       const response = await getALlOrder(params);
       if (response.status === 200) {
@@ -132,7 +132,7 @@ const Home = () => {
     } catch (error) {
       console.log(error);
     } finally {
-      setLodaing(false);
+      setLoading(false);
     }
   };
 
@@ -338,6 +338,7 @@ const Home = () => {
             product: (
               <SubItemImage
                 linkImage={itemSub?.baseImageUrl}
+                linkFulfill={itemSub?.fulfillment_file}
                 fetchAllOrder={fetchAllOrder}
                 filters={filters}
                 orderId={item?.orderId}

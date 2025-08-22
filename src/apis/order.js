@@ -72,6 +72,18 @@ const trackingOrder = (orderId, orderItemId, payload) => {
   return instance.put(`/order/${orderId}/items/${orderItemId}/tracking`, payload);
 };
 
+const uploadScale = (orderId, orderItemId, payload) => {
+  return instance.post(`/scale/orders/${orderId}/items/${orderItemId}/fulfillment-file`, payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+const scaleFulfill = (orderId, orderItemId, payload) => {
+  return instance.post(`/scale/orders/${orderId}/items/${orderItemId}/scale/confirm`, payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -87,4 +99,6 @@ export {
   updateImage,
   retestBasecode,
   trackingOrder,
+  uploadScale,
+  scaleFulfill,
 };

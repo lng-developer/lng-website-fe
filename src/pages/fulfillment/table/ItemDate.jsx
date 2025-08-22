@@ -1,13 +1,14 @@
-import { Tag, Tooltip } from 'antd';
+import { Flex, Tag, Tooltip } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { dataColors } from '../../../utils/dataColors';
 import StatusComponent from '../../../components/StatusComponent';
+import { formatDate } from '../../../utils/fomatDate';
+import { formatDistanceToNow } from 'date-fns';
 
 const ItemDate = ({
-  createdAt = '28/12/2024 02:08',
-  orderDate = '28/12/2024 01:12',
+  createdAt = '2025-08-13T03:49:59.600Z',
+  orderDate = '2025-08-13T03:49:59.600Z',
   type = 'Tool 95',
-  monthsAgo = 7,
   showHistory = true,
 }) => {
   return (
@@ -15,19 +16,23 @@ const ItemDate = ({
       {/* Created At Section */}
       <div className="mb-3">
         <div className="mb-0.5 font-medium">Created At:</div>
-        <div className="whitespace-nowrap">{createdAt}</div>
-        <div className="" style={{ color: dataColors.title }}>
-          ({monthsAgo} months)
-        </div>
+        <Flex vertical={true}>
+          <span className="whitespace-nowrap">{formatDate(createdAt)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            ({formatDistanceToNow(createdAt, { addSuffix: true })})
+          </span>
+        </Flex>
       </div>
 
       {/* Order Date Section */}
       <div className="mb-3">
         <div className="mb-0.5 font-medium">Order Date:</div>
-        <div className="whitespace-nowrap">{orderDate}</div>
-        <div className="" style={{ color: dataColors.title }}>
-          ({monthsAgo} months)
-        </div>
+        <Flex vertical={true}>
+          <span className="whitespace-nowrap">{formatDate(orderDate)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            ({formatDistanceToNow(orderDate, { addSuffix: true })})
+          </span>
+        </Flex>
       </div>
 
       {/* Type Section */}

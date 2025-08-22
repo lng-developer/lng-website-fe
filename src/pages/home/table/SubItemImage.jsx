@@ -8,7 +8,7 @@ import { memo, useState } from 'react';
 import { updateImage } from '../../../apis/order';
 import { toast } from 'sonner';
 
-const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, filters }) => {
+const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, filters, linkFulfill = '' }) => {
   const [showUpdate, setShowUpdate] = useState(false);
   const [valueImage, setValueImage] = useState('');
   const [checkError, setCheckError] = useState(false);
@@ -41,8 +41,15 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
   return (
     <>
       <div>
-        <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2 shadow-md">
-          <Image height={130} width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
+        <div className="flex gap-4">
+          <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2 shadow-md">
+            <Image height={130} width={130} src={linkImage ? linkImage : NoImage} className="rounded-lg" />
+          </div>
+          {linkFulfill && (
+            <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2 shadow-md">
+              <Image height={130} width={130} src={linkFulfill} className="rounded-lg" />
+            </div>
+          )}
         </div>
         <div
           className="w-[60px] mt-2 flex items-center justify-between rounded-md px-2 py-1 border border-[#e2e8f0] cursor-pointer hover:bg-[#f1f5f9]"
