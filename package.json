@@ -19,14 +19,17 @@
     "dayjs": "^1.11.13",
     "i18next": "^25.3.2",
     "jwt-decode": "^4.0.0",
+    "konva": "^9.3.22",
     "lodash.isequal": "^4.5.0",
     "react": "^19.1.0",
     "react-day-picker": "^9.8.1",
     "react-dom": "^19.1.0",
     "react-i18next": "^15.6.0",
     "react-icons": "^5.5.0",
+    "react-konva": "^19.0.7",
     "react-router-dom": "^7.7.0",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "use-image": "^1.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

@@ -17,10 +17,13 @@ import CostCenterConfig from './pages/cost_center/CostCenterConfig';
 import ReportOrderCost from './pages/report/ReportOrderCost';
 import SaleReport from './pages/report/SaleReport';
 import UnauthorizedPage from './pages/unauthorized';
+import QC from './pages/fulfillment/QC';
+import TitlePages from './utils/TitlePages';
 
 function App() {
   return (
     <Router>
+      <TitlePages />
       <Routes>
         <Route
           path={routes.home}
@@ -43,6 +46,7 @@ function App() {
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
+          <Route path={routes.fulfillmentQc} element={<QC />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

@@ -117,7 +117,7 @@ export const detailMenus = {
   ],
   fulfillment: [
     { key: routes.fulfillmentScale, icon: <MdBalance size={20} />, label: 'Scale' },
-    { key: '', icon: <TbBlender size={20} />, label: 'QC' },
+    { key: routes.fulfillmentQc, icon: <TbBlender size={20} />, label: 'QC' },
     { key: '', icon: <TbHomeStats size={20} />, label: 'Working Status' },
     {
       key: 'e',

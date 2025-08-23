@@ -5,12 +5,7 @@ import StatusComponent from '../../../components/StatusComponent';
 import { formatDate } from '../../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 
-const ItemDate = ({
-  createdAt = '2025-08-13T03:49:59.600Z',
-  orderDate = '2025-08-13T03:49:59.600Z',
-  type = 'Tool 95',
-  showHistory = true,
-}) => {
+const ItemDate = ({ createdAt, type = 'No data', showHistory = true }) => {
   return (
     <div className="  ">
       {/* Created At Section */}
@@ -20,17 +15,6 @@ const ItemDate = ({
           <span className="whitespace-nowrap">{formatDate(createdAt)}</span>
           <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
             ({formatDistanceToNow(createdAt, { addSuffix: true })})
-          </span>
-        </Flex>
-      </div>
-
-      {/* Order Date Section */}
-      <div className="mb-3">
-        <div className="mb-0.5 font-medium">Order Date:</div>
-        <Flex vertical={true}>
-          <span className="whitespace-nowrap">{formatDate(orderDate)}</span>
-          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            ({formatDistanceToNow(orderDate, { addSuffix: true })})
           </span>
         </Flex>
       </div>

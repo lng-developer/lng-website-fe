@@ -59,9 +59,8 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       toast.success('Import success!');
       handleResetValue();
       const response = await importOrderByFile(formData);
-      if (response.status !== 200) {
+      if (!(response.status === 200)) {
         toast.error('Import error');
-        handleResetValue();
       }
     } catch (error) {
       console.log(error);

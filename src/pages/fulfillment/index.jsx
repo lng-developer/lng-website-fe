@@ -174,7 +174,7 @@ const FulfillmentScale = () => {
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
-            date: <ItemDate />,
+            date: <ItemDate createdAt={item?.createdAt} />,
             product_info: (
               <ItemProductInfo imageUrl={itemSub?.baseImageUrl} asin={itemSub?.asin} sku={itemSub?.sku} status={item?.status} />
             ),

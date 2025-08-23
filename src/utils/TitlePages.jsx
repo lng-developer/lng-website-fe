@@ -1,0 +1,24 @@
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+const TITLES = {
+  '/order/amazon': 'Orders',
+  '/sales/listing': 'Manage Listing',
+  '/fulfillment/scale': 'Fulfillment Scale',
+  '/fulfillment/qc': 'QC Fulfillment',
+  '/reports': 'Reports',
+  '/cost-center/config': 'Config Cost Center',
+  '/cost-center/product-types': 'Product Type Groups',
+  '/report/sale': 'Sale Report',
+  '/report/orders-cost': 'Report Orders Cost',
+};
+
+const TitlePages = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = TITLES[pathname] || 'LNG System';
+  }, [pathname]);
+  return null;
+};
+
+export default TitlePages;

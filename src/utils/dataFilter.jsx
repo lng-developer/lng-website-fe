@@ -122,4 +122,27 @@ const dataFilterListing = [
   },
 ];
 
-export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing };
+const dataFilterStatusQC = [
+  {
+    key: 'All',
+    title: 'All',
+    status: 'All',
+  },
+  {
+    key: 'New',
+    title: 'New',
+    status: 'New',
+  },
+  {
+    key: 'Completed',
+    title: 'Completed',
+    status: 'Completed',
+  },
+  {
+    key: 'Rejected',
+    title: 'Rejected',
+    status: 'Rejected',
+  },
+];
+
+export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing, dataFilterStatusQC };

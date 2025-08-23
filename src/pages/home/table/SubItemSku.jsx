@@ -12,13 +12,8 @@ const SubItemSku = ({ sku, asin }) => {
           <div className="flex items-center">
             <span className="font-medium">SKU:</span>
           </div>
-          <div className="flex gap-1 items-center">
+          <div>
             <StatusComponent title={sku} color={dataColors.asin} />
-            <Tooltip title="Open Link">
-              <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${asin}`}>
-                <RiLinkM size={18} />
-              </Link>
-            </Tooltip>
           </div>
         </div>
       )}
@@ -27,8 +22,13 @@ const SubItemSku = ({ sku, asin }) => {
           <div className="flex items-center">
             <span className="font-medium">ASIN:</span>
           </div>
-          <div>
+          <div className="flex gap-1 items-center">
             <StatusComponent title={asin} color={dataColors.pending} />
+            <Tooltip title="Open Link">
+              <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${asin}`}>
+                <RiLinkM size={18} />
+              </Link>
+            </Tooltip>
           </div>
         </div>
       )}

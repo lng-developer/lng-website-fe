@@ -42,7 +42,10 @@ export default function SubItemAction({ filters, fetchAllFulfill, orderId, order
   };
 
   const handleUpload = async () => {
-    if (!imageList) return;
+    if (!imageList) {
+      toast.error('No images to upload!');
+      return;
+    }
     const formData = new FormData();
     formData.append('file', imageList?.originFileObj);
     try {
@@ -60,14 +63,56 @@ export default function SubItemAction({ filters, fetchAllFulfill, orderId, order
     }
   };
 
-  const handleDownload = () => {
-    if (!fulfillment_file) return;
-    const a = document.createElement('a');
-    a.href = fulfillment_file; // url ảnh bạn đang hiển thị
-    a.download = 'image.jpg'; // tên file tải về
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  function ensureAttachment(url, filename) {
+    const u = new URL(url);
+    // Cloudinary: fl_attachment (tùy chọn đặt tên)
+    if (!u.searchParams.has('fl_attachment')) {
+      u.searchParams.set('fl_attachment', filename || '');
+    }
+    return u.toString();
+  }
+
+  function guessName(url, fallback = 'design.psd') {
+    try {
+      const u = new URL(url);
+      const fromPath = u.pathname.split('/').pop();
+      const fromParam = u.searchParams.get('fl_attachment');
+      const name = fromParam || fromPath || fallback;
+      return name.endsWith('.psd') ? name : `${name}.psd`;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const handleDownload = async (e) => {
+    e?.stopPropagation?.();
+    if (!fulfillment_file) {
+      toast.error('No images to download!');
+      return;
+    }
+
+    const dlUrl = ensureAttachment(fulfillment_file, `${orderId}.psd`);
+    const saveAs = guessName(dlUrl, `${orderId}.psd`);
+
+    try {
+      // 1) fetch -> blob -> ObjectURL (không điều hướng tab)
+      const res = await fetch(dlUrl, { mode: 'cors' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = saveAs; // ép save với tên file
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.log(err);
+      // 2) Fallback: mở tab mới (không đè tab hiện tại)
+      window.open(dlUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleRemove = () => {
