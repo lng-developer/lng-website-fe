@@ -36,6 +36,22 @@ const updateConfigCost = (id, payload) => {
   return instance.patch(`/config-cost-center/${id}`, payload);
 };
 
+const getAllMapping = (params) => {
+  return instance.get('/mapping', { params });
+};
+
+const createMapping = (payload) => {
+  return instance.post('/mapping', payload);
+};
+
+const updateMapping = (id, payload) => {
+  return instance.patch(`/mapping/${id}`, payload);
+};
+
+const deleteMapping = (id) => {
+  return instance.delete(`/mapping/${id}`);
+};
+
 export {
   getAllConfig,
   createProductType,
@@ -46,4 +62,8 @@ export {
   createConfigCost,
   getConfigCostById,
   updateConfigCost,
+  getAllMapping,
+  createMapping,
+  updateMapping,
+  deleteMapping,
 };

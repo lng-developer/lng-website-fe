@@ -68,7 +68,8 @@ const Vendor = () => {
           <Flex gap={10}>
             <Tooltip title="Edit">
               <button
-                className="cursor-pointer"
+                className="cursor-pointer border rounded"
+                style={{ padding: 6, borderColor: dataColors.default }}
                 onClick={() => {
                   setValueEdit(record?.name);
                   setSelected(record);
@@ -80,7 +81,8 @@ const Vendor = () => {
             </Tooltip>
             <Tooltip title="Delete">
               <button
-                className="cursor-pointer"
+                className="cursor-pointer border rounded"
+                style={{ padding: 6, borderColor: dataColors.default }}
                 onClick={() => {
                   setSelected(record);
                   setIsShowModalDelete(true);

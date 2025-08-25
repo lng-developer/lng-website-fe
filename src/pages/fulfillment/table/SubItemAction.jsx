@@ -3,9 +3,7 @@ import { Upload, Button, Image, Tooltip, Flex } from 'antd';
 import { UploadOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
 import { IoClose } from 'react-icons/io5';
-import { scaleFulfill, uploadScale } from '../../../apis/order';
-import { FcApproval } from 'react-icons/fc';
-import { FaBan } from 'react-icons/fa';
+import { uploadScale } from '../../../apis/order';
 
 const { Dragger } = Upload;
 
@@ -120,33 +118,6 @@ export default function SubItemAction({ filters, fetchAllFulfill, orderId, order
     setFileList([]);
   };
 
-  const handlePassed = async () => {
-    try {
-      const response = await scaleFulfill(orderId, orderItemId, {
-        decision: 'approve',
-      });
-      if (response.status === 200) {
-        toast.success(response.data?.message);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error('Error');
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      const response = await scaleFulfill(orderId, orderItemId, {
-        decision: 'reject',
-      });
-      if (response.status === 200) {
-        toast.success(response.data?.message);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error('Error');
-    }
-  };
   return (
     <div style={{ width: 150, margin: '0 auto' }}>
       {/* Action Buttons */}
@@ -219,33 +190,6 @@ export default function SubItemAction({ filters, fetchAllFulfill, orderId, order
           )}
         </div>
       </Dragger>
-
-      {scale_status === 'Pending' && (
-        <Flex vertical gap={10} style={{ marginTop: 10 }}>
-          <button
-            type="default"
-            iconPosition="end"
-            className="w-full flex justify-center items-center border border-[#d9d9d9] rounded-md py-1 gap-2 cursor-pointer hover:bg-[#f1f5f9]"
-            onClick={handlePassed}
-          >
-            <span className="font-medium">Passed</span>
-            <span>
-              <FcApproval size={18} />
-            </span>
-          </button>
-          <button
-            type="default"
-            iconPosition="end"
-            className="w-full flex justify-center items-center border border-[#d9d9d9] rounded-md py-1 gap-2 cursor-pointer hover:bg-[#f1f5f9]"
-            onClick={handleReject}
-          >
-            <span className="font-medium">Reject</span>
-            <span>
-              <FaBan color="red" />
-            </span>
-          </button>
-        </Flex>
-      )}
     </div>
   );
 }

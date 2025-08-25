@@ -19,6 +19,7 @@ import SaleReport from './pages/report/SaleReport';
 import UnauthorizedPage from './pages/unauthorized';
 import QC from './pages/fulfillment/QC';
 import TitlePages from './utils/TitlePages';
+import Mapping from './pages/cost_center/Mapping';
 
 function App() {
   return (
@@ -37,16 +38,21 @@ function App() {
         >
           <Route index path={routes.order_amazon} element={<Home />} />
           <Route path={routes.sale_listing} element={<Listing />} />
+          {/* Vendor product */}
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
           <Route path={routes.product_cost_center} element={<ProductCostCenter />} />
+          {/* Fulfillment */}
           <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
+          <Route path={routes.fulfillmentQc} element={<QC />} />
+          {/* Cost center */}
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
+          <Route path={routes.cost_center_mapping} element={<Mapping />} />
+          {/* Report */}
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
-          <Route path={routes.fulfillmentQc} element={<QC />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

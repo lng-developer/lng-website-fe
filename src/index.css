@@ -15,6 +15,10 @@
   vertical-align: top !important;
 }
 
+.table-qc .table-row-center td {
+  vertical-align: middle !important;
+}
+
 .ant-table-body,
 .ant-table-body-inner {
   scrollbar-gutter: stable;
@@ -170,7 +174,7 @@
 
 /* nếu dùng CSS thường (global) */
 .no-indent-table .ant-table-expanded-row > td {
-  padding-left: 0px !important; /* bỏ khoảng xám bên trái */
+  padding-left: 0px !important;
   background: transparent !important;
 }
 
@@ -208,6 +212,14 @@
 
 .no-backgroud-title .ant-table-tbody > tr > td {
   border-top: 1px solid #f0f0f0 !important;
+}
+/*  */
+
+.table-qc .ant-table-body {
+  border-inline-start: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
 }
 
 /* Giữ app ở light nếu bạn không muốn theo OS */

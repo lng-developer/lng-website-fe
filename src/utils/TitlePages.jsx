@@ -9,6 +9,7 @@ const TITLES = {
   '/reports': 'Reports',
   '/cost-center/config': 'Config Cost Center',
   '/cost-center/product-types': 'Product Type Groups',
+  '/cost-center/mapping': 'Mapping Cost Center',
   '/report/sale': 'Sale Report',
   '/report/orders-cost': 'Report Orders Cost',
 };

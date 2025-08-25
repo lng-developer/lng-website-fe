@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import { RiLinkM } from 'react-icons/ri';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
+import { scaleFulfill } from '../../apis/order';
+import { toast } from 'sonner';
 
 const { Title, Text } = Typography;
 
@@ -29,24 +31,45 @@ function FitImage({ url, stageW, stageH }) {
 export default function QcCanvasModal({
   open,
   onClose,
-  imageUrl, // URL ảnh render (từ PSD)
-  baseImages = [], // mảng URL ảnh base (trái)
   orderInfo = {}, // object info hiển thị (phải)
-  onPass,
-  onReject,
   stageWidth = 900,
   stageHeight = 520,
 }) {
   const [bgColor, setBgColor] = useState('#2f5f93');
   const [qcNote, setQcNote] = useState('');
 
-  const handlePass = () => {
-    onPass?.({ result: 'pass', bgColor, note: qcNote, orderInfo });
-    onClose?.();
+  const handlePass = async () => {
+    try {
+      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+        decision: 'approve',
+        note: qcNote,
+      });
+      if (response.status === 200) {
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error');
+    } finally {
+      onClose?.();
+    }
   };
-  const handleReject = () => {
-    onReject?.({ result: 'reject', bgColor, note: qcNote, orderInfo });
-    onClose?.();
+
+  const handleReject = async () => {
+    try {
+      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+        decision: 'reject',
+        note: qcNote,
+      });
+      if (response.status === 200) {
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error');
+    } finally {
+      onClose?.();
+    }
   };
 
   return (
@@ -95,18 +118,10 @@ export default function QcCanvasModal({
       <div style={{ display: 'flex', gap: 16 }}>
         {/* LEFT: Base images */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {baseImages?.length ? (
-            baseImages.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`Base ${i + 1}`}
-                style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
-              />
-            ))
-          ) : (
-            <Text type="secondary">No base images</Text>
-          )}
+          <img
+            src={orderInfo?.data?.baseImageUrl}
+            style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
+          />
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
@@ -123,7 +138,7 @@ export default function QcCanvasModal({
           <Stage width={stageWidth} height={750}>
             <Layer>
               <Rect x={0} y={0} width={stageWidth} height={750} fill={bgColor} listening={false} />
-              <FitImage url={imageUrl} stageW={stageWidth} stageH={stageHeight} />
+              <FitImage url={orderInfo?.data?.fulfillment_file} stageW={stageWidth} stageH={stageHeight} />
             </Layer>
           </Stage>
         </div>
@@ -145,14 +160,14 @@ export default function QcCanvasModal({
             <Flex vertical={true} gap={6}>
               <div className="flex justify-between items-center">
                 <span className="font-medium">OrderId:</span>
-                <StatusComponent title={orderInfo?.order_id} color={dataColors.pink} />
+                <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Asin:</span>
                 <div className="flex gap-1 items-center">
-                  <StatusComponent title={orderInfo?.asin} color={dataColors.pending} />
+                  <StatusComponent title={orderInfo?.data?.asin} color={dataColors.pending} />
                   <Tooltip title="Open Link">
-                    <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${orderInfo?.asin}`}>
+                    <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${orderInfo?.data?.asin}`}>
                       <RiLinkM size={18} />
                     </Link>
                   </Tooltip>
@@ -160,31 +175,38 @@ export default function QcCanvasModal({
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Sku:</span>
-                <StatusComponent title={orderInfo?.sku} color={dataColors.asin} />
+                <StatusComponent title={orderInfo?.data?.sku} color={dataColors.asin} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Color:</span>
-                <StatusComponent title={orderInfo?.color} color={dataColors.default} isDefault={true} />
+                <StatusComponent title={orderInfo?.data?.cost_center?.colorValue} color={dataColors.default} isDefault={true} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Size:</span>
-                <StatusComponent title={orderInfo?.size} color={dataColors.default} isDefault={true} />
+                <StatusComponent title={orderInfo?.data?.cost_center?.sizeValue} color={dataColors.default} isDefault={true} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Fulfillable Qty:</span>
-                <StatusComponent title={orderInfo?.quantity} color={dataColors.default} isDefault={true} />
+                <StatusComponent title={orderInfo?.data?.quantity} color={dataColors.default} isDefault={true} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Vendor:</span>
-                <StatusComponent title={orderInfo?.vendor} color={dataColors.success} />
+                <StatusComponent
+                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName.split(/\s*[-–—]\s*/)[0]}
+                  color={dataColors.success}
+                />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Product Name:</span>
-                <StatusComponent title={orderInfo?.product_name} color={dataColors.default} isDefault={true} />
+                <StatusComponent
+                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName.replace(/^\s*.*?\s*[-–—]\s+/, '')}
+                  color={dataColors.default}
+                  isDefault={true}
+                />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Fulfill Name:</span>
-                <StatusComponent title={orderInfo?.fulfill_name} color={dataColors.default} isDefault={true} />
+                <StatusComponent title={orderInfo?.fulfill_name || 'No data'} color={dataColors.default} isDefault={true} />
               </div>
             </Flex>
           </div>
@@ -200,7 +222,7 @@ export default function QcCanvasModal({
             }}
           >
             <div className="flex-col justify-between">
-              {orderInfo?.version3Data?.map((item, index) => (
+              {orderInfo?.data?.version3Data?.map((item, index) => (
                 <div key={index} className="mb-1 whitespace-normal break-words">
                   <span className="font-medium">{item?.label}:</span>
                   <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>

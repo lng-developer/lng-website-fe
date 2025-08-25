@@ -84,6 +84,14 @@ const scaleFulfill = (orderId, orderItemId, payload) => {
   return instance.post(`/scale/orders/${orderId}/items/${orderItemId}/scale/confirm`, payload);
 };
 
+const getAllQC = (params) => {
+  return instance.get('/fulfillment/qc', { params });
+};
+
+const getAllCountStatusQC = (params) => {
+  return instance.get('/fulfillment/qc/statistics', { params });
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -101,4 +109,6 @@ export {
   trackingOrder,
   uploadScale,
   scaleFulfill,
+  getAllQC,
+  getAllCountStatusQC,
 };

@@ -129,19 +129,24 @@ const dataFilterStatusQC = [
     status: 'All',
   },
   {
-    key: 'New',
-    title: 'New',
-    status: 'New',
+    key: 'Pending',
+    title: 'Pending',
+    status: 'Pending',
   },
   {
     key: 'Completed',
     title: 'Completed',
-    status: 'Completed',
+    status: 'Ready',
   },
   {
     key: 'Rejected',
     title: 'Rejected',
-    status: 'Rejected',
+    status: 'QC Rejected',
+  },
+  {
+    key: 'Sent',
+    title: 'Sent',
+    status: 'Sent',
   },
 ];
 

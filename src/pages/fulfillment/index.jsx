@@ -169,7 +169,7 @@ const FulfillmentScale = () => {
         orderOwner: <span className="font-medium">{item?.orderOwner || 'Nguyễn Huy Hoàng'}</span>,
         scaleBy: <span className="font-medium">{item?.scaleBy || 'Lê Thị Phương CS'}</span>,
         express: <StatusComponent title={item?.express || 'No data'} color={dataColors.cancelled} />,
-        scaleStatus: <StatusComponent title={item?.scaleStatus || 'No data'} color={dataColors.success} />,
+        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={dataColors.success} />,
         actions: <ItemAction />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {

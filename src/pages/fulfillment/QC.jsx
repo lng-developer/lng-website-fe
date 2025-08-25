@@ -1,80 +1,46 @@
 import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
-import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import StatusComponent from '../../components/StatusComponent';
-import { formatDate } from '../../utils/fomatDate';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import { TbBlender } from 'react-icons/tb';
 import { dataFilterStatusQC } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
-
+import { getAllCountStatusQC, getAllQC } from '../../apis/order';
+import { toast } from 'sonner';
+import { FcShop } from 'react-icons/fc';
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import { RiLinkM } from 'react-icons/ri';
+import DateRangePicker from '../../components/DateRangePicker';
 const PAGE_SIZE = 10;
-
-const data = [
-  {
-    orderId: '111-6203804-0864268',
-    baseImageUrl:
-      'https://m.media-amazon.com/images/S/gestalt-seller-images-prod-us-east-1/ATVPDKIKX0DER/AJU55GT2TGET2/174426aa6ba2269328786708824f7f03.jpg',
-    purchase_date: '2025-08-22T23:13:09.000Z',
-    scale_status: 'Pending',
-    seller: 'Nguyễn Huy Hoàng',
-    status_order: 'New',
-    scale_by: 'Lê Thị Phương CS',
-  },
-  {
-    orderId: '111-6203804-0864268',
-    baseImageUrl:
-      'https://m.media-amazon.com/images/S/gestalt-seller-images-prod-us-east-1/ATVPDKIKX0DER/AJU55GT2TGET2/174426aa6ba2269328786708824f7f03.jpg',
-    purchase_date: '2025-08-22T23:13:09.000Z',
-    scale_status: 'Pending',
-    seller: 'Nguyễn Huy Hoàng',
-    status_order: 'New',
-    scale_by: 'Lê Thị Phương CS',
-  },
-  {
-    orderId: '111-6203804-0864268',
-    baseImageUrl:
-      'https://m.media-amazon.com/images/S/gestalt-seller-images-prod-us-east-1/ATVPDKIKX0DER/AJU55GT2TGET2/174426aa6ba2269328786708824f7f03.jpg',
-    purchase_date: '2025-08-22T23:13:09.000Z',
-    scale_status: 'Pending',
-    seller: 'Nguyễn Huy Hoàng',
-    status_order: 'New',
-    scale_by: 'Lê Thị Phương CS',
-  },
-  {
-    orderId: '111-6203804-0864268',
-    baseImageUrl:
-      'https://m.media-amazon.com/images/S/gestalt-seller-images-prod-us-east-1/ATVPDKIKX0DER/AJU55GT2TGET2/174426aa6ba2269328786708824f7f03.jpg',
-    purchase_date: '2025-08-22T23:13:09.000Z',
-    scale_status: 'Pending',
-    seller: 'Nguyễn Huy Hoàng',
-    status_order: 'New',
-    scale_by: 'Lê Thị Phương CS',
-  },
-];
 
 const QC = () => {
   const { collapsed } = useOutletContext();
-  const [dataSource, setDataSource] = useState([data]);
+  const [dataSource, setDataSource] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusQC[0]);
   const [openModalQC, setOpenMOdalQC] = useState(false);
+  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const [isShowRowkeys, setIsShowRowKeys] = useState(true);
+  const [tableHeight, setTableHeight] = useState(0);
+  const [dataView, setDataView] = useState({});
+  const [tabFilter, setTabFilter] = useState(dataFilterStatusQC);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    statuses: 'New',
+    scale_status: '',
+    from: defaultFrom,
+    to: defaultTo,
     search: '',
   });
-
-  const imageUrl =
-    'https://res.cloudinary.com/debr5x898/image/upload/v1755856565/fulfillment_files/111-2238146-6478638-137072151658201.png';
 
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
@@ -89,87 +55,185 @@ const QC = () => {
     setCurrentPage(page);
   };
 
+  const handleExpand = (expanded, record) => {
+    if (expanded) {
+      setExpandedRowKeys([...expandedRowKeys, record.key]);
+    } else {
+      setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
+    }
+  };
+
+  const handleShowRowKeys = () => {
+    if (isShowRowkeys) {
+      setExpandedRowKeys([]);
+    } else {
+      setExpandedRowKeys(dataSource.map((item) => item.orderId));
+    }
+    setIsShowRowKeys((prev) => !prev);
+  };
+
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Order ID</span>,
       dataIndex: 'orderId',
       key: 'orderId',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.purple} />,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Image Order</span>,
-      dataIndex: 'baseImageUrl',
-      key: 'baseImageUrl',
+      title: <span style={{ color: dataColors.title }}>Status Order</span>,
+      dataIndex: 'status',
+      key: 'status',
       align: 'center',
-      render: (data) => (
-        <div className="flex justify-center items-center">
-          <div className="w-[80px] h-[80px] rounded-lg overflow-hidden flex gap-2 shadow-md">
-            <Image src={data} width={80} height={80} className="rounded-lg" />
-          </div>
-        </div>
-      ),
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Created</span>,
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      align: 'center',
     },
     {
       title: <span style={{ color: dataColors.title }}>Order Date</span>,
       dataIndex: 'purchase_date',
       key: 'purchase_date',
       align: 'center',
-      render: (data) => (
-        <Flex vertical={true}>
-          <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
-          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            ({formatDistanceToNow(data, { addSuffix: true })})
-          </span>
-        </Flex>
-      ),
     },
     {
-      title: <span style={{ color: dataColors.title }}>Scale Status</span>,
-      dataIndex: 'scale_status',
-      key: 'scale_status',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.pending} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Order Owner</span>,
-      dataIndex: 'seller',
-      key: 'seller',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Scale By </span>,
+      title: <span style={{ color: dataColors.title }}>Scale By</span>,
       dataIndex: 'scale_by',
       key: 'scale_by',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.cancelled} />,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Status Order</span>,
-      dataIndex: 'status_order',
-      key: 'status_order',
+      title: <span style={{ color: dataColors.title }}>Basecost</span>,
+      dataIndex: 'base_cost',
+      key: 'base_cost',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.success} />,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Action</span>,
-      dataIndex: 'actions',
-      key: 'actions',
+      title: <span style={{ color: dataColors.title }}>Store</span>,
+      dataIndex: 'shopName',
+      key: 'shopName',
       align: 'center',
-      render: (data) => (
-        <Tooltip title="QC">
-          <button
-            className="cursor-pointer border rounded"
-            style={{ padding: 6, borderColor: dataColors.default }}
-            onClick={() => setOpenMOdalQC(true)}
-          >
-            <MdOutlineImageSearch size={20} />
-          </button>
-        </Tooltip>
-      ),
     },
   ];
+
+  const expandedRowRender = (record) => {
+    const subColumns = [
+      {
+        title: <span style={{ color: dataColors.title }}>ItemId</span>,
+        dataIndex: 'orderItemId',
+        key: 'orderItemId',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Image & Print Side</span>,
+        dataIndex: 'baseImageUrl',
+        key: 'baseImageUrl',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+        dataIndex: 'scale_status',
+        key: 'scale_status',
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Sku</span>, dataIndex: 'sku', key: 'sku', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Asin</span>, dataIndex: 'asin', key: 'asin', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'quantity', key: 'quantity', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action', align: 'center' },
+    ];
+
+    return (
+      <Table
+        columns={subColumns}
+        dataSource={record.subItems}
+        pagination={false}
+        rowKey="key"
+        rowClassName={() => 'table-row-center'}
+        bordered={true}
+        style={{ padding: 10 }}
+      />
+    );
+  };
+
+  // render Orders
+  const renderOrderInTable = (data = []) => {
+    const results = data.map((item, index) => {
+      return {
+        key: item?.orderId,
+        orderId: <StatusComponent title={item?.orderId} color={dataColors.purple} />,
+        status: <StatusComponent title={item?.status} color={dataColors.success} />,
+        createdAt: (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              ({formatDistanceToNow(item?.createdAt, { addSuffix: true })})
+            </span>
+          </Flex>
+        ),
+        purchase_date: (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+            </span>
+          </Flex>
+        ),
+        scale_by: <StatusComponent title={item?.scale_by || 'Nguyễn Huy Hoàng'} color={dataColors.asin} />,
+        base_cost: <span className="font-medium">${item?.base_cost}</span>,
+        shopName: (
+          <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
+            <FcShop size={20} />
+            <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
+              {item?.shopName}
+            </span>
+          </Flex>
+        ),
+
+        subItems: item?.items?.map((itemSub, indexItem) => {
+          return {
+            key: `${index}-${indexItem}`,
+            orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.purple} />,
+            baseImageUrl: (
+              <div className="flex justify-center items-center">
+                <div className="w-[80px] h-[80px] rounded-lg overflow-hidden flex gap-2 shadow-md">
+                  <Image src={itemSub?.baseImageUrl} width={80} height={80} className="rounded-lg" />
+                </div>
+              </div>
+            ),
+            scale_status: <StatusComponent title={itemSub?.scale_status} color={dataColors.pending} />,
+            sku: <StatusComponent title={itemSub?.sku} color={dataColors.asin} />,
+            asin: (
+              <div className="flex gap-1 items-center justify-center">
+                <StatusComponent title={itemSub?.asin} color={dataColors.pending} />
+                <Tooltip title="Open Link">
+                  <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${itemSub?.asin}`}>
+                    <RiLinkM size={18} />
+                  </Link>
+                </Tooltip>
+              </div>
+            ),
+            quantity: <span className="font-medium">{itemSub?.quantity}</span>,
+            action: (
+              <Tooltip title="QC">
+                <button
+                  className="cursor-pointer border rounded"
+                  style={{ padding: 6, borderColor: dataColors.default }}
+                  onClick={() => {
+                    setDataView({ orderId: item?.orderId, data: itemSub });
+                    setOpenMOdalQC(true);
+                  }}
+                >
+                  <MdOutlineImageSearch size={20} />
+                </button>
+              </Tooltip>
+            ),
+          };
+        }),
+      };
+    });
+    return results;
+  };
 
   const handleSearch = (e) => {
     if (!e.target.value) {
@@ -179,6 +243,74 @@ const QC = () => {
     updateFilter({ search: e.target.value });
   };
 
+  const fetchAllQC = async (params) => {
+    try {
+      const response = await getAllQC(params);
+      if (response.status === 200) {
+        const result = response.data?.data;
+        setDataSource(result);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Get QC error!');
+    }
+  };
+
+  // fetch count order by status
+  const fetchCountStatus = useCallback(async () => {
+    try {
+      const response = await getAllCountStatusQC(filters);
+      if (response.status === 200) {
+        const resultTabFilter = dataFilterStatusQC.map(({ key, title, status }) => ({
+          key,
+          title,
+          status,
+          count: response.data?.overall?.counts[key] ?? 0,
+        }));
+        setTabFilter(resultTabFilter);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, [filters]);
+
+  const handleFilterForStatus = (status) => {
+    if (status === 'All') {
+      updateFilter({ scale_status: '' });
+      return;
+    }
+    updateFilter({ scale_status: status });
+  };
+
+  useEffect(() => {
+    fetchAllQC(filters);
+    fetchCountStatus();
+  }, [filters]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 265; // Chiều cao header nếu có
+      const marginBottom = 20;
+
+      const availableHeight = window.innerHeight - headerHeight - marginBottom;
+      setTableHeight(availableHeight);
+    };
+
+    handleResize(); // Gọi lần đầu
+    window.addEventListener('resize', handleResize); // Lắng nghe resize
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isShowRowkeys) {
+      // Tự động mở tất cả dòng khi component mount
+      setExpandedRowKeys(dataSource.map((item) => item.orderId));
+    }
+  }, [dataSource, isShowRowkeys]);
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -187,26 +319,32 @@ const QC = () => {
             QC Fulfillment
           </h1>
           <div className="flex justify-center items-center">
-            <button
-              className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              //   onClick={handleClickAdd}
-            >
-              <MdAdd size={20} color="black" />
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Add QC
-              </span>
-            </button>
+            <DateRangePicker
+              mode="range"
+              showOutsideDays
+              modifiersClassNames={{
+                selected: 'my-selected',
+                range_middle: 'my-range-middle',
+              }}
+              modifiersStyles={{
+                range_middle: {
+                  backgroundColor: '#f3f4f6', // màu xám nhạt
+                  fontWeight: 'normal', // không in đậm
+                },
+              }}
+              updateFilter={updateFilter}
+            />
           </div>
         </div>
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex gap-3 items-center">
-          {dataFilterStatusQC.map((item, index) => (
+          {tabFilter.map((item, index) => (
             <ButtonFilter
               key={index}
               item={item}
               isActive={isActiveFilter?.key}
-              // handleFilterForStatus={handleFilterForStatus}
+              handleFilterForStatus={handleFilterForStatus}
               setIsActivefilter={setIsActivefilter}
               count={item?.count}
             />
@@ -243,63 +381,37 @@ const QC = () => {
           </div>
         </div>
         <div className="mt-4">
-          <Table columns={columns} dataSource={data} rowKey="key" bordered={true} pagination={false} loading={loading} />
+          <Table
+            className="no-indent-table table-qc"
+            columns={columns}
+            dataSource={renderOrderInTable(dataSource)}
+            expandable={{
+              indentSize: 0,
+              expandedRowRender,
+              expandIcon: ({ expanded, onExpand, record }) => (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
+                  {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+              expandedRowKeys: expandedRowKeys,
+              onExpand: handleExpand,
+              columnTitle: (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                  {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+            }}
+            rowKey="key"
+            bordered={true}
+            pagination={false}
+            loading={loading}
+            sticky={{ offsetHeader: 0 }}
+            scroll={{ y: tableHeight }}
+            tableLayout="auto"
+          />
         </div>
       </div>
-      <QcCanvasModal
-        open={openModalQC}
-        onClose={() => setOpenMOdalQC(false)}
-        imageUrl={imageUrl}
-        baseImages={[
-          'https://m.media-amazon.com/images/S/gestalt-seller-images-prod-us-east-1/ATVPDKIKX0DER/AJU55GT2TGET2/174426aa6ba2269328786708824f7f03.jpg',
-          'https://res.cloudinary.com/debr5x898/image/upload/v1755824180/snapshot_images/197d0b44-daa3-7f11-1da2-5b083a16aed7.jpg',
-        ]}
-        orderInfo={{
-          order_id: '111-5227489-8109016',
-          asin: 'B0FLDG8CCC',
-          sku: 'J2503-TL-06082025-2224',
-          size: '3XL',
-          color: 'Royal Blue',
-          vendor: 'LNGGroup',
-          quantity: 1,
-          product_name: 'Printed PET Hoodile',
-          fulfill_name: '13707215165820113707215165820113',
-          version3Data: [
-            {
-              label: 'Custom Name',
-              value: 'Mrs.Finney',
-            },
-            {
-              label: 'Select Product Type',
-              value: 'Comfort Color T-Shirt',
-            },
-            {
-              label: 'Comfort Color',
-              value: 'Orchid',
-            },
-            {
-              label: 'Select Size',
-              value: 'XL',
-            },
-            {
-              label: 'Priority Production',
-              value: 'No, Thanks.',
-            },
-            {
-              label: 'If we brought a smile to your day, then our job here is done – sprinkles on the cupcake!',
-              value: 'Thank you!!!',
-            },
-            {
-              label: 'Priority Production',
-              value: 'No, Thanks.',
-            },
-          ],
-        }}
-        onPass={(p) => console.log('PASS', p)}
-        onReject={(p) => console.log('REJECT', p)}
-        stageWidth={900}
-        stageHeight={520}
-      />
+      <QcCanvasModal open={openModalQC} onClose={() => setOpenMOdalQC(false)} orderInfo={dataView} stageWidth={900} stageHeight={520} />
     </div>
   );
 };
