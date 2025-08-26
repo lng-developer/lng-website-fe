@@ -193,7 +193,7 @@ const QC = () => {
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
-            orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.purple} />,
+            orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.default} isDefault={true} />,
             baseImageUrl: (
               <div className="flex justify-center items-center">
                 <div className="w-[80px] h-[80px] rounded-lg overflow-hidden flex gap-2 shadow-md">
@@ -411,7 +411,16 @@ const QC = () => {
           />
         </div>
       </div>
-      <QcCanvasModal open={openModalQC} onClose={() => setOpenMOdalQC(false)} orderInfo={dataView} stageWidth={900} stageHeight={520} />
+      <QcCanvasModal
+        open={openModalQC}
+        onClose={() => setOpenMOdalQC(false)}
+        orderInfo={dataView}
+        stageWidth={900}
+        stageHeight={520}
+        fetchAllQC={fetchAllQC}
+        filters={filters}
+        fetchCountStatus={fetchCountStatus}
+      />
     </div>
   );
 };

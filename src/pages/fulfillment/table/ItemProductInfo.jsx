@@ -2,6 +2,7 @@ import { Image, Button } from 'antd';
 import { LinkOutlined } from '@ant-design/icons';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
+import NoImage from '../../../assets/NoImage.jpg';
 
 const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) => {
   const handleColorStatus = (stt) => {
@@ -26,7 +27,7 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) 
           <Image
             width={130}
             height={130}
-            src={imageUrl}
+            src={imageUrl ? imageUrl : NoImage}
             className="rounded-lg object-cover shadow-sm"
             alt="Product"
             preview={{
@@ -39,26 +40,30 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) 
       {/* Product Details */}
       <div className="flex-1 ">
         {/* ASIN Section */}
-        <div className="mb-1">
-          <div className="font-semibold text-gray-800 ">ASIN:</div>
-          <div className="flex items-center gap-1">
-            <StatusComponent title={asin} color={dataColors.pending} />
-            <LinkOutlined className="text-blue-600 " />
+        {asin && (
+          <div className="mb-1">
+            <div className="font-semibold text-gray-800 ">ASIN:</div>
+            <div className="flex items-center gap-1">
+              <StatusComponent title={asin} color={dataColors.pending} />
+              <LinkOutlined className="text-blue-600 " />
+            </div>
           </div>
-        </div>
-
+        )}
         {/* SKU Section */}
-        <div className="mb-1">
-          <div className="font-semibold text-gray-800 ">SKU:</div>
-          <StatusComponent title={sku} color={dataColors.asin} />
-        </div>
+        {sku && (
+          <div className="mb-1">
+            <div className="font-semibold text-gray-800 ">SKU:</div>
+            <StatusComponent title={sku} color={dataColors.asin} />
+          </div>
+        )}
 
         {/* Status Section */}
-        <div className="mb-2">
-          <div className="font-semibold text-gray-800 ">Status:</div>
-          <StatusComponent title={status} color={handleColorStatus(status)} />
-        </div>
-
+        {status && (
+          <div className="mb-2">
+            <div className="font-semibold text-gray-800 ">Status:</div>
+            <StatusComponent title={status} color={handleColorStatus(status)} />
+          </div>
+        )}
         {/* PSD Download Button */}
         {showPsdButton && (
           <div>

@@ -69,7 +69,9 @@ const retestBasecode = (payload) => {
 };
 
 const trackingOrder = (orderId, orderItemId, payload) => {
-  return instance.put(`/order/${orderId}/items/${orderItemId}/tracking`, payload);
+  return instance.put(`/order/${orderId}/items/${orderItemId}/tracking`, payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 };
 
 const uploadScale = (orderId, orderItemId, payload) => {

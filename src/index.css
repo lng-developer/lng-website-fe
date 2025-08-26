@@ -305,3 +305,7 @@
 :where(.css-7t2xvq).ant-form-item {
   margin-bottom: 0px !important;
 }
+
+.ant-upload-drag .ant-upload {
+  padding: 0 !important;
+}

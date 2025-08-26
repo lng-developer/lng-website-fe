@@ -1,15 +1,27 @@
 import { Input } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
+import { toast } from 'sonner';
 
 const { TextArea } = Input;
 
 export default function OrderInfoForm({ orderId, seller, fulfillName }) {
+  const handleCopy = async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.log(err);
+      toast.error('Failed to copy!');
+    }
+  };
   return (
     <div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Order ID:</div>
-        <StatusComponent title={orderId} color={dataColors.pink} />
+        <button className="cursor-pointer" onClick={() => handleCopy(orderId)}>
+          <StatusComponent title={orderId} color={dataColors.pink} />
+        </button>
       </div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Seller:</div>

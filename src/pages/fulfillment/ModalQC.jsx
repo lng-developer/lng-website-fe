@@ -34,6 +34,9 @@ export default function QcCanvasModal({
   orderInfo = {}, // object info hiển thị (phải)
   stageWidth = 900,
   stageHeight = 520,
+  fetchAllQC,
+  filters,
+  fetchCountStatus,
 }) {
   const [bgColor, setBgColor] = useState('#2f5f93');
   const [qcNote, setQcNote] = useState('');
@@ -51,6 +54,8 @@ export default function QcCanvasModal({
       console.log(error);
       toast.error('Error');
     } finally {
+      fetchAllQC(filters);
+      fetchCountStatus();
       onClose?.();
     }
   };
@@ -68,6 +73,8 @@ export default function QcCanvasModal({
       console.log(error);
       toast.error('Error');
     } finally {
+      fetchAllQC(filters);
+      fetchCountStatus();
       onClose?.();
     }
   };
@@ -135,10 +142,10 @@ export default function QcCanvasModal({
             overflow: 'hidden',
           }}
         >
-          <Stage width={stageWidth} height={750}>
+          <Stage width={stageWidth} height={770}>
             <Layer>
-              <Rect x={0} y={0} width={stageWidth} height={750} fill={bgColor} listening={false} />
-              <FitImage url={orderInfo?.data?.fulfillment_file} stageW={stageWidth} stageH={stageHeight} />
+              <Rect x={0} y={0} width={stageWidth} height={770} fill={bgColor} listening={false} />
+              <FitImage url={orderInfo?.data?.fulfillment_file?.front} stageW={stageWidth} stageH={stageHeight} />
             </Layer>
           </Stage>
         </div>
@@ -192,14 +199,14 @@ export default function QcCanvasModal({
               <div className="flex justify-between items-center">
                 <span className="font-medium">Vendor:</span>
                 <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName.split(/\s*[-–—]\s*/)[0]}
+                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
                   color={dataColors.success}
                 />
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Product Name:</span>
                 <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName.replace(/^\s*.*?\s*[-–—]\s+/, '')}
+                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
                   color={dataColors.default}
                   isDefault={true}
                 />

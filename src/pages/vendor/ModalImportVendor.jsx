@@ -82,7 +82,14 @@ const ModalImportVendor = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCen
           </Link>
         </div>
         <div>
-          <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".txt,.json,.csv" maxCount={1}>
+          <Dragger
+            beforeUpload={beforeUpload}
+            fileList={fileList}
+            onRemove={() => setFileList([])}
+            accept=".txt,.json,.csv"
+            maxCount={1}
+            style={{ padding: 16 }}
+          >
             <p className="ant-upload-drag-icon">
               <CloudUploadOutlined />
             </p>

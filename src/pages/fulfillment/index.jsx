@@ -15,10 +15,10 @@ import ItemCostCenter from './table/ItemCostCenter';
 import ItemOrderInfo from './table/ItemOrderInfo';
 import TextArea from 'antd/es/input/TextArea';
 import ItemAction from './table/ItemAction';
-import SubItemAction from './table/SubItemAction';
 import { formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import { getALlOrder } from '../../apis/order';
+import DynamicImageUpload from '../../components/DynamicImageUpload';
 const PAGE_SIZE = 10;
 
 const FulfillmentScale = () => {
@@ -133,6 +133,13 @@ const FulfillmentScale = () => {
     },
   ];
 
+  const convertToArr = (object) => {
+    return Object.entries(object).map(([key, url]) => ({
+      position: key,
+      url,
+    }));
+  };
+
   const handleColorStatus = (stt) => {
     switch (stt) {
       case 'New':
@@ -142,6 +149,23 @@ const FulfillmentScale = () => {
       case 'Shipped':
         return dataColors.pending;
       case 'Cancelled':
+        return dataColors.cancelled;
+      default:
+        return dataColors.default;
+    }
+  };
+
+  const handleColorStatusScale = (stt) => {
+    switch (stt) {
+      case 'Need Scale':
+        return dataColors.success;
+      case 'Pending':
+        return dataColors.pending;
+      case 'Ready':
+        return dataColors.pending;
+      case 'QC Rejected':
+        return dataColors.cancelled;
+      case 'Failed':
         return dataColors.cancelled;
       default:
         return dataColors.default;
@@ -169,7 +193,7 @@ const FulfillmentScale = () => {
         orderOwner: <span className="font-medium">{item?.orderOwner || 'Nguyễn Huy Hoàng'}</span>,
         scaleBy: <span className="font-medium">{item?.scaleBy || 'Lê Thị Phương CS'}</span>,
         express: <StatusComponent title={item?.express || 'No data'} color={dataColors.cancelled} />,
-        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={dataColors.success} />,
+        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
         actions: <ItemAction />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
@@ -185,18 +209,18 @@ const FulfillmentScale = () => {
             cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
             cs_note: (
               <div className="mb-1 w-45">
-                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
-                <TextArea placeholder="CS note" />
+                <div className="font-semibold text-gray-800 mb-1">QC note: </div>
+                <TextArea value={itemSub?.qc_note} placeholder="QC note" spellCheck={false} />
               </div>
             ),
             action: (
-              <SubItemAction
-                fetchAllFulfill={fetchAllFulfill}
-                filters={filters}
-                scale_status={itemSub?.scale_status}
+              <DynamicImageUpload
+                initialKinds={['front']}
+                serverItems={convertToArr(itemSub?.fulfillment_file)}
                 orderId={item?.orderId}
                 orderItemId={itemSub?.orderItemId}
-                fulfillment_file={itemSub?.fulfillment_file}
+                fetchAllFulfill={fetchAllFulfill}
+                filters={filters}
               />
             ),
             order_info: (
@@ -216,7 +240,7 @@ const FulfillmentScale = () => {
       { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info' },
       { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
       { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
-      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 200 },
       { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
       { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
