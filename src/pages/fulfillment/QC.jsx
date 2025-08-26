@@ -18,6 +18,7 @@ import { FcShop } from 'react-icons/fc';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { RiLinkM } from 'react-icons/ri';
 import DateRangePicker from '../../components/DateRangePicker';
+import { handleColorStatusScale } from '../../utils/handleColor';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -201,7 +202,7 @@ const QC = () => {
                 </div>
               </div>
             ),
-            scale_status: <StatusComponent title={itemSub?.scale_status} color={dataColors.pending} />,
+            scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
             sku: <StatusComponent title={itemSub?.sku} color={dataColors.asin} />,
             asin: (
               <div className="flex gap-1 items-center justify-center">

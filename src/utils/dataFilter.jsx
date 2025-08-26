@@ -53,11 +53,6 @@ const dataFilterStatusFulfillment = [
     status: 'Pending',
   },
   {
-    key: 'In Progress',
-    title: 'In Progress',
-    status: 'InProgress',
-  },
-  {
     key: 'Completed',
     title: 'Completed',
     status: 'Completed',
@@ -142,6 +137,11 @@ const dataFilterStatusQC = [
     key: 'Rejected',
     title: 'Rejected',
     status: 'QC Rejected',
+  },
+  {
+    key: 'Failed',
+    title: 'Failed',
+    status: 'Failed',
   },
   {
     key: 'Sent',

@@ -244,6 +244,34 @@ const ProductCostCenter = () => {
       ],
     },
     {
+      title: <span style={{ color: dataColors.title }}>Priority</span>,
+      key: 'priority',
+      children: [
+        {
+          title: <span style={{ color: dataColors.title }}>Economy</span>,
+          dataIndex: 'priority',
+          key: 'priority_economy',
+          align: 'center',
+          render: (text) => (
+            <div className="h-full">
+              <span className="font-medium">{text?.economy || 0}</span>
+            </div>
+          ),
+        },
+        {
+          title: <span style={{ color: dataColors.title }}>Additional</span>,
+          dataIndex: 'priority',
+          key: 'priority_additional',
+          align: 'center',
+          render: (text) => (
+            <div className="h-full">
+              <span className="font-medium">{text?.additional || 0}</span>
+            </div>
+          ),
+        },
+      ],
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Product Type For Design </span>,
       dataIndex: 'type',
       key: 'type',
@@ -302,6 +330,7 @@ const ProductCostCenter = () => {
             international: item?.international,
             base_cost: item?.base_cost,
             additional_costs: item?.additional_costs,
+            priority: item?.priority,
           };
         });
         setProductCostCenter(result);

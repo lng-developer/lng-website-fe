@@ -38,12 +38,12 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
       });
       if (response.status === 200) {
         toast.success(response.data?.message);
-        fetchAllOrder(filters);
       }
     } catch (error) {
       console.log(error);
       toast.error('Update error!');
     } finally {
+      fetchAllOrder(filters);
       setIsShowModal(false);
     }
   };
@@ -56,12 +56,12 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
       });
       if (response.status === 200) {
         toast.success(response.data?.message);
-        fetchAllOrder(filters);
       }
     } catch (error) {
       console.log(error);
       toast.error('Update error!');
     } finally {
+      fetchAllOrder(filters);
       setIsShowModalUpdate(false);
     }
   };
@@ -76,6 +76,7 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [] }) => {
 
   useEffect(() => {
     fetchAllCase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isShowModal]);
 
   return (

@@ -15,10 +15,12 @@ import ItemCostCenter from './table/ItemCostCenter';
 import ItemOrderInfo from './table/ItemOrderInfo';
 import TextArea from 'antd/es/input/TextArea';
 import ItemAction from './table/ItemAction';
-import { formatDate } from '../../utils/fomatDate';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import { getALlOrder } from '../../apis/order';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
+import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
+import DateRangePicker from '../../components/DateRangePicker';
 const PAGE_SIZE = 10;
 
 const FulfillmentScale = () => {
@@ -35,6 +37,8 @@ const FulfillmentScale = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     statuses: 'New',
+    from: defaultFrom,
+    to: defaultTo,
     search: '',
   });
 
@@ -76,6 +80,12 @@ const FulfillmentScale = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+      dataIndex: 'scaleStatus',
+      key: 'scaleStatus',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Group ID</span>,
       dataIndex: 'groupId',
       key: 'groupId',
@@ -88,23 +98,10 @@ const FulfillmentScale = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Status</span>,
+      title: <span style={{ color: dataColors.title }}>Order Status</span>,
       dataIndex: 'status',
       key: 'status',
       align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Quality</span>,
-      dataIndex: 'quality',
-      key: 'quality',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Quantity</span>,
-      dataIndex: 'quantity',
-      key: 'quantity',
-      align: 'center',
-      width: 80,
     },
     {
       title: <span style={{ color: dataColors.title }}>Order Owner</span>,
@@ -120,12 +117,6 @@ const FulfillmentScale = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Scale Status</span>,
-      dataIndex: 'scaleStatus',
-      key: 'scaleStatus',
-      align: 'center',
-    },
-    {
       title: <span style={{ color: dataColors.title }}>Action</span>,
       dataIndex: 'actions',
       key: 'actions',
@@ -138,38 +129,6 @@ const FulfillmentScale = () => {
       position: key,
       url,
     }));
-  };
-
-  const handleColorStatus = (stt) => {
-    switch (stt) {
-      case 'New':
-        return dataColors.success;
-      case 'Fulfilled':
-        return dataColors.process;
-      case 'Shipped':
-        return dataColors.pending;
-      case 'Cancelled':
-        return dataColors.cancelled;
-      default:
-        return dataColors.default;
-    }
-  };
-
-  const handleColorStatusScale = (stt) => {
-    switch (stt) {
-      case 'Need Scale':
-        return dataColors.success;
-      case 'Pending':
-        return dataColors.pending;
-      case 'Ready':
-        return dataColors.pending;
-      case 'QC Rejected':
-        return dataColors.cancelled;
-      case 'Failed':
-        return dataColors.cancelled;
-      default:
-        return dataColors.default;
-    }
   };
 
   // render Orders
@@ -188,11 +147,9 @@ const FulfillmentScale = () => {
         groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault={true} />,
         groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        quality: <StatusComponent title={item?.quality || 'No data'} color={dataColors.yellow} />,
-        quantity: <span className="font-medium">{item?.quantity || '0'}</span>,
-        orderOwner: <span className="font-medium">{item?.orderOwner || 'Nguyễn Huy Hoàng'}</span>,
-        scaleBy: <span className="font-medium">{item?.scaleBy || 'Lê Thị Phương CS'}</span>,
-        express: <StatusComponent title={item?.express || 'No data'} color={dataColors.cancelled} />,
+        orderOwner: <StatusComponent title={item?.orderOwner || 'Nguyễn Huy Hoàng'} color={dataColors.asin} />,
+        scaleBy: <StatusComponent title={item?.scaleBy || 'Lê Thị Phương CS'} color={dataColors.pink} />,
+        express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
         scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
         actions: <ItemAction />,
         subItems: item?.items?.map((itemSub, indexItem) => {
@@ -205,12 +162,12 @@ const FulfillmentScale = () => {
             customization: (
               <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
             ),
-            task_status: <StatusComponent title="Completed" color={dataColors.success} />,
+            task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
             cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
             cs_note: (
               <div className="mb-1 w-45">
-                <div className="font-semibold text-gray-800 mb-1">QC note: </div>
-                <TextArea value={itemSub?.qc_note} placeholder="QC note" spellCheck={false} />
+                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
+                <TextArea value={itemSub?.qc_note} placeholder="CS note" spellCheck={false} />
               </div>
             ),
             action: (
@@ -240,7 +197,7 @@ const FulfillmentScale = () => {
       { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info' },
       { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
       { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
-      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 200 },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 220 },
       { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
       { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
@@ -319,7 +276,7 @@ const FulfillmentScale = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Group Task Scale
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-2">
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               //   onClick={handleClickAdd}
@@ -329,6 +286,21 @@ const FulfillmentScale = () => {
                 Add Vendor Fulfill
               </span>
             </button>
+            <DateRangePicker
+              mode="range"
+              showOutsideDays
+              modifiersClassNames={{
+                selected: 'my-selected',
+                range_middle: 'my-range-middle',
+              }}
+              modifiersStyles={{
+                range_middle: {
+                  backgroundColor: '#f3f4f6', // màu xám nhạt
+                  fontWeight: 'normal', // không in đậm
+                },
+              }}
+              updateFilter={updateFilter}
+            />
           </div>
         </div>
       </div>

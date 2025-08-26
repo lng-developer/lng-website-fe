@@ -8,7 +8,7 @@ const ItemCostCenter = ({ cost_center = {} }) => {
     <div className="text-sm">
       {/* Vendor Product Section */}
       <div className="mb-1">
-        <div className="font-semibold text-gray-800 mb-1">Vendor Product</div>
+        <div className="font-semibold text-gray-800 mb-1">Vendor Product:</div>
         <Input.TextArea
           value={cost_center?.vendorProductDisplayName}
           placeholder="Vendor product"
@@ -20,7 +20,7 @@ const ItemCostCenter = ({ cost_center = {} }) => {
 
       {/* Size Section */}
       <div className="mb-1">
-        <div className="font-semibold text-gray-800 mb-1">Size</div>
+        <div className="font-semibold text-gray-800 mb-1">Size:</div>
         <div className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center" style={{ borderColor: '#08969b' }}>
           {cost_center?.sizeValue || <MdOutlineDoNotDisturb />}
         </div>
@@ -28,7 +28,7 @@ const ItemCostCenter = ({ cost_center = {} }) => {
 
       {/* Color Section */}
       <div>
-        <div className="font-semibold text-gray-800 mb-1 ">Color</div>
+        <div className="font-semibold text-gray-800 mb-1 ">Color:</div>
         <div className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center" style={{ borderColor: '#08969b' }}>
           {cost_center?.colorValue || <MdOutlineDoNotDisturb />}
         </div>

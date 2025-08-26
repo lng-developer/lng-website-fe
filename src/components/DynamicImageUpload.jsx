@@ -201,7 +201,7 @@ export default function DynamicImageUploadBatch({
         onOk={confirmAdd}
         okButtonProps={{ disabled: !kind }}
         style={{ top: '30%' }}
-        width={400}
+        width={350}
       >
         <Select placeholder="Select image type" options={selectableKinds} value={kind} onChange={setKind} style={{ width: '100%' }} />
       </Modal>
