@@ -164,11 +164,7 @@ const Home = () => {
     },
     { title: <span style={{ color: dataColors.title }}>Customer</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
     {
-      title: (
-        <Flex vertical>
-          <span style={{ color: dataColors.title }}>Config Cost</span> <span style={{ color: dataColors.title }}>Center</span>
-        </Flex>
-      ),
+      title: <span style={{ color: dataColors.title }}>Config Cost</span>,
       dataIndex: 'config_cost_center',
       key: 'config_cost_center',
       width: 100,
@@ -182,21 +178,19 @@ const Home = () => {
       align: 'center',
     },
     { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Delivery Date</span>,
+    //   dataIndex: 'delivery_date',
+    //   key: 'delivery_date',
+    //   align: 'center',
+    //   width: 130,
+    // },
     {
-      title: <span style={{ color: dataColors.title }}>Delivery Date</span>,
-      dataIndex: 'delivery_date',
-      key: 'delivery_date',
-      align: 'center',
-    },
-    {
-      title: (
-        <Flex vertical style={{ marginLeft: !collapsed ? 0 : -5 }}>
-          <span style={{ color: dataColors.title }}>Handling</span> <span style={{ color: dataColors.title }}>Time</span>
-        </Flex>
-      ),
+      title: <span style={{ color: dataColors.title }}>Handling</span>,
       dataIndex: 'handling_time',
       key: 'handling_time',
       align: 'center',
+      width: 100,
     },
     { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
   ];
@@ -329,7 +323,7 @@ const Home = () => {
             </span>
           </Flex>
         ),
-        delivery_date: <span className="font-medium">July 25, 2025</span>,
+        // delivery_date: <span className="font-medium">July 25, 2025</span>,
         handling_time: <span className="font-medium">6 Days</span>,
         case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
         subItems: item?.items?.map((itemSub, indexItem) => {

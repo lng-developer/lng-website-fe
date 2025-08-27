@@ -12,7 +12,7 @@ const ItemCostCenter = ({ cost_center = {} }) => {
         <Input.TextArea
           value={cost_center?.vendorProductDisplayName}
           placeholder="Vendor product"
-          style={{ borderColor: dataColors.asin, resize: 'none' }}
+          style={{ borderColor: dataColors.asin, resize: 'none', fontWeight: 500 }}
           autoSize={{ minRows: 2, maxRows: 6 }}
           spellCheck={false}
         />
@@ -21,7 +21,10 @@ const ItemCostCenter = ({ cost_center = {} }) => {
       {/* Size Section */}
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Size:</div>
-        <div className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center" style={{ borderColor: '#08969b' }}>
+        <div
+          className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center"
+          style={{ borderColor: '#08969b', fontWeight: 500 }}
+        >
           {cost_center?.sizeValue || <MdOutlineDoNotDisturb />}
         </div>
       </div>
@@ -29,7 +32,10 @@ const ItemCostCenter = ({ cost_center = {} }) => {
       {/* Color Section */}
       <div>
         <div className="font-semibold text-gray-800 mb-1 ">Color:</div>
-        <div className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center" style={{ borderColor: '#08969b' }}>
+        <div
+          className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center font-medium"
+          style={{ borderColor: '#08969b', fontWeight: 500 }}
+        >
           {cost_center?.colorValue || <MdOutlineDoNotDisturb />}
         </div>
       </div>

@@ -48,6 +48,11 @@ const dataFilterStatusFulfillment = [
     status: 'All',
   },
   {
+    key: 'Need Scale',
+    title: 'Need Scale',
+    status: 'Need Scale',
+  },
+  {
     key: 'Pending',
     title: 'Pending',
     status: 'Pending',

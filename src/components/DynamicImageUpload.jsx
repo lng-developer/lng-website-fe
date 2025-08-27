@@ -146,10 +146,17 @@ export default function DynamicImageUploadBatch({
           <Card
             key={slot.id}
             size="small"
-            title={slot.title /* cố định, không cho sửa */}
+            title={slot.title}
             extra={<Button type="text" size="small" icon={<DeleteOutlined />} danger onClick={() => removeSlot(slot)} />}
-            bodyStyle={{ padding: 10 }}
-            style={{ width: slots.length > 1 ? 150 : 200 }}
+            style={{ width: slots.length > 1 ? 150 : 200, borderColor: '#d9d9d9' }}
+            styles={{
+              header: {
+                borderBottom: '1px solid #d9d9d9',
+              },
+              body: {
+                padding: 10,
+              },
+            }}
           >
             <Dragger
               beforeUpload={(file) => handleBeforeUpload(file, slot)}

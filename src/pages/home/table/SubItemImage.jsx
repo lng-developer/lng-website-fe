@@ -47,12 +47,23 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
     <>
       <div>
         <div className={arrFulfill?.length > 0 ? `inline-grid grid-cols-2 gap-4` : ''}>
-          <div className="w-[130px] h-[130px] rounded-lg overflow-hidden shadow-md">
+          <div
+            className="w-[130px] h-[130px] rounded-lg overflow-hidden"
+            style={{
+              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+            }}
+          >
             <Image height={130} width={130} src={linkImage || NoImage} className="rounded-lg" />
           </div>
           {arrFulfill.length > 0 &&
             arrFulfill?.map((f, i) => (
-              <div key={i} className="w-[130px] h-[130px] rounded-lg overflow-hidden shadow-md">
+              <div
+                key={i}
+                className="w-[130px] h-[130px] rounded-lg overflow-hidden"
+                style={{
+                  boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                }}
+              >
                 <Image height={130} width={130} src={f?.url || NoImage} className="rounded-lg" />
               </div>
             ))}

@@ -23,12 +23,17 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) 
     <div className="">
       {/* Product Image */}
       <div className="flex-shrink-0">
-        <div className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2 shadow-md mb-2">
+        <div
+          className="w-[130px] h-[130px] rounded-lg overflow-hidden flex gap-2 shadow-md mb-2"
+          style={{
+            boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+          }}
+        >
           <Image
             width={130}
             height={130}
             src={imageUrl ? imageUrl : NoImage}
-            className="rounded-lg object-cover shadow-sm"
+            className="rounded-lg object-cover"
             alt="Product"
             preview={{
               mask: <div className="">Preview</div>,

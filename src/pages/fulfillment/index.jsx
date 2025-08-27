@@ -8,7 +8,6 @@ import { Flex, Input, Pagination, Table } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import StatusComponent from '../../components/StatusComponent';
-import ItemDate from './table/ItemDate';
 import ItemProductInfo from './table/ItemProductInfo';
 import ItemCustom from './table/ItemCustom';
 import ItemCostCenter from './table/ItemCostCenter';
@@ -110,7 +109,7 @@ const FulfillmentScale = () => {
       key: 'orderOwner',
       align: 'center',
     },
-    { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
     {
       title: <span style={{ color: dataColors.title }}>Express</span>,
       dataIndex: 'express',
@@ -149,14 +148,13 @@ const FulfillmentScale = () => {
         groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         orderOwner: <StatusComponent title={item?.orderOwner || 'Nguyễn Huy Hoàng'} color={dataColors.asin} />,
-        scaleBy: <StatusComponent title={item?.scaleBy || 'Lê Thị Phương CS'} color={dataColors.pink} />,
+        scaleBy: <StatusComponent title={item?.scaleBy || 'Lê Thị Tạ Tùng CS'} color={dataColors.purple} />,
         express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
         scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
         actions: <ItemAction />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
-            date: <ItemDate createdAt={item?.createdAt} />,
             product_info: (
               <ItemProductInfo imageUrl={itemSub?.baseImageUrl} asin={itemSub?.asin} sku={itemSub?.sku} status={item?.status} />
             ),
@@ -168,7 +166,12 @@ const FulfillmentScale = () => {
             cs_note: (
               <div className="mb-1 w-45">
                 <div className="font-semibold text-gray-800 mb-1">CS note: </div>
-                <TextArea value={itemSub?.qc_note} placeholder="CS note" spellCheck={false} />
+                <TextArea
+                  value={itemSub?.qc_note}
+                  placeholder="CS note"
+                  spellCheck={false}
+                  style={{ color: dataColors.cancelled, fontWeight: 500 }}
+                />
               </div>
             ),
             action: (
@@ -182,7 +185,7 @@ const FulfillmentScale = () => {
               />
             ),
             order_info: (
-              <ItemOrderInfo orderId={item?.orderId} seller={'Nguyễn Huy Hoàng'} fulfillName={'T11-4323604-8773863-11842012004108I'} />
+              <ItemOrderInfo orderId={item?.orderId} seller={'Nguyễn Huy Hoàng'} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />
             ),
           };
         }),
@@ -194,7 +197,6 @@ const FulfillmentScale = () => {
   // Cột con trong bảng mở rộng
   const expandedRowRender = (record) => {
     const subColumns = [
-      { title: <span style={{ color: dataColors.title }}>Date</span>, dataIndex: 'date', key: 'date' },
       { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info' },
       { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
       { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },

@@ -3,11 +3,9 @@ import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { MdAdd } from 'react-icons/md';
 import StatusComponent from '../../components/StatusComponent';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
-import { TbBlender } from 'react-icons/tb';
 import { dataFilterStatusQC } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
@@ -18,7 +16,8 @@ import { FcShop } from 'react-icons/fc';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { RiLinkM } from 'react-icons/ri';
 import DateRangePicker from '../../components/DateRangePicker';
-import { handleColorStatusScale } from '../../utils/handleColor';
+import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
+import ItemProductInfoQC from './ItemProductInfoQC';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -111,6 +110,12 @@ const QC = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>QC By</span>,
+      dataIndex: 'qc_by',
+      key: 'qc_by',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Basecost</span>,
       dataIndex: 'base_cost',
       key: 'base_cost',
@@ -127,16 +132,10 @@ const QC = () => {
   const expandedRowRender = (record) => {
     const subColumns = [
       {
-        title: <span style={{ color: dataColors.title }}>ItemId</span>,
-        dataIndex: 'orderItemId',
-        key: 'orderItemId',
-        align: 'center',
-      },
-      {
-        title: <span style={{ color: dataColors.title }}>Image & Print Side</span>,
-        dataIndex: 'baseImageUrl',
-        key: 'baseImageUrl',
-        align: 'center',
+        title: <span style={{ color: dataColors.title }}>Product Info</span>,
+        dataIndex: 'product_info',
+        key: 'product_info',
+        align: 'left',
       },
       {
         title: <span style={{ color: dataColors.title }}>Scale Status</span>,
@@ -144,9 +143,24 @@ const QC = () => {
         key: 'scale_status',
         align: 'center',
       },
-      { title: <span style={{ color: dataColors.title }}>Sku</span>, dataIndex: 'sku', key: 'sku', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Asin</span>, dataIndex: 'asin', key: 'asin', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'quantity', key: 'quantity', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
+        dataIndex: 'fulfill_name',
+        key: 'fulfill_name',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>PNG Status</span>,
+        dataIndex: 'png_status',
+        key: 'png_status',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Vendor Product</span>,
+        dataIndex: 'cost_center',
+        key: 'cost_center',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action', align: 'center' },
     ];
 
@@ -168,8 +182,8 @@ const QC = () => {
     const results = data.map((item, index) => {
       return {
         key: item?.orderId,
-        orderId: <StatusComponent title={item?.orderId} color={dataColors.purple} />,
-        status: <StatusComponent title={item?.status} color={dataColors.success} />,
+        orderId: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
+        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         scale_overall_status: (
           <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
         ),
@@ -199,31 +213,30 @@ const QC = () => {
             </span>
           </Flex>
         ),
-
+        qc_by: <StatusComponent title={item?.scale_by || 'Lê Thị Tạ Tùng CS'} color={dataColors.purple} />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
-            orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.default} isDefault={true} />,
-            baseImageUrl: (
-              <div className="flex justify-center items-center">
-                <div className="w-[80px] h-[80px] rounded-lg overflow-hidden flex gap-2 shadow-md">
-                  <Image src={itemSub?.baseImageUrl} width={80} height={80} className="rounded-lg" />
-                </div>
-              </div>
-            ),
+            // orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.default} isDefault={true} />,
+            product_info: <ItemProductInfoQC link={itemSub?.baseImageUrl} sku={itemSub?.sku} asin={itemSub?.asin} />,
             scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-            sku: <StatusComponent title={itemSub?.sku} color={dataColors.asin} />,
-            asin: (
-              <div className="flex gap-1 items-center justify-center">
-                <StatusComponent title={itemSub?.asin} color={dataColors.pending} />
-                <Tooltip title="Open Link">
-                  <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${itemSub?.asin}`}>
-                    <RiLinkM size={18} />
-                  </Link>
-                </Tooltip>
+            png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
+            fulfill_name: (
+              <div
+                style={{ borderColor: dataColors.yellow, backgroundColor: `${dataColors.yellow}10` }}
+                className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
+              >
+                <span style={{ color: dataColors.yellow }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
               </div>
             ),
-            quantity: <span className="font-medium">{itemSub?.quantity}</span>,
+            cost_center: (
+              <div
+                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
+                className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
+              >
+                <span>{itemSub?.cost_center?.vendorProductDisplayName}</span>
+              </div>
+            ),
             action: (
               <Tooltip title="QC">
                 <button
