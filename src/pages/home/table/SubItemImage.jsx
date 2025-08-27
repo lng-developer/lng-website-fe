@@ -50,7 +50,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
           <div className="w-[130px] h-[130px] rounded-lg overflow-hidden shadow-md">
             <Image height={130} width={130} src={linkImage || NoImage} className="rounded-lg" />
           </div>
-          {arrFulfill.length &&
+          {arrFulfill.length > 0 &&
             arrFulfill?.map((f, i) => (
               <div key={i} className="w-[130px] h-[130px] rounded-lg overflow-hidden shadow-md">
                 <Image height={130} width={130} src={f?.url || NoImage} className="rounded-lg" />

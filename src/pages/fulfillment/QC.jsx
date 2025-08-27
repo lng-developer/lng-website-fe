@@ -254,15 +254,19 @@ const QC = () => {
   };
 
   const fetchAllQC = async (params) => {
+    setLoading(true);
     try {
       const response = await getAllQC(params);
       if (response.status === 200) {
         const result = response.data?.data;
         setDataSource(result);
+        setTotalCount(response.data?.totalCount);
       }
     } catch (error) {
       console.log(error);
       toast.error('Get QC error!');
+    } finally {
+      setLoading(false);
     }
   };
 

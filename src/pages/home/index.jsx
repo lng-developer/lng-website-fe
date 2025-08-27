@@ -532,6 +532,7 @@ const Home = () => {
                 className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
                 onClick={() => {
                   fetchAllOrder(filters);
+                  fetchCountStatus();
                   toast.success('Refresh success!');
                 }}
               >
