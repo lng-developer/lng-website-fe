@@ -94,6 +94,14 @@ const getAllCountStatusQC = (params) => {
   return instance.get('/fulfillment/qc/statistics', { params });
 };
 
+const getAllFulfillScale = (params) => {
+  return instance.get('/scale/list', { params });
+};
+
+const getAllCountStatusScale = (params) => {
+  return instance.get('/scale/statistics', { params });
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -113,4 +121,6 @@ export {
   scaleFulfill,
   getAllQC,
   getAllCountStatusQC,
+  getAllFulfillScale,
+  getAllCountStatusScale,
 };

@@ -43,9 +43,9 @@ const dataFilterStatus = [
 
 const dataFilterStatusFulfillment = [
   {
-    key: 'Total',
-    title: 'Total',
-    status: 'Total',
+    key: 'All',
+    title: 'All',
+    status: 'All',
   },
   {
     key: 'Pending',
@@ -53,14 +53,14 @@ const dataFilterStatusFulfillment = [
     status: 'Pending',
   },
   {
-    key: 'Completed',
+    key: 'Sent',
     title: 'Completed',
-    status: 'Completed',
+    status: 'Sent',
   },
   {
-    key: 'Rejected',
-    title: 'Rejected',
-    status: 'Rejected',
+    key: 'QC Rejected',
+    title: 'QC Rejected',
+    status: 'QC Rejected',
   },
 ];
 
@@ -129,13 +129,8 @@ const dataFilterStatusQC = [
     status: 'Pending',
   },
   {
-    key: 'Completed',
-    title: 'Completed',
-    status: 'Ready',
-  },
-  {
-    key: 'Rejected',
-    title: 'Rejected',
+    key: 'QC Rejected',
+    title: 'QC Rejected',
     status: 'QC Rejected',
   },
   {
@@ -145,7 +140,7 @@ const dataFilterStatusQC = [
   },
   {
     key: 'Sent',
-    title: 'Sent',
+    title: 'Completed',
     status: 'Sent',
   },
 ];

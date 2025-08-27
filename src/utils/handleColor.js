@@ -29,6 +29,8 @@ const handleColorStatusScale = (stt) => {
       return dataColors.cancelled;
     case 'Complete':
       return dataColors.success;
+    case 'Sent':
+      return dataColors.success;
     default:
       return dataColors.default;
   }

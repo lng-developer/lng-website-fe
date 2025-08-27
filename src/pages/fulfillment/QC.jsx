@@ -81,9 +81,9 @@ const QC = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Status Order</span>,
-      dataIndex: 'status',
-      key: 'status',
+      title: <span style={{ color: dataColors.title }}>Status QC</span>,
+      dataIndex: 'scale_overall_status',
+      key: 'scale_overall_status',
       align: 'center',
     },
     {
@@ -96,6 +96,12 @@ const QC = () => {
       title: <span style={{ color: dataColors.title }}>Order Date</span>,
       dataIndex: 'purchase_date',
       key: 'purchase_date',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Status Order</span>,
+      dataIndex: 'status',
+      key: 'status',
       align: 'center',
     },
     {
@@ -164,6 +170,9 @@ const QC = () => {
         key: item?.orderId,
         orderId: <StatusComponent title={item?.orderId} color={dataColors.purple} />,
         status: <StatusComponent title={item?.status} color={dataColors.success} />,
+        scale_overall_status: (
+          <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
+        ),
         createdAt: (
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>

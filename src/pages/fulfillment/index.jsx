@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Flex, Input, Pagination, Table } from 'antd';
@@ -17,7 +17,7 @@ import TextArea from 'antd/es/input/TextArea';
 import ItemAction from './table/ItemAction';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
-import { getALlOrder } from '../../apis/order';
+import { getAllCountStatusScale, getAllFulfillScale } from '../../apis/order';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -33,10 +33,11 @@ const FulfillmentScale = () => {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [tableHeight, setTableHeight] = useState(0);
+  const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    statuses: 'New',
+    scale_status: '',
     from: defaultFrom,
     to: defaultTo,
     search: '',
@@ -125,7 +126,7 @@ const FulfillmentScale = () => {
   ];
 
   const convertToArr = (object) => {
-    return Object.entries(object).map(([key, url]) => ({
+    return Object?.entries(object || {}).map(([key, url]) => ({
       position: key,
       url,
     }));
@@ -219,7 +220,7 @@ const FulfillmentScale = () => {
   const fetchAllFulfill = async (params) => {
     setLoading(true);
     try {
-      const response = await getALlOrder(params);
+      const response = await getAllFulfillScale(params);
       if (response.status === 200) {
         setDataSource(response.data?.data);
         setTotalCount(response.data?.totalCount);
@@ -241,6 +242,32 @@ const FulfillmentScale = () => {
     updateFilter({ search: e.target.value });
   };
 
+  // fetch count order by status
+  const fetchCountStatus = useCallback(async () => {
+    try {
+      const response = await getAllCountStatusScale(filters);
+      if (response.status === 200) {
+        const resultTabFilter = dataFilterStatusFulfillment.map(({ key, title, status }) => ({
+          key,
+          title,
+          status,
+          count: response.data?.overall?.counts[key] ?? 0,
+        }));
+        setTabFilter(resultTabFilter);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, [filters]);
+
+  const handleFilterForStatus = (status) => {
+    if (status === 'All') {
+      updateFilter({ scale_status: '' });
+      return;
+    }
+    updateFilter({ scale_status: status });
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const headerHeight = 265; // Chiều cao header nếu có
@@ -260,6 +287,7 @@ const FulfillmentScale = () => {
 
   useEffect(() => {
     fetchAllFulfill(filters);
+    fetchCountStatus();
   }, [filters]);
 
   useEffect(() => {
@@ -306,12 +334,12 @@ const FulfillmentScale = () => {
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex gap-3 items-center">
-          {dataFilterStatusFulfillment.map((item, index) => (
+          {tabFilter.map((item, index) => (
             <ButtonFilter
               key={index}
               item={item}
               isActive={isActiveFilter?.key}
-              // handleFilterForStatus={handleFilterForStatus}
+              handleFilterForStatus={handleFilterForStatus}
               setIsActivefilter={setIsActivefilter}
               count={item?.count}
             />

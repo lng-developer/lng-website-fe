@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex } from 'antd';
 import { Stage, Layer, Rect, Image as KImage } from 'react-konva';
 import useImage from 'use-image';
@@ -32,14 +32,43 @@ export default function QcCanvasModal({
   open,
   onClose,
   orderInfo = {}, // object info hiển thị (phải)
-  stageWidth = 900,
-  stageHeight = 520,
   fetchAllQC,
   filters,
   fetchCountStatus,
 }) {
   const [bgColor, setBgColor] = useState('#2f5f93');
   const [qcNote, setQcNote] = useState('');
+  const ORDER = ['front', 'back', 'left_sleeve', 'right_sleeve', 'collar']; // để sắp xếp nếu cần
+  const filesEntries = useMemo(() => {
+    const ff = orderInfo?.data?.fulfillment_file ?? {};
+    // giữ thứ tự ORDER nhưng chỉ lấy key có url
+    return ORDER.flatMap((k) => (ff[k] ? [[k, ff[k]]] : []));
+    // hoặc đơn giản: Object.entries(ff).filter(([,url]) => !!url);
+  }, [orderInfo]);
+
+  // 2) State đang chọn
+  const [selectedKind, setSelectedKind] = useState(null);
+  useEffect(() => {
+    setSelectedKind(filesEntries[0]?.[0] ?? null); // nếu chỉ có 1 ảnh cũng OK
+  }, [filesEntries]);
+
+  // 3) Url đang preview
+  const previewUrl = selectedKind ? orderInfo?.data?.fulfillment_file?.[selectedKind] : undefined;
+
+  const useImageSize = (url) => {
+    const [width, setWidth] = useState(0);
+
+    useEffect(() => {
+      if (!url) return;
+      const img = new Image();
+      img.onload = () => {
+        setWidth(img.width);
+      };
+      img.src = url;
+    }, [url]);
+
+    return width;
+  };
 
   const handlePass = async () => {
     try {
@@ -79,15 +108,17 @@ export default function QcCanvasModal({
     }
   };
 
+  const widthState = useImageSize(orderInfo?.data?.fulfillment_file?.front);
+
   return (
-    <Modal width={1400} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
+    <Modal width={1300} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 12,
-          marginRight: 154,
+          marginRight: orderInfo?.data?.scale_status === 'Need Scale' ? 154 : 365,
         }}
       >
         <h1 style={{ margin: 0 }}>QC Preview</h1>
@@ -110,25 +141,63 @@ export default function QcCanvasModal({
             />
           </div>
 
-          {/* Nút QC */}
-          <div className="flex gap-2">
-            <Button type="dashed" iconPosition="end" icon={<FcApproval />} onClick={handlePass} style={{ fontWeight: 500 }}>
-              Passed
-            </Button>
-            <Button type="dashed" iconPosition="end" icon={<IoArrowUndo color="red" />} onClick={handleReject} style={{ fontWeight: 500 }}>
-              Reject
-            </Button>
-          </div>
+          {orderInfo?.data?.scale_status === 'Pending' && (
+            <div className="flex gap-2">
+              <Button type="dashed" iconPosition="end" icon={<FcApproval />} onClick={handlePass} style={{ fontWeight: 500 }}>
+                Passed
+              </Button>
+              <Button
+                type="dashed"
+                iconPosition="end"
+                icon={<IoArrowUndo color="red" />}
+                onClick={handleReject}
+                style={{ fontWeight: 500 }}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 16 }}>
         {/* LEFT: Base images */}
-        <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
+          {/* Ảnh base mockup (giữ nguyên) */}
           <img
             src={orderInfo?.data?.baseImageUrl}
             style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
           />
+
+          {filesEntries.length > 0 && (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {filesEntries.map(([kind, url]) => (
+                <div
+                  key={kind}
+                  onClick={() => setSelectedKind(kind)}
+                  style={{
+                    cursor: 'pointer',
+                    border: selectedKind === kind ? '2px solid #1677ff' : '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    padding: 6,
+                    background: '#fff',
+                  }}
+                  title={kind.replace(/_/g, ' ')}
+                >
+                  <img
+                    src={url}
+                    preview={false}
+                    placeholder // antd hiển thị skeleton khi load
+                    fallback="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" // tránh icon vỡ
+                    style={{ width: '100%', height: 150, objectFit: 'contain', borderRadius: 4 }}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: '#64748B' }}>
+                    {kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
@@ -140,12 +209,13 @@ export default function QcCanvasModal({
             display: 'flex',
             justifyContent: 'center',
             overflow: 'hidden',
+            width: widthState,
           }}
         >
-          <Stage width={stageWidth} height={770}>
+          <Stage width={widthState} height={770}>
             <Layer>
-              <Rect x={0} y={0} width={stageWidth} height={770} fill={bgColor} listening={false} />
-              <FitImage url={orderInfo?.data?.fulfillment_file?.front} stageW={stageWidth} stageH={stageHeight} />
+              <Rect x={0} y={0} width={widthState} height={770} fill={bgColor} listening={false} />
+              <FitImage url={previewUrl} stageW={widthState} stageH={770} />
             </Layer>
           </Stage>
         </div>
@@ -242,6 +312,7 @@ export default function QcCanvasModal({
               QC Note
             </Title>
             <Input.TextArea
+              defaultValue={orderInfo?.data?.qc_note || ''}
               value={qcNote}
               onChange={(e) => setQcNote(e.target.value)}
               placeholder="Nhập ghi chú cho seller…"
