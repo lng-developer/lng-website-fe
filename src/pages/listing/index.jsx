@@ -1,9 +1,9 @@
 import { Link, useOutletContext } from 'react-router-dom';
-import { dataFilterListing, dataFilterStatusFulfillment } from '../../utils/dataFilter';
-import { useState } from 'react';
+import { dataFilterListing } from '../../utils/dataFilter';
+import { useEffect, useMemo, useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
-import { Flex, Image, Input, Pagination, Select, Table } from 'antd';
+import { Flex, Image, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { FaDollarSign, FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import NoImage from '../../assets/NoImage.jpg';
@@ -11,7 +11,14 @@ import StatusComponent from '../../components/StatusComponent';
 import { GoDotFill } from 'react-icons/go';
 import ItemAction from './table/ItemAction';
 import { MdAdd } from 'react-icons/md';
-
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { toast } from 'sonner';
+import { getAllListing } from '../../apis/listing';
+import { debounce } from 'lodash';
+import { formatDistanceToNow } from 'date-fns';
+import { RiLinkM } from 'react-icons/ri';
+import { FcShop } from 'react-icons/fc';
+const PAGE_SIZE = 10;
 const stats = [
   {
     icon: <FaDollarSign className="w-4 h-4 text-gray-600" />,
@@ -39,123 +46,36 @@ const stats = [
   },
 ];
 
-const dataSource = [
-  {
-    id: 1,
-    date: '25/07/2025',
-    productInfo: {
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
-      productCode: 'BOE882D4S7',
-    },
-    template: {
-      style: 'GG-Napkins',
-      designProduct: 'IKb2HVDno8R',
-      variant: 'Available',
-    },
-    psd: {
-      psdId: 'IKb2PlV0ndtR',
-      psdStatus: 'Available',
-    },
-    platform: 'Amazon',
-    assignee: 'Nguyễn Thị Lan Anh',
-    config: 'No config',
-    total: 150,
-    store: 'Acc 166',
-  },
-  {
-    id: 2,
-    date: '25/07/2025',
-    productInfo: {
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
-      productCode: 'BOE882D4S7',
-    },
-    template: {
-      style: 'GG-Napkins',
-      designProduct: 'KbMTbdWpV2V',
-      variant: 'Available',
-    },
-    psd: {
-      psdId: 'IKb2PlV0ndtR',
-      psdStatus: 'Available',
-    },
-    platform: 'Amazon',
-    assignee: 'Nguyễn Thị Lan Anh',
-    config: 'No config',
-    total: 200,
-    store: 'Acc 166',
-  },
-  {
-    id: 3,
-    date: '26/07/2025',
-    productInfo: {
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
-      productCode: 'BOE882D4S7',
-    },
-    template: {
-      style: 'GG-Towels',
-      designProduct: 'XYZ789ABC1',
-      variant: 'Available',
-    },
-    psd: {
-      psdId: 'IKb2PlV0ndtR',
-      psdStatus: 'Available',
-    },
-    platform: 'Amazon',
-    assignee: 'Trần Văn Nam',
-    config: 'Custom config',
-    total: 300,
-    store: 'Acc 166',
-  },
-  {
-    id: 4,
-    date: '27/07/2025',
-    productInfo: {
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
-      productCode: 'BOE882D4S7',
-    },
-    template: {
-      style: 'GG-Placemats',
-      designProduct: 'PQR456DEF7',
-      variant: 'Out of Stock',
-    },
-    psd: {
-      psdId: 'IKb2PlV0ndtR',
-      psdStatus: 'Available',
-    },
-    platform: 'Shopify',
-    assignee: 'Lê Thị Mai',
-    config: 'No config',
-    status: 'Priority',
-    total: 75,
-    store: 'Acc 166',
-  },
-  {
-    id: 5,
-    date: '28/07/2025',
-    productInfo: {
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
-      productCode: 'BOE882D4S7',
-    },
-    template: {
-      style: 'GG-Coasters',
-      designProduct: 'STU123JKL8',
-      variant: 'Available',
-    },
-    psd: {
-      psdId: 'IKb2PlV0ndtR',
-      psdStatus: 'Available',
-    },
-    platform: 'Amazon',
-    assignee: 'Phạm Minh Tuấn',
-    config: 'Advanced config',
-    total: 120,
-    store: 'Acc 166',
-  },
-];
-
 const Listing = () => {
   const { collapsed } = useOutletContext();
-  const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusFulfillment[0]);
+  const [isActiveFilter, setIsActivefilter] = useState(dataFilterListing[0]);
+  const [dataSource, setDataSource] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tableHeight, setTableHeight] = useState(0);
+  const [tabFilter, setTabFilter] = useState(dataFilterListing);
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    scale_status: '',
+    from: defaultFrom,
+    to: defaultTo,
+    search: '',
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    updateFilter({ page: page, perPage: pageSize });
+    setCurrentPage(page);
+  };
 
   const handleClickButton = (item) => {
     setIsActivefilter(item);
@@ -191,14 +111,14 @@ const Listing = () => {
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Date</span>,
-      dataIndex: 'date',
-      key: 'date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       align: 'center',
       render: (data) => (
-        <Flex vertical={true} justify="center">
-          <span className="font-medium">{data}</span>
+        <Flex vertical={true}>
+          <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
           <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            (7 days ago)
+            ({formatDistanceToNow(data, { addSuffix: true })})
           </span>
         </Flex>
       ),
@@ -211,16 +131,18 @@ const Listing = () => {
       render: (data) => (
         <Flex vertical={true} justify="center">
           <div>
-            <Image width={100} src={data?.image ? data?.image : NoImage} className="rounded-lg" />
+            <Image width={100} src={data?.product_image ? data?.product_image : NoImage} className="rounded-lg" />
           </div>
-          <Link to={''}> {data?.productCode} </Link>
+          <Link target="_blank" className="hover:underline font-medium" to={`http://amazon.com/gp/product/${data?.asin}`}>
+            {data?.asin}
+          </Link>
         </Flex>
       ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Total</span>,
-      dataIndex: 'total',
-      key: 'total',
+      dataIndex: 'total_sales',
+      key: 'total_sales',
       align: 'center',
       render: (data) => <span className="font-medium">{data}</span>,
     },
@@ -242,7 +164,7 @@ const Listing = () => {
           dataIndex: 'template',
           key: 'templateDesign',
           align: 'center',
-          render: (data) => <StatusComponent title={data?.designProduct} color={dataColors.asin} />,
+          render: (data) => <StatusComponent title={data?.design_product} color={dataColors.asin} />,
         },
         {
           title: <span style={{ color: dataColors.title }}>Variant</span>,
@@ -264,7 +186,7 @@ const Listing = () => {
           dataIndex: 'psd',
           key: 'psdId',
           align: 'center',
-          render: (data) => <StatusComponent title={data?.psdId} color={dataColors.purple} />,
+          render: (data) => <StatusComponent title={data?.psd_id} color={dataColors.purple} />,
         },
         {
           title: <span style={{ color: dataColors.title }}>PSD Status</span>,
@@ -274,10 +196,10 @@ const Listing = () => {
           render: (data) => (
             <div
               className="flex gap-2 items-center"
-              style={{ color: data.psdStatus === 'Available' ? dataColors.success : dataColors.cancelled }}
+              style={{ color: data.status === 'Available' ? dataColors.success : dataColors.cancelled }}
             >
               <GoDotFill />
-              <span className="font-medium">{data.psdStatus}</span>
+              <span className="font-medium">{data.status}</span>
             </div>
           ),
         },
@@ -288,7 +210,14 @@ const Listing = () => {
       dataIndex: 'store',
       key: 'store',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.default} isDefault={true} />,
+      render: (data) => (
+        <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
+          <FcShop size={20} />
+          <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
+            Acc 1
+          </span>
+        </Flex>
+      ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Platform</span>,
@@ -299,45 +228,31 @@ const Listing = () => {
     },
     {
       title: <span style={{ color: dataColors.title }}>Seller</span>,
-      dataIndex: 'assignee',
-      key: 'assignee',
+      dataIndex: 'seller',
+      key: 'seller',
       align: 'center',
-      render: (data) => (
-        <SelectFilter
-          title={data}
-          ListData={[
-            'Nguyễn Trọng Phương',
-            'Vũ Thị Uyên',
-            'Dương Thị Như Nguyệt',
-            'Nguyễn Thị Ngát',
-            'Nguyễn Thị Lan Anh',
-            'Nguyễn Huy Hoàng',
-          ]}
-          isSeller={true}
-          value={data}
-        />
-      ),
+      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.asin} />,
     },
-    {
-      title: <span style={{ color: dataColors.title }}>Thread Color </span>,
-      dataIndex: 'thread',
-      key: 'thread',
-      align: 'center',
-      render: (data) => (
-        <div
-          className="px-2 py-2 rounded-md flex justify-between items-center border cursor-pointer"
-          style={{ borderColor: dataColors.default }}
-        >
-          <span style={{ color: dataColors.title, marginRight: 5 }}>Add Config</span>
-          <MdAdd size={20} color="black" />
-        </div>
-      ),
-    },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Thread Color </span>,
+    //   dataIndex: 'thread',
+    //   key: 'thread',
+    //   align: 'center',
+    //   render: (data) => (
+    //     <div
+    //       className="px-2 py-2 rounded-md flex justify-between items-center border cursor-pointer"
+    //       style={{ borderColor: dataColors.default }}
+    //     >
+    //       <span style={{ color: dataColors.title, marginRight: 5 }}>Add Config</span>
+    //       <MdAdd size={20} color="black" />
+    //     </div>
+    //   ),
+    // },
     {
       title: <span style={{ color: dataColors.title }}>Asin Type</span>,
-      dataIndex: 'asinType',
-      key: 'asinType',
-      align: 'asinType',
+      dataIndex: 'asin_type',
+      key: 'asin_type',
+      align: 'center',
       render: (data) => (
         <Flex vertical gap={4}>
           <Select
@@ -370,6 +285,69 @@ const Listing = () => {
     },
   ];
 
+  const fetchAllListing = async (params) => {
+    setLoading(true);
+    try {
+      const response = await getAllListing(params);
+      if (response.status === 200) {
+        const result = response.data?.listings?.map((item) => {
+          return {
+            ...item,
+            productInfo: {
+              product_image: item?.product_image,
+              asin: item?.asin,
+            },
+          };
+        });
+        setDataSource(result);
+        setTotalCount(response.data?.total);
+      } else {
+        toast.error(response.data?.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
+  const handleSearch = (e) => {
+    debouncedSearch(e.target.value);
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 265; // Chiều cao header nếu có
+      const marginBottom = 20;
+
+      const availableHeight = window.innerHeight - headerHeight - marginBottom;
+      setTableHeight(availableHeight);
+    };
+
+    handleResize(); // Gọi lần đầu
+    window.addEventListener('resize', handleResize); // Lắng nghe resize
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchAllListing(filters);
+  }, [filters]);
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -391,7 +369,7 @@ const Listing = () => {
                   fontWeight: 'normal', // không in đậm
                 },
               }}
-              // updateFilter={updateFilter}
+              updateFilter={updateFilter}
             />
           </div>
         </div>
@@ -437,7 +415,7 @@ const Listing = () => {
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <Input
-              // onChange={handleSearch}
+              onChange={handleSearch}
               placeholder="Search orders by ID, Customer..."
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
@@ -466,17 +444,26 @@ const Listing = () => {
           </div>
           <div>
             <Pagination
-              total={50}
+              total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
-              defaultCurrent={1}
-              // onChange={handlePageChange}
-              // onShowSizeChange={handlePageChange}
+              defaultPageSize={PAGE_SIZE}
+              defaultCurrent={currentPage}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
             />
           </div>
         </div>
         <div className="mt-4">
-          <Table columns={columns} dataSource={dataSource} rowKey="key" bordered={true} pagination={false} scroll={{ x: 'max-content' }} />
+          <Table
+            className="no-indent-table listing"
+            columns={columns}
+            dataSource={dataSource}
+            bordered={true}
+            pagination={false}
+            loading={loading}
+            sticky={{ offsetHeader: 0 }}
+            tableLayout="auto"
+          />
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@
 
 :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-thead > tr > th,
 :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-thead > tr > td {
-  border-bottom: none !important;
+  /* border-bottom: none !important; */
 }
 
 :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table.ant-table-bordered > .ant-table-container {
@@ -213,6 +213,14 @@
 .no-backgroud-title .ant-table-tbody > tr > td {
   border-top: 1px solid #f0f0f0 !important;
 }
+
+.listing .ant-table-body {
+  border-inline-start: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
 /*  */
 
 .table-qc .ant-table-body {
@@ -220,6 +228,42 @@
   border-bottom: 1px solid #f0f0f0;
   border-bottom-right-radius: 8px;
   border-bottom-left-radius: 8px;
+}
+
+.listing
+  :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
+  .ant-table.ant-table-bordered
+  > .ant-table-container
+  > .ant-table-content
+  > table
+  > thead
+  > tr:not(:last-child)
+  > th,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
+  .ant-table.ant-table-bordered
+  > .ant-table-container
+  > .ant-table-header
+  > table
+  > thead
+  > tr:not(:last-child)
+  > th,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
+  .ant-table.ant-table-bordered
+  > .ant-table-container
+  > .ant-table-body
+  > table
+  > thead
+  > tr:not(:last-child)
+  > th,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
+  .ant-table.ant-table-bordered
+  > .ant-table-container
+  > .ant-table-summary
+  > table
+  > thead
+  > tr:not(:last-child)
+  > th {
+  border-bottom: 1px solid #e6e3e3 !important;
 }
 
 /* Giữ app ở light nếu bạn không muốn theo OS */
