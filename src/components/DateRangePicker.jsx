@@ -49,7 +49,14 @@ export default function DateRangePicker({ updateFilter }) {
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="bg-white rounded shadow-md p-4 flex gap-4 !text-sm z-100 !text-back" side="bottom" align="start">
+        <Popover.Content
+          className="bg-white rounded p-4 flex gap-4 !text-sm z-100 !text-back"
+          side="bottom"
+          align="center"
+          style={{
+            boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+          }}
+        >
           {/* Left: Presets */}
           <div className="w-40 flex flex-col gap-1">
             {presets.map((preset) => (

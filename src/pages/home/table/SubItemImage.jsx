@@ -38,7 +38,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
     }
   };
 
-  const arrFulfill = Object.entries(linkFulfill).map(([key, url]) => ({
+  const arrFulfill = Object.entries(typeof linkFulfill === 'object' ? linkFulfill : {}).map(([key, url]) => ({
     title: key,
     url,
   }));

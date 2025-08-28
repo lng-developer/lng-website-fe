@@ -127,7 +127,7 @@ const FulfillmentScale = () => {
   ];
 
   const convertToArr = (object) => {
-    return Object?.entries(object || {}).map(([key, url]) => ({
+    return Object?.entries(typeof object === 'object' ? object : {}).map(([key, url]) => ({
       position: key,
       url,
     }));

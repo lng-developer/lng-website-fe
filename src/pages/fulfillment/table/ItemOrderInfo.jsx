@@ -44,7 +44,7 @@ export default function OrderInfoForm({ orderId, seller, fulfillName }) {
               style={{
                 position: 'absolute',
                 top: 35,
-                right: 25,
+                right: 5,
                 cursor: 'pointer',
                 color: '#08969b',
               }}

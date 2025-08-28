@@ -212,10 +212,10 @@ export default function QcCanvasModal({
             width: widthState,
           }}
         >
-          <Stage width={widthState} height={770}>
+          <Stage width={widthState} height={745}>
             <Layer>
-              <Rect x={0} y={0} width={widthState} height={770} fill={bgColor} listening={false} />
-              <FitImage url={previewUrl} stageW={widthState} stageH={770} />
+              <Rect x={0} y={0} width={widthState} height={745} fill={bgColor} listening={false} />
+              <FitImage url={previewUrl} stageW={widthState} stageH={745} />
             </Layer>
           </Stage>
         </div>
@@ -224,7 +224,7 @@ export default function QcCanvasModal({
         <Flex vertical gap={10}>
           <div
             style={{
-              flex: '0 0 300px',
+              flex: '0 0 280px',
               border: '1px solid #ddd',
               borderRadius: 8,
               padding: 12,
@@ -255,14 +255,6 @@ export default function QcCanvasModal({
                 <StatusComponent title={orderInfo?.data?.sku} color={dataColors.asin} />
               </div>
               <div className="flex justify-between items-center">
-                <span className="font-medium">Color:</span>
-                <StatusComponent title={orderInfo?.data?.cost_center?.colorValue} color={dataColors.default} isDefault={true} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Size:</span>
-                <StatusComponent title={orderInfo?.data?.cost_center?.sizeValue} color={dataColors.default} isDefault={true} />
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="font-medium">Fulfillable Qty:</span>
                 <StatusComponent title={orderInfo?.data?.quantity} color={dataColors.default} isDefault={true} />
               </div>
@@ -283,7 +275,26 @@ export default function QcCanvasModal({
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Fulfill Name:</span>
-                <StatusComponent title={orderInfo?.fulfill_name || 'No data'} color={dataColors.default} isDefault={true} />
+                <div
+                  style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
+                  className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
+                >
+                  <span
+                    style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'inline-block',
+                    }}
+                    className="whitespace-nowrap"
+                  >
+                    {`${orderInfo?.orderId}-${orderInfo?.data?.orderItemId}`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Vendor Product Sku:</span>
+                <StatusComponent title={orderInfo?.data?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
               </div>
             </Flex>
           </div>

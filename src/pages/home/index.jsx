@@ -29,6 +29,7 @@ import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { getALlVendorProduct } from '../../apis/vendor';
+import { TbHistory } from 'react-icons/tb';
 import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
@@ -191,7 +192,6 @@ const Home = () => {
       dataIndex: 'handling_time',
       key: 'handling_time',
       align: 'center',
-      width: 100,
     },
     { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
   ];
@@ -289,7 +289,12 @@ const Home = () => {
             address_validation={item?.address_validation}
           />
         ),
-        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+        status: (
+          <div className="flex items-center gap-1">
+            <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />
+            <TbHistory size={16} className="cursor-pointer" />
+          </div>
+        ),
         created: (
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
