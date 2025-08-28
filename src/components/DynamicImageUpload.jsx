@@ -1,6 +1,6 @@
 // DynamicImageUploadBatch.jsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Upload, Button, Card, Modal, Select, Image } from 'antd';
+import { Upload, Button, Card, Modal, Select, Image, Spin } from 'antd';
 import { DeleteOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { IoCloudUploadOutline } from 'react-icons/io5';
 import { v4 as uuid } from 'uuid';
@@ -37,6 +37,7 @@ export default function DynamicImageUploadBatch({
   const [slots, setSlots] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
   const [kind, setKind] = useState();
+  const [spinning, setSpinning] = useState(false);
 
   // --- HYDRATE từ API + initialKinds
   useEffect(() => {
@@ -97,17 +98,13 @@ export default function DynamicImageUploadBatch({
       toast.error('No images to upload!');
       return;
     }
+    setSpinning(true);
     const formData = new FormData();
-
-    // append từng file
     itemsReady.forEach((f) => {
       formData.append('files', f.file);
     });
-
-    // append meta dưới dạng string JSON
     const meta = itemsReady.map((f) => ({ position: f.position }));
     formData.append('meta', JSON.stringify(meta));
-
     try {
       const response = await uploadScale(orderId, orderItemId, formData);
       if (response.status === 200) {
@@ -120,6 +117,7 @@ export default function DynamicImageUploadBatch({
       toast.error('Import error');
     } finally {
       fetchAllFulfill(filters);
+      setSpinning(false);
     }
   };
 
@@ -199,6 +197,8 @@ export default function DynamicImageUploadBatch({
           </Card>
         ))}
       </div>
+
+      {spinning && <Spin fullscreen tip="Uploading photos..." />}
 
       {/* Modal chọn loại ảnh khi Add */}
       <Modal
