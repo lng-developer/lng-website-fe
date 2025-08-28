@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
     const roleUser = [authData.user.role];
     setRoles(roleUser || []);
     localStorage.setItem('auth', JSON.stringify(authData));
+    localStorage.setItem('accessToken', authData.accessToken);
   };
 
   const logout = () => {
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(null);
     setRoles([]);
     localStorage.removeItem('auth');
+    localStorage.removeItem('accessToken');
   };
 
   // Load từ localStorage nếu đã đăng nhập trước đó

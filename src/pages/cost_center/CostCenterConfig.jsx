@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Input, Pagination, Switch, Table, Tooltip } from 'antd';
@@ -12,6 +12,7 @@ import SelectProductType from '../../components/SelectProductType';
 import ModalAddConfig from './ModalAddConfig';
 import ModalEditConfig from './ModalEditConfig';
 import { toast } from 'sonner';
+import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
 const CostCenterConfig = () => {
@@ -268,12 +269,20 @@ const CostCenterConfig = () => {
     }
   };
 
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
   const handleSearch = (e) => {
-    if (!e.target.value) {
-      updateFilter({ search: '' });
-      return;
-    }
-    updateFilter({ search: e.target.value });
+    debouncedSearch(e.target.value);
   };
 
   const fetchAllProductType = async () => {

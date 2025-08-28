@@ -118,7 +118,7 @@ export default function QcCanvasModal({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 12,
-          marginRight: orderInfo?.data?.scale_status === 'Need Scale' ? 154 : 365,
+          marginRight: orderInfo?.data?.scale_status === 'Pending' ? 154 : 365,
         }}
       >
         <h1 style={{ margin: 0 }}>QC Preview</h1>

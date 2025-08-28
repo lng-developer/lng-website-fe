@@ -9,7 +9,7 @@ import SubItemCustom from './table/SubItemCustom';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAllCountStatus, getALlOrder, getALlShop, retestBasecode } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { FcShop } from 'react-icons/fc';
@@ -29,6 +29,7 @@ import ItemCase from './table/ItemCase';
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { getALlVendorProduct } from '../../apis/vendor';
+import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -127,10 +128,10 @@ const Home = () => {
         setOrders(response.data?.data);
         setTotalCount(response.data?.totalCount);
       } else {
-        console.log('error');
+        toast.error(response.data?.message);
       }
     } catch (error) {
-      console.log(error);
+      toast.error(error?.response?.data?.message);
     } finally {
       setLoading(false);
     }
@@ -218,13 +219,21 @@ const Home = () => {
     );
   };
 
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
   // Xử lý search
   const handleSearch = (e) => {
-    if (!e.target.value) {
-      updateFilter({ search: '' });
-      return;
-    }
-    updateFilter({ search: e.target.value });
+    debouncedSearch(e.target.value);
   };
 
   const handleFilterForStatus = (status) => {
@@ -342,7 +351,13 @@ const Home = () => {
             sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} />,
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-            cost_center: <SubItemCost data={itemSub?.cost_center} vendorProduct={vendorProduct} />,
+            cost_center: (
+              <SubItemCost
+                data={itemSub?.cost_center}
+                vendorProduct={vendorProduct}
+                fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+              />
+            ),
             tracking_note: (
               <SubItemTracking
                 tracking_info={itemSub?.tracking_info}

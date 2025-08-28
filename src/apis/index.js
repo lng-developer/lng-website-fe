@@ -3,15 +3,16 @@ const instance = axios.create({
   baseURL: 'https://api.lngmerch.co/api',
 });
 
-// instance.interceptors.request.use(
-//   (config) => {
-//     if (localStorage.getItem('accessToken')) {
-//       config.headers.authorization = localStorage.getItem('accessToken');
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
+instance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken')?.replace(/^"|"$/g, '');
+    if (localStorage.getItem('accessToken')) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 export default instance;

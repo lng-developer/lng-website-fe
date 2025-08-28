@@ -1,7 +1,7 @@
 import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import StatusComponent from '../../components/StatusComponent';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
@@ -18,6 +18,7 @@ import { RiLinkM } from 'react-icons/ri';
 import DateRangePicker from '../../components/DateRangePicker';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import ItemProductInfoQC from './ItemProductInfoQC';
+import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -223,10 +224,10 @@ const QC = () => {
             png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
             fulfill_name: (
               <div
-                style={{ borderColor: dataColors.yellow, backgroundColor: `${dataColors.yellow}10` }}
+                style={{ borderColor: dataColors.process, backgroundColor: `${dataColors.process}10` }}
                 className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
               >
-                <span style={{ color: dataColors.yellow }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
+                <span style={{ color: dataColors.process }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
               </div>
             ),
             cost_center: (
@@ -258,12 +259,20 @@ const QC = () => {
     return results;
   };
 
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
   const handleSearch = (e) => {
-    if (!e.target.value) {
-      updateFilter({ search: '' });
-      return;
-    }
-    updateFilter({ search: e.target.value });
+    debouncedSearch(e.target.value);
   };
 
   const fetchAllQC = async (params) => {
@@ -274,10 +283,11 @@ const QC = () => {
         const result = response.data?.data;
         setDataSource(result);
         setTotalCount(response.data?.totalCount);
+      } else {
+        toast.error(response.data?.message);
       }
     } catch (error) {
-      console.log(error);
-      toast.error('Get QC error!');
+      toast.error(error?.response?.data?.message);
     } finally {
       setLoading(false);
     }

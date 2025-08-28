@@ -1,5 +1,5 @@
 import { Flex, Input, Modal, Pagination, Switch, Table, Tooltip } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdAdd } from 'react-icons/md';
@@ -8,6 +8,7 @@ import StatusComponent from '../../components/StatusComponent';
 import { createMapping, deleteMapping, getAllMapping, updateMapping } from '../../apis/config';
 import { toast } from 'sonner';
 import ModalAddMapping from './ModalAddMapping';
+import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
 const Mapping = () => {
@@ -168,12 +169,20 @@ const Mapping = () => {
     }
   }, []);
 
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
   const handleSearch = (e) => {
-    if (!e.target.value) {
-      updateFilter({ search: '' });
-      return;
-    }
-    updateFilter({ search: e.target.value });
+    debouncedSearch(e.target.value);
   };
 
   const matchTypeOptions = [

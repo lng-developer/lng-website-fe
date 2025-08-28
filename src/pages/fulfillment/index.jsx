@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Flex, Input, Pagination, Table } from 'antd';
@@ -20,6 +20,8 @@ import { getAllCountStatusScale, getAllFulfillScale } from '../../apis/order';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
+import { toast } from 'sonner';
+import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
 
 const FulfillmentScale = () => {
@@ -227,21 +229,29 @@ const FulfillmentScale = () => {
         setDataSource(response.data?.data);
         setTotalCount(response.data?.totalCount);
       } else {
-        console.log('error');
+        toast.error(response.data?.message);
       }
     } catch (error) {
-      console.log(error);
+      toast.error(error?.response?.data?.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (keyword) => {
+        if (!keyword) {
+          updateFilter({ search: '' });
+          return;
+        }
+        updateFilter({ search: keyword });
+      }, 300),
+    []
+  );
+
   const handleSearch = (e) => {
-    if (!e.target.value) {
-      updateFilter({ search: '' });
-      return;
-    }
-    updateFilter({ search: e.target.value });
+    debouncedSearch(e.target.value);
   };
 
   // fetch count order by status
