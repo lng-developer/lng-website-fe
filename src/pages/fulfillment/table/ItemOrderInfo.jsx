@@ -38,18 +38,18 @@ export default function OrderInfoForm({ orderId, seller, fulfillName }) {
           >
             {fulfillName}
           </div>
-          <Tooltip title="Copy">
+          {/* <Tooltip title="Copy">
             <CopyOutlined
               onClick={() => handleCopy(fulfillName)}
               style={{
                 position: 'absolute',
                 top: 35,
-                right: 5,
+                right: 25,
                 cursor: 'pointer',
                 color: '#08969b',
               }}
             />
-          </Tooltip>
+          </Tooltip> */}
         </div>
       </div>
       <div className="mb-1">
