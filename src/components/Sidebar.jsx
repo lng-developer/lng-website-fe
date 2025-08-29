@@ -42,6 +42,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
   };
 
   const handleChangePassword = async () => {
+    console.log(user);
     if (!currentPassword) {
       setErrorCurrentPassword(true);
       return;
@@ -53,7 +54,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
 
     try {
       const response = await changePassword({
-        username: user?.username,
+        username: user?.email,
         oldPassword: currentPassword,
         newPassword: newPassword,
       });

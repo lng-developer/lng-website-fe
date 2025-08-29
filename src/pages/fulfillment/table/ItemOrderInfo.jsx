@@ -28,7 +28,7 @@ export default function OrderInfoForm({ orderId, seller, fulfillName }) {
         <div className="font-semibold text-gray-800 mb-1">Seller:</div>
         <StatusComponent title={seller} color={dataColors.asin} />
       </div>
-      <div className="mb-1" style={{ position: 'relative', width: '100%' }}>
+      <div className="mb-1 max-w-[220px]" style={{ position: 'relative', width: '100%' }}>
         <div className="font-semibold text-gray-800 mb-1">Fulfill Name:</div>
         <div>
           <div
@@ -38,18 +38,18 @@ export default function OrderInfoForm({ orderId, seller, fulfillName }) {
           >
             {fulfillName}
           </div>
-          {/* <Tooltip title="Copy">
+          <Tooltip title="Copy">
             <CopyOutlined
               onClick={() => handleCopy(fulfillName)}
               style={{
                 position: 'absolute',
                 top: 35,
-                right: 25,
+                right: 5,
                 cursor: 'pointer',
                 color: '#08969b',
               }}
             />
-          </Tooltip> */}
+          </Tooltip>
         </div>
       </div>
       <div className="mb-1">

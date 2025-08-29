@@ -16,8 +16,8 @@ import { toast } from 'sonner';
 import { getAllListing } from '../../apis/listing';
 import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
-import { RiLinkM } from 'react-icons/ri';
 import { FcShop } from 'react-icons/fc';
+import { LuImport } from 'react-icons/lu';
 const PAGE_SIZE = 10;
 const stats = [
   {
@@ -254,25 +254,14 @@ const Listing = () => {
       key: 'asin_type',
       align: 'center',
       render: (data) => (
-        <Flex vertical gap={4}>
-          <Select
-            defaultValue="PODLovers"
-            style={{ width: 120 }}
-            options={[
-              { value: 'Normal', label: 'Normal' },
-              { value: 'POD', label: 'PODLovers' },
-            ]}
-          />
-          <span className="font-medium mt-2 text-sm">Orther Config</span>
-          <Select
-            defaultValue="Normal"
-            style={{ width: 120 }}
-            options={[
-              { value: 'Normal', label: 'Normal' },
-              { value: 'POD', label: 'PODLovers' },
-            ]}
-          />
-        </Flex>
+        <Select
+          defaultValue="PODLovers"
+          style={{ width: 120 }}
+          options={[
+            { value: 'Normal', label: 'Normal' },
+            { value: 'POD', label: 'PODLovers' },
+          ]}
+        />
       ),
     },
     {
@@ -355,7 +344,29 @@ const Listing = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Listing
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => {}}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Listing
+              </span>
+              <div style={{ color: 'black' }}>
+                <LuImport size={15} />
+              </div>
+            </button>
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => {}}
+            >
+              <div style={{ color: 'black' }}>
+                <MdAdd size={15} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Add Listing
+              </span>
+            </button>
             <DateRangePicker
               mode="range"
               showOutsideDays

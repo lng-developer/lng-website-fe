@@ -562,6 +562,7 @@ const Home = () => {
               defaultCurrent={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
+              className="custom-pagination"
             />
           </div>
         </div>

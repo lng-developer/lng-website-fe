@@ -35,7 +35,7 @@
 
 :where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > th,
 :where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > td {
-  border-bottom: none !important;
+  /* border-bottom: none !important; */
 }
 
 :where(.css-7t2xvq).ant-table-wrapper .ant-table.ant-table-bordered > .ant-table-container {
@@ -352,4 +352,14 @@
 
 .ant-upload-drag .ant-upload {
   padding: 0 !important;
+}
+
+.ant-pagination .ant-pagination-item {
+  border: 1px solid #d9d9d9; /* màu border mặc định */
+  border-radius: 4px; /* bo góc nhẹ */
+}
+
+/* Khi active */
+.ant-pagination .ant-pagination-item-active {
+  border-color: #1890ff; /* xanh AntD */
 }
