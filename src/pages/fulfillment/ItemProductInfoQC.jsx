@@ -4,9 +4,9 @@ import { dataColors } from '../../utils/dataColors';
 import { Link } from 'react-router-dom';
 import { RiLinkM } from 'react-icons/ri';
 
-const ItemProductInfoQC = ({ link, sku, asin }) => {
+const ItemProductInfoQC = ({ link, sku, asin, quantity }) => {
   return (
-    <div className="flex items-center gap-10">
+    <div className="flex items-center gap-5">
       <div
         className="w-[100px] h-[100px] rounded-lg overflow-hidden flex gap-2"
         style={{
@@ -31,6 +31,11 @@ const ItemProductInfoQC = ({ link, sku, asin }) => {
                 <RiLinkM size={18} />
               </Link>
             </Tooltip>
+          </div>
+        </div>
+        <div className="flex items-center">
+          <div className="font-medium text-left">
+            <span>Quantity:</span> <span style={{ color: dataColors.success }}> {quantity}</span>
           </div>
         </div>
       </div>

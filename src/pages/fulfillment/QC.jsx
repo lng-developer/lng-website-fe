@@ -218,7 +218,9 @@ const QC = () => {
           return {
             key: `${index}-${indexItem}`,
             // orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.default} isDefault={true} />,
-            product_info: <ItemProductInfoQC link={itemSub?.baseImageUrl} sku={itemSub?.sku} asin={itemSub?.asin} />,
+            product_info: (
+              <ItemProductInfoQC link={itemSub?.baseImageUrl} sku={itemSub?.sku} asin={itemSub?.asin} quantity={itemSub?.quantity} />
+            ),
             scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
             png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
             fulfill_name: (
