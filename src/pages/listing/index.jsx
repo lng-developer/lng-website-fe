@@ -18,6 +18,8 @@ import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
 import { FcShop } from 'react-icons/fc';
 import { LuImport } from 'react-icons/lu';
+import ModalAddListing from './ModalAddListing';
+import ModalImportListing from './ModalImportListing';
 const PAGE_SIZE = 10;
 const stats = [
   {
@@ -46,6 +48,18 @@ const stats = [
   },
 ];
 
+const ASIN_TYPE_OPTS = [
+  { label: 'PODLovers', value: 'PODLovers' },
+  { label: 'First Sale', value: 'First Sale' },
+  { label: 'Normal', value: 'Normal' },
+  { label: 'Outline', value: 'Outline' },
+  { label: 'Style', value: 'Style' },
+  { label: 'Tool', value: 'Tool' },
+  { label: 'Custom Image', value: 'Custom Image' },
+  { label: 'Auto Fulfill', value: 'Auto Fulfill' },
+  { label: 'Other', value: 'Other' },
+];
+
 const Listing = () => {
   const { collapsed } = useOutletContext();
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterListing[0]);
@@ -55,6 +69,8 @@ const Listing = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [tableHeight, setTableHeight] = useState(0);
   const [tabFilter, setTabFilter] = useState(dataFilterListing);
+  const [openModalAdd, setOpenModalAdd] = useState(false);
+  const [openModalImport, setOpenModalImport] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -130,10 +146,15 @@ const Listing = () => {
       align: 'center',
       render: (data) => (
         <Flex vertical={true} justify="center">
-          <div>
+          <div
+            className="w-[100px] h-[100px] rounded-lg overflow-hidden"
+            style={{
+              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+            }}
+          >
             <Image width={100} src={data?.product_image ? data?.product_image : NoImage} className="rounded-lg" />
           </div>
-          <Link target="_blank" className="hover:underline font-medium" to={`http://amazon.com/gp/product/${data?.asin}`}>
+          <Link target="_blank" className="hover:underline font-medium mt-2" to={`http://amazon.com/gp/product/${data?.asin}`}>
             {data?.asin}
           </Link>
         </Flex>
@@ -186,7 +207,7 @@ const Listing = () => {
           dataIndex: 'psd',
           key: 'psdId',
           align: 'center',
-          render: (data) => <StatusComponent title={data?.psd_id} color={dataColors.purple} />,
+          render: (data) => <StatusComponent title={data?.psd_id || 'No data'} color={dataColors.purple} />,
         },
         {
           title: <span style={{ color: dataColors.title }}>PSD Status</span>,
@@ -231,7 +252,7 @@ const Listing = () => {
       dataIndex: 'seller',
       key: 'seller',
       align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.asin} />,
+      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
     },
     // {
     //   title: <span style={{ color: dataColors.title }}>Thread Color </span>,
@@ -253,16 +274,7 @@ const Listing = () => {
       dataIndex: 'asin_type',
       key: 'asin_type',
       align: 'center',
-      render: (data) => (
-        <Select
-          defaultValue="PODLovers"
-          style={{ width: 120 }}
-          options={[
-            { value: 'Normal', label: 'Normal' },
-            { value: 'POD', label: 'PODLovers' },
-          ]}
-        />
-      ),
+      render: (data) => <Select defaultValue={data} style={{ width: 160, borderColor: dataColors.title }} options={ASIN_TYPE_OPTS} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -347,7 +359,7 @@ const Listing = () => {
           <div className="flex justify-center items-center gap-2">
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => {}}
+              onClick={() => setOpenModalImport(true)}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
                 Import Listing
@@ -358,7 +370,7 @@ const Listing = () => {
             </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => {}}
+              onClick={() => setOpenModalAdd(true)}
             >
               <div style={{ color: 'black' }}>
                 <MdAdd size={15} />
@@ -472,11 +484,12 @@ const Listing = () => {
             bordered={true}
             pagination={false}
             loading={loading}
-            sticky={{ offsetHeader: 0 }}
-            tableLayout="auto"
+            scroll={{ x: 'max-content' }}
           />
         </div>
       </div>
+      <ModalAddListing open={openModalAdd} onClose={() => setOpenModalAdd(false)} fetchAllListing={fetchAllListing} filters={filters} />
+      <ModalImportListing isModalOpen={openModalImport} setIsModalOpen={setOpenModalImport} />
     </div>
   );
 };

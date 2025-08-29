@@ -204,7 +204,7 @@ const QC = () => {
             </span>
           </Flex>
         ),
-        scale_by: <StatusComponent title={item?.scale_by || 'Nguyễn Huy Hoàng'} color={dataColors.asin} />,
+        scale_by: <StatusComponent title={item?.seller?.full_name} color={dataColors.process} />,
         base_cost: <span className="font-medium">${item?.base_cost}</span>,
         shopName: (
           <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
@@ -214,7 +214,7 @@ const QC = () => {
             </span>
           </Flex>
         ),
-        qc_by: <StatusComponent title={item?.scale_by || 'Lê Thị Tạ Tùng CS'} color={dataColors.purple} />,
+        qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
@@ -224,10 +224,10 @@ const QC = () => {
             png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
             fulfill_name: (
               <div
-                style={{ borderColor: dataColors.process, backgroundColor: `${dataColors.process}10` }}
+                style={{ borderColor: dataColors.asin, backgroundColor: `${dataColors.asin}10` }}
                 className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
               >
-                <span style={{ color: dataColors.process }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
+                <span style={{ color: dataColors.asin }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
               </div>
             ),
             cost_center: (

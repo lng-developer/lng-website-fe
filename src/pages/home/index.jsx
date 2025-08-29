@@ -351,9 +351,10 @@ const Home = () => {
                 filters={filters}
                 orderId={item?.orderId}
                 orderItemId={itemSub?.orderItemId}
+                seller={item?.seller}
               />
             ),
-            sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} />,
+            sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} seller={item?.seller} />,
             price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
             cost_center: (

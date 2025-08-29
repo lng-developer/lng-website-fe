@@ -4,7 +4,7 @@ import { dataColors } from '../../../utils/dataColors';
 import { RiLinkM } from 'react-icons/ri';
 import { Tooltip } from 'antd';
 
-const SubItemSku = ({ sku, asin }) => {
+const SubItemSku = ({ sku, asin, seller }) => {
   return (
     <div className="text-left">
       {sku && (
@@ -45,7 +45,7 @@ const SubItemSku = ({ sku, asin }) => {
           <span className="font-medium">Seller:</span>
         </div>
         <div>
-          <StatusComponent title="No data" color={dataColors.pink} />
+          <StatusComponent title={seller?.full_name} color={dataColors.process} />
         </div>
       </div>
       <div className="flex-col gap-2 mb-2">
@@ -53,7 +53,7 @@ const SubItemSku = ({ sku, asin }) => {
           <span className="font-medium">Team:</span>
         </div>
         <div>
-          <StatusComponent title="No data" color={dataColors.process} />
+          <StatusComponent title="LNG Group" color={dataColors.pink} />
         </div>
       </div>
     </div>

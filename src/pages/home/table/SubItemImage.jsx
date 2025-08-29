@@ -8,7 +8,7 @@ import { memo, useState } from 'react';
 import { updateImage } from '../../../apis/order';
 import { toast } from 'sonner';
 
-const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, filters, linkFulfill = {} }) => {
+const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, filters, linkFulfill = {}, seller }) => {
   const [showUpdate, setShowUpdate] = useState(false);
   const [valueImage, setValueImage] = useState('');
   const [checkError, setCheckError] = useState(false);
@@ -108,7 +108,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <span className="mr-2 font-medium">Scale By:</span>
             </div>
             <div>
-              <StatusComponent title="No data" color={dataColors.process} />
+              <StatusComponent title={seller?.full_name} color={dataColors.process} />
             </div>
           </div>
           <div className="flex-col gap-2 mt-2">
@@ -116,7 +116,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <span className="mr-2 font-medium">QC By:</span>
             </div>
             <div>
-              <StatusComponent title="No data" color={dataColors.pink} />
+              <StatusComponent title="Đặng Thành Trung CS" color={dataColors.purple} />
             </div>
           </div>
         </div>

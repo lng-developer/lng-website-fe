@@ -149,8 +149,8 @@ const FulfillmentScale = () => {
         groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault={true} />,
         groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        orderOwner: <StatusComponent title={item?.orderOwner || 'Nguyễn Huy Hoàng'} color={dataColors.asin} />,
-        scaleBy: <StatusComponent title={item?.scaleBy || 'Lê Thị Tạ Tùng CS'} color={dataColors.purple} />,
+        orderOwner: <StatusComponent title={item?.seller?.full_name} color={dataColors.process} />,
+        scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
         express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
         scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
         actions: <ItemAction />,
@@ -187,7 +187,11 @@ const FulfillmentScale = () => {
               />
             ),
             order_info: (
-              <ItemOrderInfo orderId={item?.orderId} seller={'Nguyễn Huy Hoàng'} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />
+              <ItemOrderInfo
+                orderId={item?.orderId}
+                seller={item?.seller?.full_name}
+                fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+              />
             ),
           };
         }),

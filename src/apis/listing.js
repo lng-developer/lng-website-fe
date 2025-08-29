@@ -4,4 +4,16 @@ const getAllListing = (params) => {
   return instance.get('/listing', { params });
 };
 
-export { getAllListing };
+const createListing = (payload) => {
+  return instance.post('/listing', payload);
+};
+
+const importListing = (payload) => {
+  return instance.post('/listing/import', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export { getAllListing, createListing, importListing };

@@ -3,8 +3,10 @@ import { updateBaseCost } from '../../../apis/order';
 import { memo, useEffect, useState } from 'react';
 import useDebounce from '../../../hooks/useDebounce';
 import { toast } from 'sonner';
+import { useAuth } from '../../../context/AuthContext';
 
 const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
+  const { user } = useAuth();
   const [value, setValue] = useState('');
   const debounce = useDebounce(value, 600);
   const handleChange = async () => {
@@ -38,11 +40,19 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
     handleChange();
   }, [debounce]);
   return (
-    <Popover content={content}>
-      <div className="cursor-pointer">
-        <span className="font-medium hover:text-blue-600">${base_cost ? base_cost : 0}</span>
-      </div>
-    </Popover>
+    <>
+      {user?.role === 'Admin' ? (
+        <Popover content={content}>
+          <div className="cursor-pointer">
+            <span className="font-medium hover:text-blue-600">${base_cost ? base_cost : 0}</span>
+          </div>
+        </Popover>
+      ) : (
+        <div className="cursor-pointer">
+          <span className="font-medium">${base_cost ? base_cost : 0}</span>
+        </div>
+      )}
+    </>
   );
 };
 

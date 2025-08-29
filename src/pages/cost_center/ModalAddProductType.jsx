@@ -32,18 +32,18 @@ function ModalAddProductType({ open, loading, onCancel, fetchAllConfig, vendorPr
       title="Add New Product Type For Seller"
       onCancel={onCancel}
       onOk={handleOk}
-      okText="Save"
+      okText="Create"
       cancelText="Cancel"
       confirmLoading={!!loading}
       width={450}
       maskClosable={false}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ items: [{}] }}>
-        <Form.Item label="Name" name="name" rules={[{ required: true, message: 'Please enter name' }]}>
+        <Form.Item label={<span className="font-medium">Name</span>} name="name" rules={[{ required: true, message: 'Please enter name' }]}>
           <Input placeholder="Enter name" />
         </Form.Item>
 
-        <div style={{ marginBottom: 8, fontWeight: 500 }}>Vendor Products:</div>
+        <div style={{ marginBottom: 8, fontWeight: 500, marginTop: 8 }}>Vendor Products:</div>
 
         <Form.List name="items">
           {(fields, { add, remove }) => (
