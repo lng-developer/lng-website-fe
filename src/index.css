@@ -19,46 +19,6 @@
   vertical-align: middle !important;
 }
 
-.ant-table-body,
-.ant-table-body-inner {
-  scrollbar-gutter: stable;
-}
-
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-thead > tr > th,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-thead > tr > td {
-  /* border-bottom: none !important; */
-}
-
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table.ant-table-bordered > .ant-table-container {
-  border-inline-start: none !important;
-}
-
-:where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > th,
-:where(.css-7t2xvq).ant-table-wrapper .ant-table-thead > tr > td {
-  /* border-bottom: none !important; */
-}
-
-:where(.css-7t2xvq).ant-table-wrapper .ant-table.ant-table-bordered > .ant-table-container {
-  border-inline-start: none !important;
-  border-top: none !important;
-}
-
-.ant-table-content {
-  border-left: 1px solid #f0f0f0 !important;
-  border-bottom: 1px solid #f0f0f0 !important;
-  border-right: 1px solid #f0f0f0 !important;
-  overflow: hidden;
-  border-radius: 8px;
-}
-
-.ant-table-expanded-row .ant-table-thead > tr > th {
-  border-right: none !important;
-}
-
-.ant-table-thead > tr > th {
-  white-space: nowrap; /* không xuống hàng */
-}
-
 .range-center :where(.ant-picker-input > input) {
   @apply text-center;
 }
@@ -118,50 +78,8 @@
   font-weight: 500 !important;
 }
 
-:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-inline,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-inline,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-vertical,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-vertical {
-  border-inline-end: none !important;
-}
-
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table-thead
-  > tr
-  > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table-thead
-  > tr
-  > td:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
-  background-color: transparent !important;
-}
-
-:where(.css-7t2xvq).ant-table-wrapper
-  .ant-table-thead
-  > tr
-  > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before,
-:where(.css-7t2xvq).ant-table-wrapper
-  .ant-table-thead
-  > tr
-  > td:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
-  background-color: transparent !important;
-}
-
-.ant-table-row-level-0 tr {
-  border-top: none !important;
-}
-
 .ant-menu {
   border-inline-end: none !important;
-}
-
-.ant-table-thead > tr > th {
-  background-color: #f1f5f9 !important;
-  border-color: #e6e3e3 !important;
-}
-
-.ant-table-content {
-  overflow: hidden;
 }
 
 :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-pagination.ant-pagination {
@@ -170,100 +88,6 @@
 
 :where(.css-7t2xvq).ant-table-wrapper .ant-table-pagination.ant-pagination {
   margin-top: 36px !important; /* hoặc giá trị bạn muốn */
-}
-
-/* nếu dùng CSS thường (global) */
-.no-indent-table .ant-table-expanded-row > td {
-  padding-left: 0px !important;
-  background: transparent !important;
-}
-
-/* antd chèn indent bằng span này – cho về 0 */
-.no-indent-table .ant-table-row-indent {
-  width: 0 !important;
-  margin: 0 !important;
-}
-
-/* nút expand không đẩy thêm khoảng trống */
-.no-indent-table .ant-table-row-expand-icon {
-  margin-inline-start: 0 !important;
-}
-
-/* đôi khi nested table bị margin-left – ép về 0 */
-.no-indent-table .ant-table-expanded-row .ant-table {
-  margin-left: 0 !important;
-}
-
-.no-backgroud-title .ant-table-expanded-row .ant-table-cell {
-  background: transparent !important;
-  border: none !important;
-}
-
-.no-backgroud-title .ant-table-body {
-  border-inline-start: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-
-.no-backgroud-title .ant-table-expanded-row .ant-table-content {
-  border: 1px solid #f0f0f0 !important;
-}
-
-.no-backgroud-title .ant-table-tbody > tr > td {
-  border-top: 1px solid #f0f0f0 !important;
-}
-
-.listing .ant-table-body {
-  border-inline-start: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-
-/*  */
-
-.table-qc .ant-table-body {
-  border-inline-start: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-
-.listing
-  :where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table.ant-table-bordered
-  > .ant-table-container
-  > .ant-table-content
-  > table
-  > thead
-  > tr:not(:last-child)
-  > th,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table.ant-table-bordered
-  > .ant-table-container
-  > .ant-table-header
-  > table
-  > thead
-  > tr:not(:last-child)
-  > th,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table.ant-table-bordered
-  > .ant-table-container
-  > .ant-table-body
-  > table
-  > thead
-  > tr:not(:last-child)
-  > th,
-:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
-  .ant-table.ant-table-bordered
-  > .ant-table-container
-  > .ant-table-summary
-  > table
-  > thead
-  > tr:not(:last-child)
-  > th {
-  border-bottom: 1px solid #e6e3e3 !important;
 }
 
 /* Giữ app ở light nếu bạn không muốn theo OS */
@@ -362,4 +186,94 @@
 /* Khi active */
 .ant-pagination .ant-pagination-item-active {
   border-color: #1890ff; /* xanh AntD */
+}
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-inline,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-inline,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light.ant-menu-root.ant-menu-vertical,
+:where(.css-dev-only-do-not-override-7t2xvq).ant-menu-light > .ant-menu.ant-menu-root.ant-menu-vertical {
+  border-inline-end: none !important;
+}
+
+/* Handle Table */
+.ant-table-thead > tr > th {
+  white-space: nowrap; /* không xuống hàng */
+}
+
+.ant-table-thead > tr > th {
+  background-color: #f1f5f9 !important;
+  border-color: #e6e3e3 !important;
+}
+
+.no-indent-table .ant-table-expanded-row > td {
+  padding-left: 0px !important;
+  background: transparent !important;
+}
+
+/* antd chèn indent bằng span này – cho về 0 */
+.no-indent-table .ant-table-row-indent {
+  width: 0 !important;
+  margin: 0 !important;
+}
+
+/* nút expand không đẩy thêm khoảng trống */
+.no-indent-table .ant-table-row-expand-icon {
+  margin-inline-start: 0 !important;
+}
+
+/* đôi khi nested table bị margin-left – ép về 0 */
+.no-indent-table .ant-table-expanded-row .ant-table {
+  margin-left: 0 !important;
+}
+
+.no-backgroud-title .ant-table-expanded-row .ant-table-cell {
+  background: transparent !important;
+  border-inline-end: none !important;
+}
+
+.no-backgroud-title .ant-table-content {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px;
+}
+
+.no-backgroud-title .ant-table-expanded-row {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.product-type .ant-table-content {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px;
+  border-inline-end: 1px solid #f0f0f0 !important;
+}
+
+.product-type .ant-table-cell {
+  border-inline-end: 1px solid #f0f0f0 !important;
+}
+
+.table-qc .ant-table-content {
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px;
+}
+
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper .ant-table-expanded-row .ant-table-thead > tr > th {
+  border-bottom: none !important;
+  border-inline-end: none !important;
+}
+
+:where(.css-7t2xvq).ant-table-wrapper .ant-table-expanded-row .ant-table-thead > tr > th {
+  border-bottom: none !important;
+  border-inline-end: none !important;
+}
+
+:where(.css-dev-only-do-not-override-7t2xvq).ant-table-wrapper
+  .ant-table-thead
+  > tr
+  > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
+  background-color: transparent !important;
+}
+
+:where(.css-7t2xvq).ant-table-wrapper
+  .ant-table-thead
+  > tr
+  > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
+  background-color: transparent !important;
 }

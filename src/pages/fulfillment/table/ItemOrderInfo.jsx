@@ -26,7 +26,7 @@ export default function OrderInfoForm({ orderId, seller, fulfillName }) {
       </div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Seller:</div>
-        <StatusComponent title={seller} color={dataColors.process} />
+        <StatusComponent title={seller || 'No data'} color={dataColors.process} />
       </div>
       <div className="mb-1 max-w-[220px]" style={{ position: 'relative', width: '100%' }}>
         <div className="font-semibold text-gray-800 mb-1">Fulfill Name:</div>

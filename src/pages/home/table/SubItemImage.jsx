@@ -108,7 +108,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <span className="mr-2 font-medium">Scale By:</span>
             </div>
             <div>
-              <StatusComponent title={seller?.full_name} color={dataColors.process} />
+              <StatusComponent title={seller?.full_name || 'No data'} color={dataColors.process} />
             </div>
           </div>
           <div className="flex-col gap-2 mt-2">

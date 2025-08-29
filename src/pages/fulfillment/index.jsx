@@ -149,7 +149,7 @@ const FulfillmentScale = () => {
         groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault={true} />,
         groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        orderOwner: <StatusComponent title={item?.seller?.full_name} color={dataColors.process} />,
+        orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
         scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
         express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
         scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
@@ -219,7 +219,6 @@ const FulfillmentScale = () => {
         pagination={false}
         rowKey="key"
         rowClassName={() => 'table-row-center'}
-        bordered
         style={{ padding: 10 }}
       />
     );
@@ -393,7 +392,7 @@ const FulfillmentScale = () => {
         </div>
         <div className="mt-4">
           <Table
-            className="no-indent-table no-backgroud-title"
+            className="no-indent-table no-backgroud-title scale"
             columns={columns}
             dataSource={renderOrderInTable(dataSource)}
             expandable={{

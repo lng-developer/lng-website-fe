@@ -192,6 +192,7 @@ const Home = () => {
       dataIndex: 'handling_time',
       key: 'handling_time',
       align: 'center',
+      with: 120,
     },
     { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
   ];

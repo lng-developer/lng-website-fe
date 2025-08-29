@@ -387,14 +387,14 @@ const CostCenterProductTypes = () => {
         />
         <div className="mt-4">
           <Table
-            className="no-indent-table"
+            className="no-indent-table product-type"
             columns={columnLevel1}
             dataSource={dataSource}
             expandable={{
               indentSize: 0,
               expandedRowRender: (r, index) => (
                 <Table
-                  className="no-indent-table"
+                  className="no-indent-table product-type"
                   columns={columnsLevel2}
                   dataSource={dataSource[index]?.items}
                   pagination={false}
@@ -402,11 +402,10 @@ const CostCenterProductTypes = () => {
                     indentSize: 0,
                     expandedRowRender: (r, index2) => (
                       <Table
-                        className="no-indent-table"
+                        className="no-indent-table product-type"
                         columns={skuColumns}
                         dataSource={dataSource[index]?.items[index2]?.cost_centers}
                         pagination={true}
-                        bordered={true}
                         rowKey="key"
                         style={{ padding: 10 }}
                       />
@@ -427,7 +426,6 @@ const CostCenterProductTypes = () => {
                       </div>
                     ),
                   }}
-                  bordered={true}
                   rowKey="key"
                   style={{ padding: 10 }}
                 />
@@ -445,7 +443,6 @@ const CostCenterProductTypes = () => {
                 </div>
               ),
             }}
-            bordered={true}
             pagination={false}
             rowKey="key"
           />

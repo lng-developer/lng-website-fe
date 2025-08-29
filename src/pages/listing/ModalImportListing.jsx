@@ -54,7 +54,7 @@ const ModalImportListing = ({ isModalOpen, setIsModalOpen }) => {
       onCancel={handleResetValue}
     >
       <div className="py-2">
-        <div className="my-3">
+        <div>
           <Dragger
             beforeUpload={beforeUpload}
             fileList={fileList}
