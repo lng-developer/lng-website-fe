@@ -19,6 +19,9 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import ItemProductInfoQC from './ItemProductInfoQC';
 import { debounce } from 'lodash';
+// import QCCompositorFixed from './Modal';
+// import QCPreviewModal from './Modal';
+// import QcCanvasModal2 from './Modal2';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -459,7 +462,72 @@ const QC = () => {
         filters={filters}
         fetchCountStatus={fetchCountStatus}
       />
+      {/* <QcCanvasModal2
+        open={openModalQC}
+        onClose={() => setOpenMOdalQC(false)}
+        orderInfo={dataView}
+        stageWidth={900}
+        stageHeight={520}
+        fetchAllQC={fetchAllQC}
+        filters={filters}
+        fetchCountStatus={fetchCountStatus}
+        layersData={[
+          {
+            id: 'front',
+            label: 'Front',
+            url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516674/fulfillment_files/112-4563192-0238605-137817274210201-front.png',
+          },
+          {
+            id: 'rightSleeve',
+            label: 'Right Sleeve',
+            url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516677/fulfillment_files/112-4563192-0238605-137817274210201-right_sleeve.png',
+          },
+        ]}
+        logicalWidth={4200}
+        logicalHeight={4800}
+        viewportWidth={1000}
+        viewportHeight={750}
+      /> */}
     </div>
+
+    // <QCPreviewModal
+    //   open={true}
+    //   layersData={[
+    //     {
+    //       id: 'front',
+    //       label: 'Front',
+    //       url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516674/fulfillment_files/112-4563192-0238605-137817274210201-front.png',
+    //       x: 900,
+    //       y: 360,
+    //       scale: 1,
+    //       rotation: 0,
+    //       visible: true,
+    //       opacity: 1,
+    //     },
+    //     {
+    //       id: 'rightSleeve',
+    //       label: 'Right Sleeve',
+    //       url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516677/fulfillment_files/112-4563192-0238605-137817274210201-right_sleeve.png',
+    //       x: 420,
+    //       y: 960,
+    //       scale: 1,
+    //       rotation: 0,
+    //       visible: true,
+    //       opacity: 1,
+    //     },
+    //   ]}
+    //   logicalWidth={4200}
+    //   logicalHeight={4800}
+    //   viewportWidth={1000}
+    //   viewportHeight={750}
+    //   itemInfo={{
+    //     orderId: '112-456…',
+    //     asin: 'B0F…',
+    //     vendor: 'Merchfox',
+    //     color: 'Royal Blue',
+    //     size: '3XL',
+    //   }}
+    // />
   );
 };
 
