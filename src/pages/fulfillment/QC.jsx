@@ -19,9 +19,7 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import ItemProductInfoQC from './ItemProductInfoQC';
 import { debounce } from 'lodash';
-// import QCCompositorFixed from './Modal';
-// import QCPreviewModal from './Modal';
-// import QcCanvasModal2 from './Modal2';
+import QcCanvasModal2 from './Modal2';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -37,6 +35,7 @@ const QC = () => {
   const [tableHeight, setTableHeight] = useState(0);
   const [dataView, setDataView] = useState({});
   const [tabFilter, setTabFilter] = useState(dataFilterStatusQC);
+  const [indexQC, setIndexQC] = useState(0);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -228,10 +227,10 @@ const QC = () => {
             png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
             fulfill_name: (
               <div
-                style={{ borderColor: dataColors.process, backgroundColor: `${dataColors.process}10` }}
+                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
                 className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
               >
-                <span style={{ color: dataColors.process }}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
+                <span style={{}}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
               </div>
             ),
             cost_center: (
@@ -249,6 +248,8 @@ const QC = () => {
                   style={{ padding: 6, borderColor: dataColors.default }}
                   onClick={() => {
                     setDataView({ orderId: item?.orderId, data: itemSub });
+                    // setDataView(item);
+                    // setIndexQC(indexItem);
                     setOpenMOdalQC(true);
                   }}
                 >
@@ -471,22 +472,11 @@ const QC = () => {
         fetchAllQC={fetchAllQC}
         filters={filters}
         fetchCountStatus={fetchCountStatus}
-        layersData={[
-          {
-            id: 'front',
-            label: 'Front',
-            url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516674/fulfillment_files/112-4563192-0238605-137817274210201-front.png',
-          },
-          {
-            id: 'rightSleeve',
-            label: 'Right Sleeve',
-            url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516677/fulfillment_files/112-4563192-0238605-137817274210201-right_sleeve.png',
-          },
-        ]}
         logicalWidth={4200}
         logicalHeight={4800}
         viewportWidth={1000}
         viewportHeight={750}
+        indexQC={indexQC}
       /> */}
     </div>
 

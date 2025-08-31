@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex } from 'antd';
+import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex, Pagination } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import useImage from 'use-image';
 import StatusComponent from '../../components/StatusComponent';
@@ -84,7 +84,6 @@ function num(v, d) {
 export default function QcCanvasModal2({
   open,
   onClose,
-  layersData = [],
   logicalWidth = 4200,
   logicalHeight = 4800,
   viewportWidth = 1000,
@@ -92,7 +91,8 @@ export default function QcCanvasModal2({
   fetchAllQC,
   filters,
   fetchCountStatus,
-  orderInfo,
+  orderInfo = {},
+  indexQC = 0,
 }) {
   const [bgMode, setBgMode] = useState('color'); // "checker" | "color" | "transparent"
   const [bgColor, setBgColor] = useState('#2f6f8a'); // Royal-ish blue
@@ -100,16 +100,31 @@ export default function QcCanvasModal2({
   const [items, setItems] = useState([]);
   const stageRef = useRef(null);
   const initialLayoutDone = useRef(false);
+  const [currentIndex, setCurrentIndex] = useState(indexQC);
 
-  //   const layersData = Object.entries(orderInfo?.data?.fulfillment_file).map(([key, url]) => {
-  //     return {
-  //       id: key.replace(/_/g, ''), // bỏ dấu gạch dưới nếu cần
-  //       label: key
-  //         .replace(/_/g, ' ') // thay _ bằng khoảng trắng
-  //         .replace(/\b\w/g, (c) => c.toUpperCase()), // viết hoa chữ cái đầu
-  //       url,
-  //     };
-  //   });
+  const currentItem = orderInfo?.items?.[currentIndex];
+  const layersData = useMemo(() => {
+    if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
+
+    return Object.entries(orderInfo.items[currentIndex].fulfillment_file).map(([key, url]) => ({
+      id: key.replace(/_/g, ''),
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      url,
+      x: 900,
+      y: 360,
+      scale: 1,
+      visible: true,
+      opacity: 1,
+    }));
+  }, [orderInfo, currentIndex]);
+
+  useEffect(() => {
+    setCurrentIndex(indexQC);
+  }, [indexQC]);
+
+  const handlePageChange = (page) => {
+    setCurrentIndex(page - 1);
+  };
 
   // Load image elements
   useEffect(() => {
@@ -160,7 +175,7 @@ export default function QcCanvasModal2({
 
   const handlePass = async () => {
     try {
-      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
         decision: 'approve',
         note: qcNote,
       });
@@ -179,7 +194,7 @@ export default function QcCanvasModal2({
 
   const handleReject = async () => {
     try {
-      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
         decision: 'reject',
         note: qcNote,
       });
@@ -227,35 +242,45 @@ export default function QcCanvasModal2({
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 12,
-          marginRight: orderInfo?.data?.scale_status === 'Pending' ? 154 : 365,
         }}
       >
-        <h1 style={{ margin: 0 }}>QC Preview</h1>
+        <h1 style={{ margin: 0, width: 220 }}>QC Preview</h1>
 
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', width: 700, marginLeft: 16 }}>
+          <div className="flex items-center">
+            <Pagination
+              total={currentItem ? orderInfo?.items.length : 1}
+              showTotal={(total) => (
+                <span className="font-medium">
+                  Item {currentIndex + 1}/{total}
+                </span>
+              )}
+              pageSize={1}
+              current={currentIndex + 1}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
+            />
+          </div>
           {/* Chọn màu nền */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="font-medium">Background: </span>
-            <Select
-              value={bgColor}
-              onChange={setBgColor}
-              style={{ width: 140 }}
-              options={[
-                { label: 'Royal Blue', value: '#2f5f93' },
-                { label: 'Black', value: '#111111' },
-                { label: 'White', value: '#ffffff' },
-                { label: 'Heather Grey', value: '#bdbdbd' },
-                { label: 'Forest', value: '#2c5632' },
-              ]}
-            />
+            <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
           </div>
+        </div>
 
-          {orderInfo?.data?.scale_status === 'Pending' && (
+        <div className="flex mr-10 w-[300px] ml-[15px]">
+          {currentItem?.scale_status === 'Pending' && (
             <div className="flex gap-2">
-              <Button type="dashed" iconPosition="end" icon={<FcApproval />} onClick={handlePass} style={{ fontWeight: 500 }}>
+              <Button
+                type="dashed"
+                iconPosition="end"
+                icon={<FcApproval />}
+                onClick={handlePass}
+                style={{ fontWeight: 500 }}
+                className={`hover:!text-[#39a00d] hover:!border-[#39a00d]`}
+              >
                 Passed
               </Button>
               <Button
@@ -264,6 +289,7 @@ export default function QcCanvasModal2({
                 icon={<IoArrowUndo color="red" />}
                 onClick={handleReject}
                 style={{ fontWeight: 500 }}
+                className={`hover:!text-[#cd1323] hover:!border-[#cd1323]`}
               >
                 Reject
               </Button>
@@ -276,10 +302,21 @@ export default function QcCanvasModal2({
         {/* LEFT: Base images */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
           {/* Ảnh base mockup (giữ nguyên) */}
-          <img
-            src={orderInfo?.data?.baseImageUrl}
-            style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
-          />
+          {currentItem?.baseImageUrl && (
+            <img src={currentItem?.baseImageUrl} style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }} />
+          )}
+
+          <div>
+            <div className="mb-2">
+              <span className="font-medium">Customer Photo</span>
+            </div>
+            {currentItem?.snapshotImage && (
+              <img
+                src={currentItem?.snapshotImage}
+                style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
+              />
+            )}
+          </div>
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
@@ -337,69 +374,71 @@ export default function QcCanvasModal2({
             <Title level={5} style={{ marginTop: 0 }}>
               Item Info
             </Title>
-            <Flex vertical={true} gap={6}>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">OrderId:</span>
-                <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Asin:</span>
-                <div className="flex gap-1 items-center">
-                  <StatusComponent title={orderInfo?.data?.asin} color={dataColors.pending} />
-                  <Tooltip title="Open Link">
-                    <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${orderInfo?.data?.asin}`}>
-                      <RiLinkM size={18} />
-                    </Link>
-                  </Tooltip>
+            {currentItem && (
+              <Flex vertical={true} gap={6}>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">OrderId:</span>
+                  <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
                 </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Sku:</span>
-                <StatusComponent title={orderInfo?.data?.sku} color={dataColors.asin} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Fulfillable Qty:</span>
-                <StatusComponent title={orderInfo?.data?.quantity} color={dataColors.default} isDefault={true} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Vendor:</span>
-                <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
-                  color={dataColors.success}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Product Name:</span>
-                <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
-                  color={dataColors.default}
-                  isDefault={true}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Fulfill Name:</span>
-                <div
-                  style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
-                  className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
-                >
-                  <span
-                    style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: 'inline-block',
-                    }}
-                    className="whitespace-nowrap"
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Asin:</span>
+                  <div className="flex gap-1 items-center">
+                    <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
+                    <Tooltip title="Open Link">
+                      <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
+                        <RiLinkM size={18} />
+                      </Link>
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Sku:</span>
+                  <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Fulfillable Qty:</span>
+                  <StatusComponent title={currentItem?.quantity} color={dataColors.default} isDefault={true} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Vendor:</span>
+                  <StatusComponent
+                    title={currentItem?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
+                    color={dataColors.success}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Product Name:</span>
+                  <StatusComponent
+                    title={currentItem?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
+                    color={dataColors.default}
+                    isDefault={true}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Fulfill Name:</span>
+                  <div
+                    style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
+                    className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
                   >
-                    {`${orderInfo?.orderId}-${orderInfo?.data?.orderItemId}`}
-                  </span>
+                    <span
+                      style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'inline-block',
+                      }}
+                      className="whitespace-nowrap"
+                    >
+                      {`${orderInfo?.orderId}-${currentItem?.orderItemId}`}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Vendor Product Sku:</span>
-                <StatusComponent title={orderInfo?.data?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
-              </div>
-            </Flex>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Vendor Product Sku:</span>
+                  <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
+                </div>
+              </Flex>
+            )}
           </div>
           <div
             style={{
@@ -413,12 +452,13 @@ export default function QcCanvasModal2({
             }}
           >
             <div className="flex-col justify-between">
-              {orderInfo?.data?.version3Data?.map((item, index) => (
-                <div key={index} className="mb-1 whitespace-normal break-words">
-                  <span className="font-medium">{item?.label}:</span>
-                  <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
-                </div>
-              ))}
+              {currentItem &&
+                currentItem?.version3Data?.map((item, index) => (
+                  <div key={index} className="mb-1 whitespace-normal break-words">
+                    <span className="font-medium">{item?.label}:</span>
+                    <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
+                  </div>
+                ))}
             </div>
           </div>
           <div>
@@ -426,7 +466,7 @@ export default function QcCanvasModal2({
               QC Note
             </Title>
             <Input.TextArea
-              defaultValue={orderInfo?.data?.qc_note || ''}
+              defaultValue={currentItem?.qc_note || ''}
               value={qcNote}
               onChange={(e) => setQcNote(e.target.value)}
               placeholder="Nhập ghi chú cho seller…"
