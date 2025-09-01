@@ -12,7 +12,6 @@ import SubItemTracking from './table/SubItemTracking';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAllCountStatus, getALlOrder, getALlShop, retestBasecode } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
-import { FcShop } from 'react-icons/fc';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
 import { formatDistanceToNow } from 'date-fns';
@@ -330,14 +329,7 @@ const Home = () => {
           </div>
         ),
         base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
-        store: (
-          <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
-            <FcShop size={20} />
-            <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
-              {item?.shopName}
-            </span>
-          </Flex>
-        ),
+        store: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
         // delivery_date: <span className="font-medium">July 25, 2025</span>,
         handling_time: <span className="font-medium">6 Days</span>,
         case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
@@ -531,6 +523,7 @@ const Home = () => {
                 onChange={(val) => {
                   setShippingType(val);
                   updateFilter({ shippingType: val });
+                  fetchCountStatus();
                 }}
               />
               <SelectFilter
@@ -540,6 +533,7 @@ const Home = () => {
                 onChange={(val) => {
                   setSelectShop(val);
                   updateFilter({ shopName: val });
+                  fetchCountStatus();
                 }}
               />
             </div>

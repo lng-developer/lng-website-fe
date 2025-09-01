@@ -369,7 +369,7 @@ const FulfillmentScale = () => {
             />
             <div className="flex gap-2 items-center ">
               <SelectFilter
-                title="Type"
+                title="Shop"
                 ListData={['Outline', 'Custom Image', 'Manual Scale', 'Tool']}
                 // value={selectShop}
                 // onChange={(val) => {

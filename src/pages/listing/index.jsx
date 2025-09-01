@@ -231,14 +231,7 @@ const Listing = () => {
       dataIndex: 'store',
       key: 'store',
       align: 'center',
-      render: (data) => (
-        <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
-          <FcShop size={20} />
-          <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
-            Acc 1
-          </span>
-        </Flex>
-      ),
+      render: (data) => <StatusComponent title={data?.name} color={dataColors.pending} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Platform</span>,
@@ -274,14 +267,14 @@ const Listing = () => {
       dataIndex: 'asin_type',
       key: 'asin_type',
       align: 'center',
-      render: (data) => <Select defaultValue={data} style={{ width: 160, borderColor: dataColors.title }} options={ASIN_TYPE_OPTS} />,
+      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
       dataIndex: 'actions',
       key: 'actions',
       align: 'center',
-      render: (data) => <ItemAction />,
+      render: (data) => <ItemAction asin={data?.asin} />,
       fixed: 'right',
     },
   ];
@@ -296,6 +289,9 @@ const Listing = () => {
             ...item,
             productInfo: {
               product_image: item?.product_image,
+              asin: item?.asin,
+            },
+            actions: {
               asin: item?.asin,
             },
           };
@@ -484,7 +480,7 @@ const Listing = () => {
             bordered={true}
             pagination={false}
             loading={loading}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: 'max-content', y: tableHeight }}
           />
         </div>
       </div>

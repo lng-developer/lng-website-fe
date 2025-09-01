@@ -1,8 +1,9 @@
-import { Image, Button } from 'antd';
-import { LinkOutlined } from '@ant-design/icons';
+import { Image, Button, Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
+import { RiLinkM } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
 
 const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) => {
   const handleColorStatus = (stt) => {
@@ -50,7 +51,11 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) 
             <div className="font-semibold text-gray-800 ">ASIN:</div>
             <div className="flex items-center gap-1">
               <StatusComponent title={asin} color={dataColors.pending} />
-              <LinkOutlined className="text-blue-600 " />
+              <Tooltip title="Open Link">
+                <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${asin}`}>
+                  <RiLinkM size={18} />
+                </Link>
+              </Tooltip>
             </div>
           </div>
         )}

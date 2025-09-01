@@ -9,6 +9,7 @@ import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { scaleFulfill } from '../../apis/order';
 import { toast } from 'sonner';
+import { TfiControlBackward } from 'react-icons/tfi';
 
 const { Title, Text } = Typography;
 function EditableImage({
@@ -120,6 +121,8 @@ export default function QcCanvasModal({
   const [currentIndex, setCurrentIndex] = useState(indexQC);
   const [errorNote, setErrorNote] = useState(false);
   const currentItem = orderInfo?.items?.[currentIndex];
+  const backUrl = currentItem?.fulfillment_file?.back || null;
+  const [showBack, setShowBack] = useState(false);
   const layersData = useMemo(() => {
     if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
 
@@ -127,10 +130,6 @@ export default function QcCanvasModal({
       id: key.replace(/_/g, ''),
       label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       url,
-      x: 900,
-      y: 360,
-      visible: true,
-      opacity: 1,
     }));
   }, [orderInfo, currentIndex]);
 
@@ -213,7 +212,9 @@ export default function QcCanvasModal({
     } finally {
       fetchAllQC(filters);
       fetchCountStatus();
-      onClose?.();
+      if (orderInfo?.items && !orderInfo?.items?.length > 0) {
+        onClose?.();
+      }
     }
   };
 
@@ -236,7 +237,9 @@ export default function QcCanvasModal({
     } finally {
       fetchAllQC(filters);
       fetchCountStatus();
-      onClose?.();
+      if (orderInfo?.items && !orderInfo?.items?.length > 0) {
+        onClose?.();
+      }
     }
   };
 
@@ -293,9 +296,26 @@ export default function QcCanvasModal({
             />
           </div>
           {/* Chọn màu nền */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="font-medium">Background: </span>
-            <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+          <div className="flex items-center">
+            {showBack && (
+              <div
+                className="mr-5"
+                style={{
+                  cursor: 'pointer',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  padding: 6,
+                  background: '#fff',
+                }}
+                onClick={() => setShowBack(false)}
+              >
+                <TfiControlBackward size={18} />
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="font-medium">Background: </span>
+              <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+            </div>
           </div>
         </div>
 
@@ -334,7 +354,6 @@ export default function QcCanvasModal({
           {currentItem?.baseImageUrl && (
             <img src={currentItem?.baseImageUrl} style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }} />
           )}
-
           <div>
             <div className="mb-2">
               <span className="font-medium">Customer Photo</span>
@@ -346,6 +365,33 @@ export default function QcCanvasModal({
               />
             )}
           </div>
+          {backUrl && (
+            <div>
+              <div className="mb-2">
+                <span className="font-medium">Back PNG</span>
+              </div>
+              <div
+                onClick={() => setShowBack(true)}
+                style={{
+                  cursor: 'pointer',
+                  border: showBack ? '2px solid #1677ff' : '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  padding: 6,
+                  background: '#fff',
+                }}
+                title="Back"
+              >
+                <img
+                  src={backUrl}
+                  preview={false}
+                  placeholder // antd hiển thị skeleton khi load
+                  fallback="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" // tránh icon vỡ
+                  style={{ width: '100%', height: 150, objectFit: 'contain', borderRadius: 4 }}
+                />
+                <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: '#64748B' }}>Back</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
@@ -359,25 +405,43 @@ export default function QcCanvasModal({
           }}
         >
           <Stage width={viewportWidth} height={viewportHeight}>
-            {/* nền */}
             <Layer listening={false} imageSmoothingEnabled={true}>
               <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
             </Layer>
 
-            {/* ảnh */}
-            <Layer
-              imageSmoothingEnabled={true} // ✅ bật smoothing
-              ref={(layer) => {
-                if (layer) {
-                  const ctx = layer.getContext()._context;
-                  if (ctx) ctx.imageSmoothingQuality = 'high'; // ✅ yêu cầu chất lượng cao
-                }
-              }}
-            >
-              {items.map((it) => (
-                <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(patch) => updateItem(it.id, patch)} />
-              ))}
-            </Layer>
+            {showBack && backUrl ? (
+              <Layer
+                imageSmoothingEnabled={true}
+                ref={(layer) => {
+                  if (layer) {
+                    const ctx = layer.getContext()._context;
+                    if (ctx) ctx.imageSmoothingQuality = 'high';
+                  }
+                }}
+              >
+                {items
+                  .filter((it) => it.id.toLowerCase() === 'back')
+                  .map((it) => (
+                    <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(p) => updateItem(it.id, p)} />
+                  ))}
+              </Layer>
+            ) : (
+              <Layer
+                imageSmoothingEnabled={true}
+                ref={(layer) => {
+                  if (layer) {
+                    const ctx = layer.getContext()._context;
+                    if (ctx) ctx.imageSmoothingQuality = 'high';
+                  }
+                }}
+              >
+                {items
+                  .filter((it) => it.id.toLowerCase() !== 'back') // 👈 bỏ item back
+                  .map((it) => (
+                    <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(p) => updateItem(it.id, p)} />
+                  ))}
+              </Layer>
+            )}
           </Stage>
         </div>
 
@@ -489,13 +553,14 @@ export default function QcCanvasModal({
             <Input.TextArea
               defaultValue={currentItem?.qc_note || ''}
               value={qcNote}
+              spellCheck={false}
               style={{ borderColor: errorNote ? '#FB2C36' : '' }}
               onChange={(e) => {
                 setQcNote(e.target.value);
                 setErrorNote(false);
               }}
               placeholder="Enter notes for seller…"
-              autoSize={{ minRows: 6, maxRows: 12 }}
+              autoSize={{ minRows: 5, maxRows: 12 }}
             />
             {errorNote && <div className="text-red-500 font-medium mt-1">Please note!</div>}
           </div>

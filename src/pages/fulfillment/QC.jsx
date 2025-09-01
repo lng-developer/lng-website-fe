@@ -1,8 +1,8 @@
-import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import StatusComponent from '../../components/StatusComponent';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,14 +12,11 @@ import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
 import { getAllCountStatusQC, getAllQC } from '../../apis/order';
 import { toast } from 'sonner';
-import { FcShop } from 'react-icons/fc';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { RiLinkM } from 'react-icons/ri';
 import DateRangePicker from '../../components/DateRangePicker';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import ItemProductInfoQC from './ItemProductInfoQC';
 import { debounce } from 'lodash';
-import QcCanvasModal2 from './Modal2';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -207,14 +204,7 @@ const QC = () => {
         ),
         scale_by: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
         base_cost: <span className="font-medium">${item?.base_cost}</span>,
-        shopName: (
-          <Flex justify="center" style={{ borderColor: dataColors.pending, whiteSpace: 'nowrap' }}>
-            <FcShop size={20} />
-            <span className="font-medium ml-2 w-auto" style={{ color: dataColors.pending }}>
-              {item?.shopName}
-            </span>
-          </Flex>
-        ),
+        shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
         qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
@@ -453,16 +443,6 @@ const QC = () => {
           />
         </div>
       </div>
-      {/* <QcCanvasModal
-        open={openModalQC}
-        onClose={() => setOpenMOdalQC(false)}
-        orderInfo={dataView}
-        stageWidth={900}
-        stageHeight={520}
-        fetchAllQC={fetchAllQC}
-        filters={filters}
-        fetchCountStatus={fetchCountStatus}
-      /> */}
       <QcCanvasModal
         open={openModalQC}
         onClose={() => setOpenMOdalQC(false)}
@@ -479,45 +459,6 @@ const QC = () => {
         indexQC={indexQC}
       />
     </div>
-
-    // <QCPreviewModal
-    //   open={true}
-    //   layersData={[
-    //     {
-    //       id: 'front',
-    //       label: 'Front',
-    //       url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516674/fulfillment_files/112-4563192-0238605-137817274210201-front.png',
-    //       x: 900,
-    //       y: 360,
-    //       scale: 1,
-    //       rotation: 0,
-    //       visible: true,
-    //       opacity: 1,
-    //     },
-    //     {
-    //       id: 'rightSleeve',
-    //       label: 'Right Sleeve',
-    //       url: 'https://res.cloudinary.com/debr5x898/image/upload/v1756516677/fulfillment_files/112-4563192-0238605-137817274210201-right_sleeve.png',
-    //       x: 420,
-    //       y: 960,
-    //       scale: 1,
-    //       rotation: 0,
-    //       visible: true,
-    //       opacity: 1,
-    //     },
-    //   ]}
-    //   logicalWidth={4200}
-    //   logicalHeight={4800}
-    //   viewportWidth={1000}
-    //   viewportHeight={750}
-    //   itemInfo={{
-    //     orderId: '112-456…',
-    //     asin: 'B0F…',
-    //     vendor: 'Merchfox',
-    //     color: 'Royal Blue',
-    //     size: '3XL',
-    //   }}
-    // />
   );
 };
 
