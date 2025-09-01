@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex } from 'antd';
-import { Stage, Layer, Rect, Image as KImage } from 'react-konva';
-import useImage from 'use-image';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex, Pagination } from 'antd';
+import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { Link } from 'react-router-dom';
@@ -12,67 +11,196 @@ import { scaleFulfill } from '../../apis/order';
 import { toast } from 'sonner';
 
 const { Title, Text } = Typography;
+function EditableImage({
+  htmlImg,
+  x,
+  y,
+  width,
+  height, // ✅ dùng width/height thay cho scale
+  rotation = 0,
+  isSelected,
+  visible = true,
+  opacity = 1,
+  onSelect,
+  onChange,
+}) {
+  const shapeRef = useRef(null);
+  const trRef = useRef(null);
 
-/** Ảnh tự fit vào khung stage, giữ tỉ lệ */
-function FitImage({ url, stageW, stageH }) {
-  const [img] = useImage(url, 'anonymous');
-  const geom = useMemo(() => {
-    if (!img) return null;
-    const scale = Math.min(stageW / img.width, stageH / img.height);
-    const w = img.width * scale;
-    const h = img.height * scale;
-    return { w, h, x: (stageW - w) / 2, y: (stageH - h) / 2 };
-  }, [img, stageW, stageH]);
+  useEffect(() => {
+    if (isSelected && trRef.current && shapeRef.current) {
+      trRef.current.nodes([shapeRef.current]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected]);
 
-  if (!img || !geom) return null;
-  return <KImage image={img} x={geom.x} y={geom.y} width={geom.w} height={geom.h} listening={false} />;
+  if (!htmlImg) return null;
+
+  return (
+    <Group>
+      <KonvaImage
+        ref={shapeRef}
+        image={htmlImg}
+        x={x}
+        y={y}
+        width={width || htmlImg.width} // ✅ vẽ theo kích thước thực
+        height={height || htmlImg.height}
+        rotation={rotation}
+        opacity={opacity}
+        visible={visible}
+        draggable
+        onClick={onSelect}
+        perfectDrawEnabled={false}
+        onTap={onSelect}
+        onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
+        onTransformEnd={() => {
+          const node = shapeRef.current;
+          if (!node) return;
+          // ✅ chuyển scale thành width/height để tránh resample nhiều lần
+          const newWidth = node.width() * node.scaleX();
+          const newHeight = node.height() * node.scaleY();
+          node.scaleX(1);
+          node.scaleY(1);
+          onChange({
+            x: node.x(),
+            y: node.y(),
+            width: newWidth,
+            height: newHeight,
+            rotation: node.rotation(),
+          });
+        }}
+      />
+      {isSelected && (
+        <Transformer
+          ref={trRef}
+          rotateEnabled
+          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+          boundBoxFunc={(oldBox, newBox) => (newBox.width < 5 || newBox.height < 5 ? oldBox : newBox)}
+        />
+      )}
+    </Group>
+  );
+}
+
+function normalizeLayer(x, i) {
+  return {
+    id: x.id ?? `layer_${i}`,
+    label: x.label ?? `Layer ${i + 1}`,
+    url: x.url ?? null,
+    htmlImg: null,
+    x: 0,
+    y: 0,
+    rotation: num(x.rotation, 0),
+    visible: x.visible ?? true,
+    opacity: num(x.opacity, 1),
+    isSelected: false,
+  };
+}
+function num(v, d) {
+  return Number.isFinite(+v) ? +v : d;
 }
 
 export default function QcCanvasModal({
   open,
   onClose,
-  orderInfo = {}, // object info hiển thị (phải)
+  logicalWidth = 4200,
+  logicalHeight = 4800,
+  viewportWidth = 1000,
+  viewportHeight = 750,
   fetchAllQC,
   filters,
   fetchCountStatus,
+  orderInfo = {},
+  indexQC = 0,
 }) {
-  const [bgColor, setBgColor] = useState('#2f5f93');
+  const [bgColor, setBgColor] = useState('#2f6f8a'); // Royal-ish blue
   const [qcNote, setQcNote] = useState('');
-  const ORDER = ['front', 'back', 'left_sleeve', 'right_sleeve', 'collar']; // để sắp xếp nếu cần
-  const filesEntries = useMemo(() => {
-    const ff = orderInfo?.data?.fulfillment_file ?? {};
-    // giữ thứ tự ORDER nhưng chỉ lấy key có url
-    return ORDER.flatMap((k) => (ff[k] ? [[k, ff[k]]] : []));
-    // hoặc đơn giản: Object.entries(ff).filter(([,url]) => !!url);
-  }, [orderInfo]);
+  const [items, setItems] = useState([]);
+  const initialLayoutDone = useRef(false);
+  const [currentIndex, setCurrentIndex] = useState(indexQC);
+  const [errorNote, setErrorNote] = useState(false);
+  const currentItem = orderInfo?.items?.[currentIndex];
+  const layersData = useMemo(() => {
+    if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
 
-  // 2) State đang chọn
-  const [selectedKind, setSelectedKind] = useState(null);
+    return Object.entries(orderInfo.items[currentIndex].fulfillment_file).map(([key, url]) => ({
+      id: key.replace(/_/g, ''),
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      url,
+      x: 900,
+      y: 360,
+      visible: true,
+      opacity: 1,
+    }));
+  }, [orderInfo, currentIndex]);
+
+  const displayScale = useMemo(() => {
+    return Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight);
+  }, [viewportWidth, viewportHeight, logicalWidth, logicalHeight]);
+
   useEffect(() => {
-    setSelectedKind(filesEntries[0]?.[0] ?? null); // nếu chỉ có 1 ảnh cũng OK
-  }, [filesEntries]);
+    setCurrentIndex(indexQC);
+  }, [indexQC]);
 
-  // 3) Url đang preview
-  const previewUrl = selectedKind ? orderInfo?.data?.fulfillment_file?.[selectedKind] : undefined;
-
-  const useImageSize = (url) => {
-    const [width, setWidth] = useState(0);
-
-    useEffect(() => {
-      if (!url) return;
-      const img = new Image();
-      img.onload = () => {
-        setWidth(img.width);
-      };
-      img.src = url;
-    }, [url]);
-
-    return width;
+  const handlePageChange = (page) => {
+    setCurrentIndex(page - 1);
   };
+
+  // Load image elements
+  useEffect(() => {
+    if (!open) return;
+    if (!Array.isArray(layersData)) return setItems([]);
+
+    Promise.all(
+      layersData.map(
+        (x, i) =>
+          new Promise((resolve) => {
+            const it = normalizeLayer(x, i);
+            if (!it.url) return resolve(it);
+
+            const img = new window.Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = async () => {
+              // kích thước hiển thị (sau khi thu nhỏ)
+              const dw = Math.max(1, Math.round(img.width * displayScale));
+              const dh = Math.max(1, Math.round(img.height * displayScale));
+
+              let bmp = img;
+              try {
+                // ✅ resize chất lượng cao ngay khi load
+                bmp = await createImageBitmap(img, {
+                  resizeWidth: dw,
+                  resizeHeight: dh,
+                  resizeQuality: 'high',
+                });
+              } catch {
+                // fallback: dùng ảnh gốc nếu createImageBitmap không hỗ trợ
+              }
+
+              resolve({
+                ...it,
+                htmlImg: bmp,
+                // chuyển luôn sang hệ toạ độ viewport (để vẽ 1:1)
+                x: Math.round((it.x || 0) * displayScale),
+                y: Math.round((it.y || 0) * displayScale),
+                width: dw,
+                height: dh,
+              });
+            };
+            img.onerror = () => resolve(it);
+            img.src = it.url;
+          })
+      )
+    ).then((arr) => setItems(arr));
+  }, [open, JSON.stringify(layersData), displayScale]);
+
+  // ===== Helpers =====
+  const selectId = (id) => setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
+  const updateItem = (id, patch) => setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
 
   const handlePass = async () => {
     try {
-      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
         decision: 'approve',
         note: qcNote,
       });
@@ -90,8 +218,12 @@ export default function QcCanvasModal({
   };
 
   const handleReject = async () => {
+    if (!qcNote) {
+      setErrorNote(true);
+      return;
+    }
     try {
-      const response = await scaleFulfill(orderInfo?.orderId, orderInfo?.data?.orderItemId, {
+      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
         decision: 'reject',
         note: qcNote,
       });
@@ -108,42 +240,76 @@ export default function QcCanvasModal({
     }
   };
 
-  const widthState = useImageSize(orderInfo?.data?.fulfillment_file?.front);
+  useEffect(() => {
+    if (!open) return;
+    if (!items.length) return;
+    if (initialLayoutDone.current) return;
+    initialLayoutDone.current = true;
+
+    setItems((arr) =>
+      arr.map((it) => {
+        // Giữ (0,0) cho tất cả layer từ normalizeLayer
+        const isRightSleeve = /(right.*sleeve|sleeve.*right)/i.test(it.id) || /(right.*sleeve|sleeve.*right)/i.test(it.label || '');
+        if (isRightSleeve && it.htmlImg) {
+          const factor = 0.55; // nhỏ hơn ~15%
+          const newScale = (it.scale || 1) * factor;
+          const h = (it.htmlImg.height || 0) * newScale;
+          return {
+            ...it,
+            scale: newScale,
+            x: 250, // canh trái
+            y: Math.max(0, logicalHeight - h) - 200, // sát đáy canvas
+          };
+        }
+        return it;
+      })
+    );
+  }, [open, items, logicalHeight]);
 
   return (
-    <Modal width={1300} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
+    <Modal width={1350} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 12,
-          marginRight: orderInfo?.data?.scale_status === 'Pending' ? 154 : 365,
         }}
       >
-        <h1 style={{ margin: 0 }}>QC Preview</h1>
+        <h1 style={{ margin: 0, width: 220 }}>QC Preview</h1>
 
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', width: 700, marginLeft: 16 }}>
+          <div className="flex items-center">
+            <Pagination
+              total={currentItem ? orderInfo?.items.length : 1}
+              showTotal={(total) => (
+                <span className="font-medium">
+                  Item {currentIndex + 1}/{total}
+                </span>
+              )}
+              pageSize={1}
+              current={currentIndex + 1}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
+            />
+          </div>
           {/* Chọn màu nền */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="font-medium">Background: </span>
-            <Select
-              value={bgColor}
-              onChange={setBgColor}
-              style={{ width: 140 }}
-              options={[
-                { label: 'Royal Blue', value: '#2f5f93' },
-                { label: 'Black', value: '#111111' },
-                { label: 'White', value: '#ffffff' },
-                { label: 'Heather Grey', value: '#bdbdbd' },
-                { label: 'Forest', value: '#2c5632' },
-              ]}
-            />
+            <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
           </div>
+        </div>
 
-          {orderInfo?.data?.scale_status === 'Pending' && (
+        <div className="flex mr-10 w-[300px] ml-[15px]">
+          {currentItem?.scale_status === 'Pending' && (
             <div className="flex gap-2">
-              <Button type="dashed" iconPosition="end" icon={<FcApproval />} onClick={handlePass} style={{ fontWeight: 500 }}>
+              <Button
+                type="dashed"
+                iconPosition="end"
+                icon={<FcApproval />}
+                onClick={handlePass}
+                style={{ fontWeight: 500 }}
+                className={`hover:!text-[#39a00d] hover:!border-[#39a00d]`}
+              >
                 Passed
               </Button>
               <Button
@@ -152,6 +318,7 @@ export default function QcCanvasModal({
                 icon={<IoArrowUndo color="red" />}
                 onClick={handleReject}
                 style={{ fontWeight: 500 }}
+                className={`hover:!text-[#cd1323] hover:!border-[#cd1323]`}
               >
                 Reject
               </Button>
@@ -164,58 +331,52 @@ export default function QcCanvasModal({
         {/* LEFT: Base images */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
           {/* Ảnh base mockup (giữ nguyên) */}
-          <img
-            src={orderInfo?.data?.baseImageUrl}
-            style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
-          />
-
-          {filesEntries.length > 0 && (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {filesEntries.map(([kind, url]) => (
-                <div
-                  key={kind}
-                  onClick={() => setSelectedKind(kind)}
-                  style={{
-                    cursor: 'pointer',
-                    border: selectedKind === kind ? '2px solid #1677ff' : '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: 6,
-                    background: '#fff',
-                  }}
-                  title={kind.replace(/_/g, ' ')}
-                >
-                  <img
-                    src={url}
-                    preview={false}
-                    placeholder // antd hiển thị skeleton khi load
-                    fallback="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" // tránh icon vỡ
-                    style={{ width: '100%', height: 150, objectFit: 'contain', borderRadius: 4 }}
-                  />
-                  <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: '#64748B' }}>
-                    {kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </div>
-                </div>
-              ))}
-            </div>
+          {currentItem?.baseImageUrl && (
+            <img src={currentItem?.baseImageUrl} style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }} />
           )}
+
+          <div>
+            <div className="mb-2">
+              <span className="font-medium">Customer Photo</span>
+            </div>
+            {currentItem?.snapshotImage && (
+              <img
+                src={currentItem?.snapshotImage}
+                style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
+              />
+            )}
+          </div>
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
         <div
+          className="relative rounded-xl"
           style={{
-            flex: 1,
-            border: '1px solid #eee',
-            borderRadius: 8,
-            display: 'flex',
-            justifyContent: 'center',
+            width: viewportWidth,
+            height: viewportHeight,
             overflow: 'hidden',
-            width: widthState,
+            background: bgColor,
           }}
         >
-          <Stage width={widthState} height={745}>
-            <Layer>
-              <Rect x={0} y={0} width={widthState} height={745} fill={bgColor} listening={false} />
-              <FitImage url={previewUrl} stageW={widthState} stageH={745} />
+          <Stage width={viewportWidth} height={viewportHeight}>
+            {/* nền */}
+            <Layer listening={false} imageSmoothingEnabled={true}>
+              <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
+            </Layer>
+
+            {/* ảnh */}
+            <Layer
+              imageSmoothingEnabled={true} // ✅ bật smoothing
+              ref={(layer) => {
+                if (layer) {
+                  const ctx = layer.getContext()._context;
+                  if (ctx) ctx.imageSmoothingQuality = 'high'; // ✅ yêu cầu chất lượng cao
+                }
+              }}
+            >
+              {items.map((it) => (
+                <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(patch) => updateItem(it.id, patch)} />
+              ))}
             </Layer>
           </Stage>
         </div>
@@ -234,69 +395,71 @@ export default function QcCanvasModal({
             <Title level={5} style={{ marginTop: 0 }}>
               Item Info
             </Title>
-            <Flex vertical={true} gap={6}>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">OrderId:</span>
-                <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Asin:</span>
-                <div className="flex gap-1 items-center">
-                  <StatusComponent title={orderInfo?.data?.asin} color={dataColors.pending} />
-                  <Tooltip title="Open Link">
-                    <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${orderInfo?.data?.asin}`}>
-                      <RiLinkM size={18} />
-                    </Link>
-                  </Tooltip>
+            {currentItem && (
+              <Flex vertical={true} gap={6}>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">OrderId:</span>
+                  <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
                 </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Sku:</span>
-                <StatusComponent title={orderInfo?.data?.sku} color={dataColors.asin} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Fulfillable Qty:</span>
-                <StatusComponent title={orderInfo?.data?.quantity} color={dataColors.default} isDefault={true} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Vendor:</span>
-                <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
-                  color={dataColors.success}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Product Name:</span>
-                <StatusComponent
-                  title={orderInfo?.data?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
-                  color={dataColors.default}
-                  isDefault={true}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Fulfill Name:</span>
-                <div
-                  style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
-                  className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
-                >
-                  <span
-                    style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: 'inline-block',
-                    }}
-                    className="whitespace-nowrap"
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Asin:</span>
+                  <div className="flex gap-1 items-center">
+                    <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
+                    <Tooltip title="Open Link">
+                      <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
+                        <RiLinkM size={18} />
+                      </Link>
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Sku:</span>
+                  <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Fulfillable Qty:</span>
+                  <StatusComponent title={currentItem?.quantity} color={dataColors.default} isDefault={true} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Vendor:</span>
+                  <StatusComponent
+                    title={currentItem?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
+                    color={dataColors.success}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Product Name:</span>
+                  <StatusComponent
+                    title={currentItem?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
+                    color={dataColors.default}
+                    isDefault={true}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Fulfill Name:</span>
+                  <div
+                    style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
+                    className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
                   >
-                    {`${orderInfo?.orderId}-${orderInfo?.data?.orderItemId}`}
-                  </span>
+                    <span
+                      style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'inline-block',
+                      }}
+                      className="whitespace-nowrap"
+                    >
+                      {`${orderInfo?.orderId}-${currentItem?.orderItemId}`}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Vendor Product Sku:</span>
-                <StatusComponent title={orderInfo?.data?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
-              </div>
-            </Flex>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Vendor Product Sku:</span>
+                  <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
+                </div>
+              </Flex>
+            )}
           </div>
           <div
             style={{
@@ -310,12 +473,13 @@ export default function QcCanvasModal({
             }}
           >
             <div className="flex-col justify-between">
-              {orderInfo?.data?.version3Data?.map((item, index) => (
-                <div key={index} className="mb-1 whitespace-normal break-words">
-                  <span className="font-medium">{item?.label}:</span>
-                  <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
-                </div>
-              ))}
+              {currentItem &&
+                currentItem?.version3Data?.map((item, index) => (
+                  <div key={index} className="mb-1 whitespace-normal break-words">
+                    <span className="font-medium">{item?.label}:</span>
+                    <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
+                  </div>
+                ))}
             </div>
           </div>
           <div>
@@ -323,12 +487,17 @@ export default function QcCanvasModal({
               QC Note
             </Title>
             <Input.TextArea
-              defaultValue={orderInfo?.data?.qc_note || ''}
+              defaultValue={currentItem?.qc_note || ''}
               value={qcNote}
-              onChange={(e) => setQcNote(e.target.value)}
-              placeholder="Nhập ghi chú cho seller…"
+              style={{ borderColor: errorNote ? '#FB2C36' : '' }}
+              onChange={(e) => {
+                setQcNote(e.target.value);
+                setErrorNote(false);
+              }}
+              placeholder="Enter notes for seller…"
               autoSize={{ minRows: 6, maxRows: 12 }}
             />
+            {errorNote && <div className="text-red-500 font-medium mt-1">Please note!</div>}
           </div>
         </Flex>
       </div>

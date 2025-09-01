@@ -247,9 +247,9 @@ const QC = () => {
                   className="cursor-pointer border rounded"
                   style={{ padding: 6, borderColor: dataColors.default }}
                   onClick={() => {
-                    setDataView({ orderId: item?.orderId, data: itemSub });
-                    // setDataView(item);
-                    // setIndexQC(indexItem);
+                    // setDataView({ orderId: item?.orderId, data: itemSub });
+                    setDataView(item);
+                    setIndexQC(indexItem);
                     setOpenMOdalQC(true);
                   }}
                 >
@@ -453,7 +453,7 @@ const QC = () => {
           />
         </div>
       </div>
-      <QcCanvasModal
+      {/* <QcCanvasModal
         open={openModalQC}
         onClose={() => setOpenMOdalQC(false)}
         orderInfo={dataView}
@@ -462,8 +462,8 @@ const QC = () => {
         fetchAllQC={fetchAllQC}
         filters={filters}
         fetchCountStatus={fetchCountStatus}
-      />
-      {/* <QcCanvasModal2
+      /> */}
+      <QcCanvasModal
         open={openModalQC}
         onClose={() => setOpenMOdalQC(false)}
         orderInfo={dataView}
@@ -477,7 +477,7 @@ const QC = () => {
         viewportWidth={1000}
         viewportHeight={750}
         indexQC={indexQC}
-      /> */}
+      />
     </div>
 
     // <QCPreviewModal

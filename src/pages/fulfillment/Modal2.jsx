@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex, Pagination } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
-import useImage from 'use-image';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { Link } from 'react-router-dom';
@@ -12,16 +11,31 @@ import { scaleFulfill } from '../../apis/order';
 import { toast } from 'sonner';
 
 const { Title, Text } = Typography;
-function EditableImage({ htmlImg, x, y, scale = 1, rotation = 0, isSelected, visible = true, opacity = 1, onSelect, onChange }) {
+function EditableImage({
+  htmlImg,
+  x,
+  y,
+  width,
+  height, // ✅ dùng width/height thay cho scale
+  rotation = 0,
+  isSelected,
+  visible = true,
+  opacity = 1,
+  onSelect,
+  onChange,
+}) {
   const shapeRef = useRef(null);
   const trRef = useRef(null);
+
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected]);
+
   if (!htmlImg) return null;
+
   return (
     <Group>
       <KonvaImage
@@ -29,22 +43,31 @@ function EditableImage({ htmlImg, x, y, scale = 1, rotation = 0, isSelected, vis
         image={htmlImg}
         x={x}
         y={y}
-        scaleX={scale}
-        scaleY={scale}
+        width={width || htmlImg.width} // ✅ vẽ theo kích thước thực
+        height={height || htmlImg.height}
         rotation={rotation}
         opacity={opacity}
         visible={visible}
         draggable
         onClick={onSelect}
+        perfectDrawEnabled={false}
         onTap={onSelect}
         onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
           if (!node) return;
-          const s = node.scaleX();
+          // ✅ chuyển scale thành width/height để tránh resample nhiều lần
+          const newWidth = node.width() * node.scaleX();
+          const newHeight = node.height() * node.scaleY();
           node.scaleX(1);
           node.scaleY(1);
-          onChange({ x: node.x(), y: node.y(), scale: s, rotation: node.rotation() });
+          onChange({
+            x: node.x(),
+            y: node.y(),
+            width: newWidth,
+            height: newHeight,
+            rotation: node.rotation(),
+          });
         }}
       />
       {isSelected && (
@@ -52,10 +75,7 @@ function EditableImage({ htmlImg, x, y, scale = 1, rotation = 0, isSelected, vis
           ref={trRef}
           rotateEnabled
           enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-          boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 5 || newBox.height < 5) return oldBox;
-            return newBox;
-          }}
+          boundBoxFunc={(oldBox, newBox) => (newBox.width < 5 || newBox.height < 5 ? oldBox : newBox)}
         />
       )}
     </Group>
@@ -70,7 +90,6 @@ function normalizeLayer(x, i) {
     htmlImg: null,
     x: 0,
     y: 0,
-    scale: num(x.scale, 1),
     rotation: num(x.rotation, 0),
     visible: x.visible ?? true,
     opacity: num(x.opacity, 1),
@@ -94,14 +113,12 @@ export default function QcCanvasModal2({
   orderInfo = {},
   indexQC = 0,
 }) {
-  const [bgMode, setBgMode] = useState('color'); // "checker" | "color" | "transparent"
   const [bgColor, setBgColor] = useState('#2f6f8a'); // Royal-ish blue
   const [qcNote, setQcNote] = useState('');
   const [items, setItems] = useState([]);
-  const stageRef = useRef(null);
   const initialLayoutDone = useRef(false);
   const [currentIndex, setCurrentIndex] = useState(indexQC);
-
+  const [errorNote, setErrorNote] = useState(false);
   const currentItem = orderInfo?.items?.[currentIndex];
   const layersData = useMemo(() => {
     if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
@@ -112,11 +129,14 @@ export default function QcCanvasModal2({
       url,
       x: 900,
       y: 360,
-      scale: 1,
       visible: true,
       opacity: 1,
     }));
   }, [orderInfo, currentIndex]);
+
+  const displayScale = useMemo(() => {
+    return Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight);
+  }, [viewportWidth, viewportHeight, logicalWidth, logicalHeight]);
 
   useEffect(() => {
     setCurrentIndex(indexQC);
@@ -128,50 +148,55 @@ export default function QcCanvasModal2({
 
   // Load image elements
   useEffect(() => {
-    if (!open) return; // avoid work when modal closed
+    if (!open) return;
     if (!Array.isArray(layersData)) return setItems([]);
+
     Promise.all(
       layersData.map(
         (x, i) =>
           new Promise((resolve) => {
             const it = normalizeLayer(x, i);
             if (!it.url) return resolve(it);
+
             const img = new window.Image();
             img.crossOrigin = 'anonymous';
-            img.onload = () => resolve({ ...it, htmlImg: img });
-            img.onerror = () => resolve(it); // resolve anyway
+            img.onload = async () => {
+              // kích thước hiển thị (sau khi thu nhỏ)
+              const dw = Math.max(1, Math.round(img.width * displayScale));
+              const dh = Math.max(1, Math.round(img.height * displayScale));
+
+              let bmp = img;
+              try {
+                // ✅ resize chất lượng cao ngay khi load
+                bmp = await createImageBitmap(img, {
+                  resizeWidth: dw,
+                  resizeHeight: dh,
+                  resizeQuality: 'high',
+                });
+              } catch {
+                // fallback: dùng ảnh gốc nếu createImageBitmap không hỗ trợ
+              }
+
+              resolve({
+                ...it,
+                htmlImg: bmp,
+                // chuyển luôn sang hệ toạ độ viewport (để vẽ 1:1)
+                x: Math.round((it.x || 0) * displayScale),
+                y: Math.round((it.y || 0) * displayScale),
+                width: dw,
+                height: dh,
+              });
+            };
+            img.onerror = () => resolve(it);
             img.src = it.url;
           })
       )
     ).then((arr) => setItems(arr));
-  }, [open, JSON.stringify(layersData)]);
+  }, [open, JSON.stringify(layersData), displayScale]);
 
   // ===== Helpers =====
-  const deselectAll = () => setItems((arr) => arr.map((it) => ({ ...it, isSelected: false })));
   const selectId = (id) => setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
   const updateItem = (id, patch) => setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-
-  // Scale to fit fixed viewport
-  const scale = useMemo(() => {
-    return Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight);
-  }, [viewportWidth, viewportHeight, logicalWidth, logicalHeight]);
-
-  // Close on ESC
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
-      const sel = items.find((x) => x.isSelected);
-      if (!sel) return;
-      const step = e.shiftKey ? 10 : 1;
-      if (e.key === 'ArrowUp') updateItem(sel.id, { y: sel.y - step });
-      if (e.key === 'ArrowDown') updateItem(sel.id, { y: sel.y + step });
-      if (e.key === 'ArrowLeft') updateItem(sel.id, { x: sel.x - step });
-      if (e.key === 'ArrowRight') updateItem(sel.id, { x: sel.x + step });
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, items]);
 
   const handlePass = async () => {
     try {
@@ -193,6 +218,10 @@ export default function QcCanvasModal2({
   };
 
   const handleReject = async () => {
+    if (!qcNote) {
+      setErrorNote(true);
+      return;
+    }
     try {
       const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
         decision: 'reject',
@@ -326,35 +355,27 @@ export default function QcCanvasModal2({
             width: viewportWidth,
             height: viewportHeight,
             overflow: 'hidden',
-            background: bgMode === 'color' ? bgColor : 'transparent',
+            background: bgColor,
           }}
         >
-          <Stage
-            ref={stageRef}
-            width={logicalWidth}
-            height={logicalHeight}
-            scaleX={scale}
-            scaleY={scale}
-            className="absolute inset-0"
-            onMouseDown={(e) => {
-              if (e.target === e.target.getStage()) deselectAll();
-            }}
-          >
-            <Layer listening={false}>
-              {bgMode === 'checker' && <Checkerboard w={logicalWidth} h={logicalHeight} />}
-              {bgMode === 'color' && <Rect x={0} y={0} width={logicalWidth} height={logicalHeight} fill={bgColor} />}
-              {bgMode === 'transparent' && <Rect x={0} y={0} width={logicalWidth} height={logicalHeight} fillEnabled={false} />}
+          <Stage width={viewportWidth} height={viewportHeight}>
+            {/* nền */}
+            <Layer listening={false} imageSmoothingEnabled={true}>
+              <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
             </Layer>
-            <Layer>
+
+            {/* ảnh */}
+            <Layer
+              imageSmoothingEnabled={true} // ✅ bật smoothing
+              ref={(layer) => {
+                if (layer) {
+                  const ctx = layer.getContext()._context;
+                  if (ctx) ctx.imageSmoothingQuality = 'high'; // ✅ yêu cầu chất lượng cao
+                }
+              }}
+            >
               {items.map((it) => (
-                <EditableImage
-                  key={it.id}
-                  canvasW={logicalWidth}
-                  canvasH={logicalHeight}
-                  {...it}
-                  onSelect={() => selectId(it.id)}
-                  onChange={(patch) => updateItem(it.id, patch)}
-                />
+                <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(patch) => updateItem(it.id, patch)} />
               ))}
             </Layer>
           </Stage>
@@ -468,10 +489,15 @@ export default function QcCanvasModal2({
             <Input.TextArea
               defaultValue={currentItem?.qc_note || ''}
               value={qcNote}
-              onChange={(e) => setQcNote(e.target.value)}
-              placeholder="Nhập ghi chú cho seller…"
+              style={{ borderColor: errorNote ? '#FB2C36' : '' }}
+              onChange={(e) => {
+                setQcNote(e.target.value);
+                setErrorNote(false);
+              }}
+              placeholder="Enter notes for seller…"
               autoSize={{ minRows: 6, maxRows: 12 }}
             />
+            {errorNote && <div className="text-red-500 font-medium mt-1">Please note!</div>}
           </div>
         </Flex>
       </div>
