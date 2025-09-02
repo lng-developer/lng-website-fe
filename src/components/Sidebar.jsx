@@ -114,7 +114,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
   return (
     <>
       <aside
-        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 w-full border-r-2 border-r-[#f1f5f9] md:bottom-0 md:right-auto md:h-svh ${
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 w-full border-r-1 border-r-[#f1f5f9] md:bottom-0 md:right-auto md:h-svh ${
           collapsed ? 'md:w-64' : 'md:w-13.5'
         }`}
       >
@@ -150,7 +150,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
             </button>
           </Flex>
         </div>
-        <div className="py-2 font-medium">
+        <div className="py-2 font-medium shadow-sm">
           <Layout style={{ height: '100vh' }}>
             {/* Lớp 1 - Top Menu */}
             <Flex justify="center" style={{ background: '#fff', borderRight: '1px solid #eee' }}>
@@ -187,7 +187,6 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
               width={!collapsed ? 0 : 202}
               style={{
                 background: '#fff',
-                borderRight: '1px solid #eee',
                 overflow: 'hidden',
                 transition: 'width 0.3s',
               }}

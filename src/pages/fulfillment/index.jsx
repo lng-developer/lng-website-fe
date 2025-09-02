@@ -285,7 +285,7 @@ const FulfillmentScale = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 265; // Chiều cao header nếu có
+      const headerHeight = 240; // Chiều cao header nếu có
       const marginBottom = 20;
 
       const availableHeight = window.innerHeight - headerHeight - marginBottom;
