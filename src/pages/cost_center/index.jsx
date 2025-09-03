@@ -1,18 +1,19 @@
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
-import { Flex, Input, Tooltip, Table, Modal, Select } from 'antd';
+import { Flex, Input, Tooltip, Table, Modal, Select, Pagination } from 'antd';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { useCallback, useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
-import { formatDate } from '../../utils/fomatDate';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { deleteProductType, deleteProductTypeItem, getAllConfig, updateProductType } from '../../apis/config';
 import ModalAddProductType from './ModalAddProductType';
 import ModalDelete from '../../components/ModalDelete';
 import { getALlVendorProduct } from '../../apis/vendor';
 import { toast } from 'sonner';
+const PAGE_SIZE = 10;
 
 const CostCenterProductTypes = () => {
   const { collapsed } = useOutletContext();
@@ -33,6 +34,27 @@ const CostCenterProductTypes = () => {
   const [vendorProducts, setVendorProducts] = useState([]);
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
   const [idSelectVendor, setIdSelectVendor] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    page: currentPage,
+    perPage: PAGE_SIZE,
+    search: '',
+  });
+
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    updateFilter({ page: page, perPage: pageSize });
+    setCurrentPage(page);
+  };
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
@@ -247,9 +269,10 @@ const CostCenterProductTypes = () => {
     },
   ];
 
-  const fetchAllConfig = useCallback(async () => {
+  const fetchAllConfig = useCallback(async (params) => {
+    setLoading(true);
     try {
-      const response = await getAllConfig();
+      const response = await getAllConfig(params);
       if (response.status === 200) {
         const result = response.data?.items?.map((k) => {
           return {
@@ -270,9 +293,12 @@ const CostCenterProductTypes = () => {
         });
         setDataSource(result);
         setDataFilter(result);
+        setTotalCount(response.data?.total);
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -295,7 +321,7 @@ const CostCenterProductTypes = () => {
       console.log(error);
       toast.error('Delete error!');
     } finally {
-      fetchAllConfig();
+      fetchAllConfig(filters);
       setIsShowModalDelete(false);
     }
   };
@@ -310,7 +336,7 @@ const CostCenterProductTypes = () => {
       console.log(error);
       toast.error('Delete error!');
     } finally {
-      fetchAllConfig();
+      fetchAllConfig(filters);
       setIsShowModalDeleteItem(false);
     }
   };
@@ -327,7 +353,7 @@ const CostCenterProductTypes = () => {
       console.log(error);
       toast.error('Create error!');
     } finally {
-      fetchAllConfig();
+      fetchAllConfig(filters);
       setIsShowModalUpdate(false);
     }
   };
@@ -356,8 +382,8 @@ const CostCenterProductTypes = () => {
   }, []);
 
   useEffect(() => {
-    fetchAllConfig();
-  }, []);
+    fetchAllConfig(filters);
+  }, [filters]);
 
   return (
     <div>
@@ -380,11 +406,23 @@ const CostCenterProductTypes = () => {
         </div>
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
-        <Input
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search..."
-          className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
-        />
+        <div className="flex justify-between items-center">
+          <Input
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search..."
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+          />
+          <div>
+            <Pagination
+              total={totalCount}
+              showTotal={(total) => `Total ${total} items`}
+              defaultPageSize={10}
+              defaultCurrent={1}
+              onChange={handlePageChange}
+              onShowSizeChange={handlePageChange}
+            />
+          </div>
+        </div>
         <div className="mt-4">
           <Table
             className="no-indent-table product-type"
@@ -445,6 +483,7 @@ const CostCenterProductTypes = () => {
             }}
             pagination={false}
             rowKey="key"
+            loading={loading}
           />
         </div>
       </div>

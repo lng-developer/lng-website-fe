@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button, Select, Typography, Input, Space, Divider, Tooltip, Flex, Pagination } from 'antd';
+import { Modal, Button, Typography, Input, Tooltip, Flex, Pagination } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
@@ -11,7 +11,7 @@ import { scaleFulfill } from '../../apis/order';
 import { toast } from 'sonner';
 import { TfiControlBackward } from 'react-icons/tfi';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 function EditableImage({
   htmlImg,
   x,
@@ -117,15 +117,13 @@ export default function QcCanvasModal({
   const [bgColor, setBgColor] = useState('#2f6f8a'); // Royal-ish blue
   const [qcNote, setQcNote] = useState('');
   const [items, setItems] = useState([]);
-  const initialLayoutDone = useRef(false);
   const [currentIndex, setCurrentIndex] = useState(indexQC);
   const [errorNote, setErrorNote] = useState(false);
   const currentItem = orderInfo?.items?.[currentIndex];
-  const backUrl = currentItem?.fulfillment_file?.back || null;
   const [showBack, setShowBack] = useState(false);
+  const [activeLayer, setActiveLayer] = useState(null);
   const layersData = useMemo(() => {
     if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
-
     return Object.entries(orderInfo.items[currentIndex].fulfillment_file).map(([key, url]) => ({
       id: key.replace(/_/g, ''),
       label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -243,32 +241,6 @@ export default function QcCanvasModal({
     }
   };
 
-  useEffect(() => {
-    if (!open) return;
-    if (!items.length) return;
-    if (initialLayoutDone.current) return;
-    initialLayoutDone.current = true;
-
-    setItems((arr) =>
-      arr.map((it) => {
-        // Giữ (0,0) cho tất cả layer từ normalizeLayer
-        const isRightSleeve = /(right.*sleeve|sleeve.*right)/i.test(it.id) || /(right.*sleeve|sleeve.*right)/i.test(it.label || '');
-        if (isRightSleeve && it.htmlImg) {
-          const factor = 0.55; // nhỏ hơn ~15%
-          const newScale = (it.scale || 1) * factor;
-          const h = (it.htmlImg.height || 0) * newScale;
-          return {
-            ...it,
-            scale: newScale,
-            x: 250, // canh trái
-            y: Math.max(0, logicalHeight - h) - 200, // sát đáy canvas
-          };
-        }
-        return it;
-      })
-    );
-  }, [open, items, logicalHeight]);
-
   return (
     <Modal width={1350} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
       <div
@@ -354,44 +326,27 @@ export default function QcCanvasModal({
           {currentItem?.baseImageUrl && (
             <img src={currentItem?.baseImageUrl} style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }} />
           )}
-          <div>
-            <div className="mb-2">
-              <span className="font-medium">Customer Photo</span>
-            </div>
-            {currentItem?.snapshotImage && (
-              <img
-                src={currentItem?.snapshotImage}
-                style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
-              />
-            )}
-          </div>
-          {backUrl && (
-            <div>
-              <div className="mb-2">
-                <span className="font-medium">Back PNG</span>
-              </div>
+          {layersData.map((l) => (
+            <div key={l.id}>
               <div
-                onClick={() => setShowBack(true)}
+                onClick={() => {
+                  setActiveLayer(l.id); // chọn layer
+                  selectId(l.id); // nếu muốn hiển thị Transformer
+                }}
                 style={{
                   cursor: 'pointer',
-                  border: showBack ? '2px solid #1677ff' : '1px solid #e5e7eb',
+                  border: activeLayer === l.id ? '2px solid #1677ff' : '1px solid #e5e7eb',
                   borderRadius: 8,
-                  padding: 6,
+                  padding: activeLayer === l.id ? 6 : 7,
                   background: '#fff',
                 }}
-                title="Back"
+                title={l.label}
               >
-                <img
-                  src={backUrl}
-                  preview={false}
-                  placeholder // antd hiển thị skeleton khi load
-                  fallback="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" // tránh icon vỡ
-                  style={{ width: '100%', height: 150, objectFit: 'contain', borderRadius: 4 }}
-                />
-                <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: '#64748B' }}>Back</div>
+                <img src={l.url} style={{ width: '100%', height: 150, objectFit: 'contain', borderRadius: 4 }} alt={l.label} />
+                <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: '#64748B' }}>{l.label}</div>
               </div>
             </div>
-          )}
+          ))}
         </div>
 
         {/* MIDDLE: Preview canvas (chỉ đổi màu nền + hiển thị ảnh) */}
@@ -409,39 +364,13 @@ export default function QcCanvasModal({
               <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
             </Layer>
 
-            {showBack && backUrl ? (
-              <Layer
-                imageSmoothingEnabled={true}
-                ref={(layer) => {
-                  if (layer) {
-                    const ctx = layer.getContext()._context;
-                    if (ctx) ctx.imageSmoothingQuality = 'high';
-                  }
-                }}
-              >
-                {items
-                  .filter((it) => it.id.toLowerCase() === 'back')
-                  .map((it) => (
-                    <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(p) => updateItem(it.id, p)} />
-                  ))}
-              </Layer>
-            ) : (
-              <Layer
-                imageSmoothingEnabled={true}
-                ref={(layer) => {
-                  if (layer) {
-                    const ctx = layer.getContext()._context;
-                    if (ctx) ctx.imageSmoothingQuality = 'high';
-                  }
-                }}
-              >
-                {items
-                  .filter((it) => it.id.toLowerCase() !== 'back') // 👈 bỏ item back
-                  .map((it) => (
-                    <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(p) => updateItem(it.id, p)} />
-                  ))}
-              </Layer>
-            )}
+            <Layer imageSmoothingEnabled={true}>
+              {items
+                .filter((it) => (activeLayer ? it.id === activeLayer : true)) // chỉ hiện 1 layer
+                .map((it) => (
+                  <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(patch) => updateItem(it.id, patch)} />
+                ))}
+            </Layer>
           </Stage>
         </div>
 
