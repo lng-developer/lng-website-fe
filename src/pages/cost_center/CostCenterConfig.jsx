@@ -287,7 +287,7 @@ const CostCenterConfig = () => {
 
   const fetchAllProductType = async () => {
     try {
-      const response = await getAllConfig({ all: true });
+      const response = await getAllConfig({ all: true, page: 1, perPage: 100 });
       if (response.status === 200) {
         const result = response.data?.items?.map((k) => {
           return {

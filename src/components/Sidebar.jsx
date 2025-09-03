@@ -150,10 +150,10 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
             </button>
           </Flex>
         </div>
-        <div className="py-2 font-medium shadow-sm">
+        <div className=" font-medium shadow-sm">
           <Layout style={{ height: '100vh' }}>
             {/* Lớp 1 - Top Menu */}
-            <Flex justify="center" style={{ background: '#fff', borderRight: '1px solid #eee' }}>
+            <Flex justify="center" style={{ background: '#fff', borderRight: collapsed ? '1px solid #eee' : '', paddingTop: 4 }}>
               <Menu
                 mode="inline"
                 selectedKeys={[activeMenu]}
@@ -189,6 +189,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
                 background: '#fff',
                 overflow: 'hidden',
                 transition: 'width 0.3s',
+                paddingTop: 4,
               }}
             >
               <Menu

@@ -116,20 +116,29 @@ const SaleReport = () => {
 
       group.forEach((row, idx) => {
         const total = row.values.reduce((a, b) => a + b, 0);
+
+        // chỉ set border cho các seller trừ seller đầu tiên
+        const isFirstRowOfThisSeller = idx === 0;
+        const addSeparator = isFirstRowOfThisSeller && rows.length > 0;
+
         const record = {
           key: `${seller}-${row.type}`,
           seller,
           type: <span className="font-medium">{row.type}</span>,
           total,
-          _rowSpan: idx === 0 ? group.length : 0,
+          _rowSpan: isFirstRowOfThisSeller ? group.length : 0,
+          _groupStart: addSeparator, // 👈 đánh dấu
+          _money: row.money,
+          _percent: row.percent,
         };
         dayKeys.forEach((k, i) => (record[k] = row.values[i]));
-        rows.push({ ...record, _money: row.money, _percent: row.percent });
+        rows.push(record);
       });
     });
     return rows;
   };
 
+  const sepStyle = (row) => (row._groupStart ? { borderTop: '1px solid #e5e9eeff' } : undefined);
   const dataSource = buildRows();
 
   // ---- columns antd
@@ -144,13 +153,10 @@ const SaleReport = () => {
       align: 'center',
       fixed: 'left',
       width: 150,
-      render: (val, row) => {
-        // gộp ô seller cho cả block
-        return {
-          children: <div style={{ fontWeight: 600 }}>{val}</div>,
-          props: { rowSpan: row._rowSpan },
-        };
-      },
+      render: (val, row) => ({
+        children: <div style={{ fontWeight: 600 }}>{val}</div>,
+        props: { rowSpan: row._rowSpan, style: sepStyle(row) }, // 👈 borderTop
+      }),
     },
     {
       title: (
@@ -161,6 +167,7 @@ const SaleReport = () => {
       dataIndex: 'type',
       width: 100,
       fixed: 'left',
+      onCell: (row) => ({ style: sepStyle(row) }), // 👈
       render: (v) => <span style={{ color: '#475569' }}>{v}</span>,
     },
     {
@@ -173,15 +180,9 @@ const SaleReport = () => {
       width: 100,
       align: 'right',
       fixed: 'left',
-      onHeaderCell: () => ({
-        style: {
-          borderRight: '2px solid #e5e9eeff', // header border
-        },
-      }),
-      onCell: () => ({
-        style: {
-          borderRight: '2px solid #e5e9eeff', // 👈 đậm hơn, màu tuỳ chỉnh
-        },
+      onHeaderCell: () => ({ style: { borderRight: '2px solid #e5e9eeff' } }),
+      onCell: (row) => ({
+        style: { borderRight: '2px solid #e5e9eeff', ...sepStyle(row) }, // 👈
       }),
       render: (val, row) => {
         if (row._percent)
@@ -194,8 +195,6 @@ const SaleReport = () => {
         return <span className="font-medium">{val}</span>;
       },
     },
-    // cột tổng (tùy chọn): tính tổng theo mỗi hàng -> bỏ nếu không cần
-    // { title: "Total", dataIndex: "total", width: 120, align: "right" },
     ...days.map((d, idx) => ({
       title: (
         <span className="font-medium" style={{ color: dataColors.title }}>
@@ -205,6 +204,7 @@ const SaleReport = () => {
       dataIndex: dayKeys[idx],
       align: 'right',
       width: 120,
+      onCell: (row) => ({ style: sepStyle(row) }),
       render: (val, row) => {
         if (row._percent) {
           return val === 0 ? (
