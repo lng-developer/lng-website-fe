@@ -25,7 +25,7 @@ function App() {
   return (
     <Router>
       <TitlePages />
-      <Routes>
+      {/* <Routes>
         <Route
           path={routes.home}
           element={
@@ -38,18 +38,14 @@ function App() {
         >
           <Route index path={routes.order_amazon} element={<Home />} />
           <Route path={routes.sale_listing} element={<Listing />} />
-          {/* Vendor product */}
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
           <Route path={routes.product_cost_center} element={<ProductCostCenter />} />
-          {/* Fulfillment */}
           <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
           <Route path={routes.fulfillmentQc} element={<QC />} />
-          {/* Cost center */}
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.cost_center_mapping} element={<Mapping />} />
-          {/* Report */}
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
@@ -58,7 +54,7 @@ function App() {
         <Route path={routes.login} element={<Login />} />
         <Route path={routes.register} element={<Register />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
+      </Routes> */}
     </Router>
   );
 }

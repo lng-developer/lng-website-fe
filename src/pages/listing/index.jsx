@@ -440,8 +440,8 @@ const Listing = () => {
             />
             <div className="flex gap-2 items-center ">
               <SelectFilter
-                title="Shipping Type"
-                ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
+                title="Seller"
+                ListData={['Chu Quang Hào', 'Tạ Khánh Tùng']}
                 // value={shippingType}
                 // onChange={(val) => {
                 //   setShippingType(val);
