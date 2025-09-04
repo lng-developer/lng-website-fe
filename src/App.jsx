@@ -25,7 +25,7 @@ function App() {
   return (
     <Router>
       <TitlePages />
-      {/* <Routes>
+      <Routes>
         <Route
           path={routes.home}
           element={
@@ -54,7 +54,7 @@ function App() {
         <Route path={routes.login} element={<Login />} />
         <Route path={routes.register} element={<Register />} />
         <Route path="*" element={<NotFound />} />
-      </Routes> */}
+      </Routes>
     </Router>
   );
 }
