@@ -2,122 +2,143 @@ import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
 import SelectFilter from '../../components/SelectFilter';
-import { Flex, Table, Tag } from 'antd';
+import { Table } from 'antd';
 import { LuBoxes } from 'react-icons/lu';
 import { FaSackDollar, FaArrowTrendUp, FaMoneyBillWave } from 'react-icons/fa6';
 import { eachDayOfInterval, format, subDays } from 'date-fns';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getAllReport } from '../../apis/report';
+import { toast } from 'sonner';
+import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 
 const today = new Date();
+
+// helpers
+const numberSafe = (v) => (Number.isFinite(v) ? Number(v) : 0);
+const sum = (arr = []) => arr.reduce((a, b) => a + numberSafe(b), 0);
+const $ = (n) => (n >= 0 ? `$${n.toFixed(2)}` : `-$${Math.abs(n).toFixed(2)}`);
+const roiColor = (v) => (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : 'default');
+const fitToLen = (arr = [], len) => {
+  if (arr.length === len) return arr;
+  const clipped = arr.slice(0, len);
+  if (clipped.length < len) return [...clipped, ...Array(len - clipped.length).fill(0)];
+  return clipped;
+};
+
 const SaleReport = () => {
   const { collapsed } = useOutletContext();
-  const [days, setDays] = useState(
-    eachDayOfInterval({
-      start: new Date(subDays(today, 6)),
-      end: new Date(today),
-    }).map((d) => format(d, 'dd-MM'))
-  );
+  const [reportBySeller, setReportBySeller] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    from: defaultFrom,
+    to: defaultTo,
+  });
+  const [days, setDays] = useState([]);
 
-  // ---- cấu hình ngày theo cột
-  const dayKeys = days.map((d) => d.replace(/-/g, '_')); // ["06_08",...]
-
-  // ---- dữ liệu thô cho 2 seller (ví dụ)
-  const raw = {
-    'Nguyễn Văn Huy': {
-      fee: [
-        16.24, 37.6, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19,
-        371.15, 802.85, 330.76, 197.55,
-      ],
-      opCost: [
-        33.3, 34.12, 36.81, 35.41, 35.41, 0, 0, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19,
-        371.15, 802.85, 330.76, 197.55,
-      ],
-      refund: [
-        0, 0, 0, 0, 0, 0, 0, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19, 371.15, 802.85,
-        330.76, 197.55,
-      ],
-      items: [
-        13, 10, 7, 7, 14, 7, 4, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19, 371.15, 802.85,
-        330.76, 197.55,
-      ],
-      revenue: [
-        601.11, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0,
-        424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      baseCost: [
-        219.59, 150.24, 128.25, 135.71, 240.61, 127.52, 54.54, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0,
-        424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      ads: [
-        229.51, 209.4, 194.1, 228.5, 249.55, 295.07, 53.61, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0,
-        424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-    },
-    'Phạm Thị Yến': {
-      fee: [
-        102.19, 72.2, 62.08, 63.1, 136.48, 56.23, 33.58, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0,
-        424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      opCost: [
-        33.3, 34.12, 36.81, 35.41, 35.41, 36.33, 38.32, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7,
-        365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      refund: [
-        0, 0, 0, 0, 0, 108.98, 0, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19, 371.15,
-        802.85, 330.76, 197.55,
-      ],
-      items: [
-        12, 9, 6, 6, 11, 6, 3, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7, 365.19, 371.15, 802.85,
-        330.76, 197.55,
-      ],
-      revenue: [
-        545.21, 338.44, 300.18, 318.06, 721.15, 299.31, 180.12, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0,
-        0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      baseCost: [
-        188.24, 136.12, 114.9, 122.11, 214.22, 101.33, 45.9, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0,
-        424.7, 365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-      ads: [
-        205.4, 180.6, 170.3, 191.2, 210.9, 260.1, 45.8, 0, 424.7, 365.19, 371.15, 802.85, 330.76, 197.55, 27.1, 27.94, 10.0, 0, 0, 0, 424.7,
-        365.19, 371.15, 802.85, 330.76, 197.55,
-      ],
-    },
+  const updateFilter = (newValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+    }));
   };
 
-  // ---- helpers
-  const $ = (n) => (n >= 0 ? `$${n.toFixed(2)}` : `-$${Math.abs(n.toFixed(2))}`);
-  const roiColor = (v) => (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : 'default');
+  const fetchAllReport = async (params) => {
+    setLoading(true);
+    try {
+      const response = await getAllReport(params);
+      if (response.status === 200) {
+        setReportBySeller(response.data?.data);
+        setDays(response.data?.date);
+      } else {
+        toast.error(response.data?.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // profit1 = revenue - base - fee
-  // profit2 = profit1 - ads - opCost - refund
-  const buildRows = () => {
+  // 7 ngày mặc định
+
+  const dayKeys = days.map((d) => d.replace(/-/g, '_'));
+
+  // Chuẩn hoá theo số cột ngày
+  const normalized = useMemo(() => {
+    const len = dayKeys.length;
+    const out = {};
+    Object.entries(reportBySeller || {}).forEach(([seller, r]) => {
+      out[seller] = {
+        ...r,
+        fee: fitToLen(r.fee, len),
+        opCost: fitToLen(r.opCost, len),
+        refund: fitToLen(r.refund, len),
+        items: fitToLen(r.items, len),
+        revenue: fitToLen(r.revenue, len),
+        baseCost: fitToLen(r.baseCost, len),
+        ads: fitToLen(r.ads, len),
+        profit1: r.profit1 ? fitToLen(r.profit1, len) : undefined,
+        profit2: r.profit2 ? fitToLen(r.profit2, len) : undefined,
+      };
+    });
+    return out;
+  }, [reportBySeller, dayKeys.length]);
+
+  // Build data cho bảng
+  const dataSource = useMemo(() => {
     const rows = [];
-    Object.entries(raw).forEach(([seller, r]) => {
-      const profit1 = r.revenue.map((v, i) => +(v - r.baseCost[i] - r.fee[i]).toFixed(2));
-      const profit2 = r.revenue.map((v, i) => +(v - r.baseCost[i] - r.fee[i] - r.ads[i] - r.opCost[i] - r.refund[i]).toFixed(2));
-      const roi = r.revenue.map((_, i) => {
-        const denom = r.ads[i] + r.baseCost[i];
-        return denom ? +((profit1[i] / denom) * 100).toFixed(2) : 0;
+
+    Object.entries(normalized).forEach(([seller, r]) => {
+      const profit1 = r.profit1 ?? r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.fee[i])).toFixed(2));
+
+      const profit2 =
+        r.profit2 ??
+        r.revenue.map(
+          (v, i) =>
+            +(
+              numberSafe(v) -
+              numberSafe(r.baseCost[i]) -
+              numberSafe(r.fee[i]) -
+              numberSafe(r.ads[i]) -
+              numberSafe(r.opCost[i]) -
+              numberSafe(r.refund[i])
+            ).toFixed(2)
+        );
+
+      const roiArr = r.revenue.map((_, i) => {
+        const denom = numberSafe(r.ads[i]) + numberSafe(r.baseCost[i]);
+        return denom ? +((numberSafe(profit1[i]) / denom) * 100).toFixed(2) : 0;
       });
 
+      const totals = {
+        items: r.totals?.items ?? sum(r.items),
+        revenue: r.totals?.revenue ?? sum(r.revenue),
+        baseCost: r.totals?.baseCost ?? sum(r.baseCost),
+        ads: r.totals?.ads ?? sum(r.ads),
+        fee: r.totals?.fee ?? sum(r.fee),
+        opCost: r.totals?.opCost ?? sum(r.opCost),
+        refund: r.totals?.refund ?? sum(r.refund),
+        profit1: r.totals?.profit1 ?? sum(profit1),
+        profit2: r.totals?.profit2 ?? sum(profit2),
+      };
+
+      const totalROI = totals.baseCost + totals.ads > 0 ? +(((totals.profit1 || 0) / (totals.baseCost + totals.ads)) * 100).toFixed(2) : 0;
+
       const group = [
-        { type: 'Total Items', values: r.items, money: false },
-        { type: 'Revenue', values: r.revenue, money: true },
-        { type: 'Base cost', values: r.baseCost, money: true },
-        { type: 'Ads spend', values: r.ads, money: true },
-        { type: 'Fee', values: r.fee, money: true },
-        { type: 'Profit 1', values: profit1, money: true },
-        { type: 'ROI', values: roi, percent: true },
-        { type: 'Operation Cost', values: r.opCost, money: true },
-        { type: 'Refund', values: r.refund, money: true },
-        { type: 'Profit 2', values: profit2, money: true },
+        { type: 'Total Items', values: r.items, totalVal: totals.items },
+        { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
+        { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
+        { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
+        { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
+        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1 },
+        { type: 'ROI', values: roiArr, percent: true, totalVal: totalROI },
+        { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
+        { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
+        { type: 'Profit 2', values: profit2, money: true, totalVal: totals.profit2 },
       ];
 
       group.forEach((row, idx) => {
-        const total = row.values.reduce((a, b) => a + b, 0);
-
-        // chỉ set border cho các seller trừ seller đầu tiên
         const isFirstRowOfThisSeller = idx === 0;
         const addSeparator = isFirstRowOfThisSeller && rows.length > 0;
 
@@ -125,23 +146,23 @@ const SaleReport = () => {
           key: `${seller}-${row.type}`,
           seller,
           type: <span className="font-medium">{row.type}</span>,
-          total,
+          total: row.totalVal,
           _rowSpan: isFirstRowOfThisSeller ? group.length : 0,
-          _groupStart: addSeparator, // 👈 đánh dấu
+          _groupStart: addSeparator,
           _money: row.money,
           _percent: row.percent,
         };
-        dayKeys.forEach((k, i) => (record[k] = row.values[i]));
+
+        dayKeys.forEach((k, i) => (record[k] = numberSafe(row.values[i])));
         rows.push(record);
       });
     });
+
     return rows;
-  };
+  }, [normalized, dayKeys]);
 
   const sepStyle = (row) => (row._groupStart ? { borderTop: '1px solid #e5e9eeff' } : undefined);
-  const dataSource = buildRows();
 
-  // ---- columns antd
   const columns = [
     {
       title: (
@@ -155,7 +176,7 @@ const SaleReport = () => {
       width: 150,
       render: (val, row) => ({
         children: <div style={{ fontWeight: 600 }}>{val}</div>,
-        props: { rowSpan: row._rowSpan, style: sepStyle(row) }, // 👈 borderTop
+        props: { rowSpan: row._rowSpan, style: sepStyle(row) },
       }),
     },
     {
@@ -165,9 +186,9 @@ const SaleReport = () => {
         </span>
       ),
       dataIndex: 'type',
-      width: 100,
+      width: 120,
       fixed: 'left',
-      onCell: (row) => ({ style: sepStyle(row) }), // 👈
+      onCell: (row) => ({ style: sepStyle(row) }),
       render: (v) => <span style={{ color: '#475569' }}>{v}</span>,
     },
     {
@@ -177,22 +198,21 @@ const SaleReport = () => {
         </span>
       ),
       dataIndex: 'total',
-      width: 100,
+      width: 120,
       align: 'right',
       fixed: 'left',
       onHeaderCell: () => ({ style: { borderRight: '2px solid #e5e9eeff' } }),
-      onCell: (row) => ({
-        style: { borderRight: '2px solid #e5e9eeff', ...sepStyle(row) }, // 👈
-      }),
+      onCell: (row) => ({ style: { borderRight: '2px solid #e5e9eeff', ...sepStyle(row) } }),
       render: (val, row) => {
-        if (row._percent)
+        if (row._percent) {
           return (
             <span className="font-medium" style={{ color: roiColor(val) }}>
-              {val.toFixed(2)}%
+              {Number(val).toFixed(2)}%
             </span>
           );
-        if (row._money) return <span className="font-medium">{$(val)}</span>;
-        return <span className="font-medium">{val}</span>;
+        }
+        if (row._money) return <span className="font-medium">{$(Number(val))}</span>;
+        return <span className="font-medium">{Number(val)}</span>;
       },
     },
     ...days.map((d, idx) => ({
@@ -206,28 +226,43 @@ const SaleReport = () => {
       width: 120,
       onCell: (row) => ({ style: sepStyle(row) }),
       render: (val, row) => {
+        const v = Number(val) || 0;
         if (row._percent) {
-          return val === 0 ? (
+          return v === 0 ? (
             '-'
           ) : (
-            <span className="font-medium" style={{ color: roiColor(val) }}>
-              {val.toFixed(2)}%
+            <span className="font-medium" style={{ color: roiColor(v) }}>
+              {v.toFixed(2)}%
             </span>
           );
         }
-        if (row._money) return val === 0 ? <span className="font-medium">$0.00</span> : <span className="font-medium">{$(val)}</span>;
-        return <span className="font-medium">{val}</span>; // items
+        if (row._money) return <span className="font-medium">{$(v)}</span>;
+        return <span className="font-medium">{v}</span>;
       },
     })),
   ];
 
-  const updateFilter = (value) => {
-    const dayFormat = eachDayOfInterval({
-      start: new Date(value?.from),
-      end: new Date(value?.to),
-    }).map((d) => format(d, 'dd-MM'));
-    setDays(dayFormat);
-  };
+  // KPIs tổng trên đầu (cộng theo totals của từng seller)
+  const kpis = useMemo(() => {
+    const totals = Object.values(normalized)
+      .map((r) => r.totals)
+      .filter(Boolean);
+    const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
+
+    const totalItems = get('items');
+    const totalRevenue = get('revenue');
+    const totalBase = get('baseCost');
+    const totalAds = get('ads');
+    const totalProfit1 = get('profit1');
+    const totalProfit2 = get('profit2');
+    const roi = totalBase + totalAds > 0 ? +((totalProfit1 / (totalBase + totalAds)) * 100).toFixed(2) : 0;
+
+    return { totalItems, totalRevenue, roi, totalProfit2 };
+  }, [normalized]);
+
+  useEffect(() => {
+    fetchAllReport(filters);
+  }, [filters]);
 
   return (
     <div>
@@ -240,21 +275,14 @@ const SaleReport = () => {
             <DateRangePicker
               mode="range"
               showOutsideDays
-              modifiersClassNames={{
-                selected: 'my-selected',
-                range_middle: 'my-range-middle',
-              }}
-              modifiersStyles={{
-                range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
-                },
-              }}
+              modifiersClassNames={{ selected: 'my-selected', range_middle: 'my-range-middle' }}
+              modifiersStyles={{ range_middle: { backgroundColor: '#f3f4f6', fontWeight: 'normal' } }}
               updateFilter={updateFilter}
             />
           </div>
         </div>
       </div>
+
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center">
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
@@ -262,71 +290,68 @@ const SaleReport = () => {
               <div>
                 <div className="font-medium text-[#64748b]">Total Items</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.process }}>
-                  230
+                  {kpis.totalItems}
                 </span>
               </div>
-              <div>
-                <LuBoxes size={25} color={dataColors.process} />
-              </div>
+              <LuBoxes size={25} color={dataColors.process} />
             </div>
           </div>
+
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Revenue</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.success }}>
-                  $2302
+                  {$(+kpis.totalRevenue)}
                 </span>
               </div>
-              <div>
-                <FaSackDollar size={25} color={dataColors.success} />
-              </div>
+              <FaSackDollar size={25} color={dataColors.success} />
             </div>
           </div>
+
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">ROI</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
-                  230%
+                  {kpis.roi}%
                 </span>
               </div>
-              <div>
-                <FaArrowTrendUp size={25} color={dataColors.pending} />
-              </div>
+              <FaArrowTrendUp size={25} color={dataColors.pending} />
             </div>
           </div>
+
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Profit</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.success }}>
-                  $1233
+                  {$(+kpis.totalProfit2)}
                 </span>
               </div>
-              <div>
-                <FaMoneyBillWave size={25} color={dataColors.success} />
-              </div>
+              <FaMoneyBillWave size={25} color={dataColors.success} />
             </div>
           </div>
         </div>
+
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <div className="flex gap-2 items-center ">
-              <SelectFilter
-                title="Report By Seller"
-                ListData={['Nguyễn Văn Huy', 'Chu Quang Hào', 'Tạ Khánh Tùng']}
-                // value={shippingType}
-                // onChange={(val) => {
-                //   setShippingType(val);
-                //   updateFilter({ shippingType: val });
-                // }}
-              />
+              <SelectFilter title="Report By Seller" ListData={Object.keys(reportBySeller)} />
             </div>
           </div>
         </div>
+
         <div className="mt-4">
-          <Table columns={columns} dataSource={dataSource} rowKey="key" bordered={true} pagination={false} scroll={{ x: 'max-content' }} />
+          <Table
+            columns={columns}
+            dataSource={dataSource}
+            rowKey="key"
+            bordered
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            loading={loading}
+          />
         </div>
       </div>
     </div>
