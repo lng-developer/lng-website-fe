@@ -3,7 +3,7 @@ import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
 import { Table } from 'antd';
 import { LuBoxes } from 'react-icons/lu';
-import { FaSackDollar, FaArrowTrendUp, FaMoneyBillWave, FaArrowTrendDown } from 'react-icons/fa6';
+import { FaSackDollar, FaMoneyBillWave } from 'react-icons/fa6';
 import { LuImport } from 'react-icons/lu';
 import { useEffect, useMemo, useState } from 'react';
 import { getAllReport } from '../../apis/report';
@@ -14,6 +14,7 @@ import ModalAds from './ModalAds';
 import { getAllSellers } from '../../apis/user';
 import { useAuth } from '../../context/AuthContext';
 import SelectSeller from '../../components/SelectSeller';
+import { AiFillDollarCircle } from 'react-icons/ai';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -21,8 +22,6 @@ const sum = (arr = []) => arr.reduce((a, b) => a + numberSafe(b), 0);
 const $ = (n) => (n >= 0 ? `$${Number(n).toFixed(2)}` : `-$${Math.abs(Number(n)).toFixed(2)}`);
 // ROI threshold 60%
 const roiColor = (percent) => (percent >= 60 ? dataColors.success : dataColors.cancelled);
-const roiIcon = (percent) =>
-  percent >= 60 ? <FaArrowTrendUp size={25} color={dataColors.success} /> : <FaArrowTrendDown size={25} color={dataColors.cancelled} />;
 const fitToLen = (arr = [], len) => {
   if (arr.length === len) return arr;
   const clipped = arr.slice(0, len);
@@ -135,7 +134,7 @@ const SaleReport = () => {
 
       // 👉 ROI chuyển xuống cuối nhóm
       const group = [
-        { type: 'Total Items', values: r.items, totalVal: totals.items },
+        { type: 'Total Orders', values: r.items, totalVal: totals.items },
         { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
@@ -283,10 +282,7 @@ const SaleReport = () => {
     const totalAds = get('ads');
     const totalProfit2 = get('profit2');
 
-    // KPI ROI = Profit2 / Ads
-    const roiNum = totalAds > 0 ? +((totalProfit2 / totalAds) * 100).toFixed(2) : 0;
-
-    return { totalItems, totalRevenue, roiNum, totalProfit2 };
+    return { totalItems, totalRevenue, totalAds, totalProfit2 };
   }, [normalized]);
 
   const fetchAllSellers = async () => {
@@ -366,7 +362,7 @@ const SaleReport = () => {
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-[#64748b]">Total Items</div>
+                <div className="font-medium text-[#64748b]">Total Orders</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.process }}>
                   {kpis.totalItems}
                 </span>
@@ -390,12 +386,12 @@ const SaleReport = () => {
           <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-[#64748b]">ROI</div>
-                <span className="text-xl font-bold" style={{ color: roiColor(kpis.roiNum) }}>
-                  {kpis.roiNum}%
+                <div className="font-medium text-[#64748b]">Ads spend</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
+                  {$(+kpis.totalAds)}
                 </span>
               </div>
-              {roiIcon(kpis.roiNum)}
+              <AiFillDollarCircle size={25} color={dataColors.pending} />
             </div>
           </div>
 
