@@ -1,23 +1,28 @@
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
-import SelectFilter from '../../components/SelectFilter';
 import { Table } from 'antd';
 import { LuBoxes } from 'react-icons/lu';
-import { FaSackDollar, FaArrowTrendUp, FaMoneyBillWave } from 'react-icons/fa6';
-import { eachDayOfInterval, format, subDays } from 'date-fns';
+import { FaSackDollar, FaArrowTrendUp, FaMoneyBillWave, FaArrowTrendDown } from 'react-icons/fa6';
+import { LuImport } from 'react-icons/lu';
 import { useEffect, useMemo, useState } from 'react';
 import { getAllReport } from '../../apis/report';
 import { toast } from 'sonner';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
+import ModalReport from './ModalReport';
+import ModalAds from './ModalAds';
+import { getAllSellers } from '../../apis/user';
+import { useAuth } from '../../context/AuthContext';
+import SelectSeller from '../../components/SelectSeller';
 
-const today = new Date();
-
-// helpers
-const numberSafe = (v) => (Number.isFinite(v) ? Number(v) : 0);
+// ---------- helpers ----------
+const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
 const sum = (arr = []) => arr.reduce((a, b) => a + numberSafe(b), 0);
-const $ = (n) => (n >= 0 ? `$${n.toFixed(2)}` : `-$${Math.abs(n).toFixed(2)}`);
-const roiColor = (v) => (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : 'default');
+const $ = (n) => (n >= 0 ? `$${Number(n).toFixed(2)}` : `-$${Math.abs(Number(n)).toFixed(2)}`);
+// ROI threshold 60%
+const roiColor = (percent) => (percent >= 60 ? dataColors.success : dataColors.cancelled);
+const roiIcon = (percent) =>
+  percent >= 60 ? <FaArrowTrendUp size={25} color={dataColors.success} /> : <FaArrowTrendDown size={25} color={dataColors.cancelled} />;
 const fitToLen = (arr = [], len) => {
   if (arr.length === len) return arr;
   const clipped = arr.slice(0, len);
@@ -27,14 +32,19 @@ const fitToLen = (arr = [], len) => {
 
 const SaleReport = () => {
   const { collapsed } = useOutletContext();
+  const { user } = useAuth();
   const [reportBySeller, setReportBySeller] = useState({});
   const [loading, setLoading] = useState(false);
+  const [days, setDays] = useState([]);
+  const [openModalImportReport, setOpenModalImportReport] = useState(false);
+  const [openModalImportAds, setOpenModalImportAds] = useState(false);
+  const [sellers, setSellers] = useState([]);
+  const [selectSeller, setSelectSeller] = useState();
   const [filters, setFilters] = useState({
     from: defaultFrom,
     to: defaultTo,
+    seller: '', // '' = all
   });
-  const [days, setDays] = useState([]);
-
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
       ...prev,
@@ -46,25 +56,23 @@ const SaleReport = () => {
   const fetchAllReport = async (params) => {
     setLoading(true);
     try {
-      const response = await getAllReport(params);
-      if (response.status === 200) {
-        setReportBySeller(response.data?.data);
-        setDays(response.data?.date);
+      const res = await getAllReport(params); // backend phải nhận {from,to,seller}
+      if (res.status === 200) {
+        setReportBySeller(res.data?.data || {});
+        setDays(res.data?.date || []);
       } else {
-        toast.error(response.data?.message);
+        toast.error(res.data?.message || 'Fetch error');
       }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unexpected error');
     } finally {
       setLoading(false);
     }
   };
 
-  // 7 ngày mặc định
-
   const dayKeys = days.map((d) => d.replace(/-/g, '_'));
 
-  // Chuẩn hoá theo số cột ngày
+  // ----- chuẩn hoá độ dài mảng theo số cột ngày -----
   const normalized = useMemo(() => {
     const len = dayKeys.length;
     const out = {};
@@ -72,12 +80,12 @@ const SaleReport = () => {
       out[seller] = {
         ...r,
         fee: fitToLen(r.fee, len),
-        opCost: fitToLen(r.opCost, len),
+        opCost: fitToLen(r.opCost, len), // lấy từ import
         refund: fitToLen(r.refund, len),
         items: fitToLen(r.items, len),
         revenue: fitToLen(r.revenue, len),
         baseCost: fitToLen(r.baseCost, len),
-        ads: fitToLen(r.ads, len),
+        ads: fitToLen(r.ads, len), // lấy từ import
         profit1: r.profit1 ? fitToLen(r.profit1, len) : undefined,
         profit2: r.profit2 ? fitToLen(r.profit2, len) : undefined,
       };
@@ -85,13 +93,15 @@ const SaleReport = () => {
     return out;
   }, [reportBySeller, dayKeys.length]);
 
-  // Build data cho bảng
+  // ----- build data cho bảng -----
   const dataSource = useMemo(() => {
     const rows = [];
 
     Object.entries(normalized).forEach(([seller, r]) => {
+      // Profit1 = revenue - baseCost - fee
       const profit1 = r.profit1 ?? r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.fee[i])).toFixed(2));
 
+      // Profit2 = Profit1 - ads - opCost - refund
       const profit2 =
         r.profit2 ??
         r.revenue.map(
@@ -106,10 +116,7 @@ const SaleReport = () => {
             ).toFixed(2)
         );
 
-      const roiArr = r.revenue.map((_, i) => {
-        const denom = numberSafe(r.ads[i]) + numberSafe(r.baseCost[i]);
-        return denom ? +((numberSafe(profit1[i]) / denom) * 100).toFixed(2) : 0;
-      });
+      const roiArr = r.ads.map((ad, i) => (numberSafe(ad) > 0 ? +((numberSafe(profit2[i]) / numberSafe(ad)) * 100).toFixed(2) : null));
 
       const totals = {
         items: r.totals?.items ?? sum(r.items),
@@ -123,19 +130,22 @@ const SaleReport = () => {
         profit2: r.totals?.profit2 ?? sum(profit2),
       };
 
-      const totalROI = totals.baseCost + totals.ads > 0 ? +(((totals.profit1 || 0) / (totals.baseCost + totals.ads)) * 100).toFixed(2) : 0;
+      // 2) ROI tổng: dùng totals.profit2 / totals.ads
+      const totalROI = totals.ads > 0 ? +(((totals.profit2 || 0) / totals.ads) * 100).toFixed(2) : null;
 
+      // 👉 ROI chuyển xuống cuối nhóm
       const group = [
         { type: 'Total Items', values: r.items, totalVal: totals.items },
         { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
         { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
-        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1 },
-        { type: 'ROI', values: roiArr, percent: true, totalVal: totalROI },
+        // hai hàng Profit có bật signAware để tô màu theo âm/dương
+        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
         { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
-        { type: 'Profit 2', values: profit2, money: true, totalVal: totals.profit2 },
+        { type: 'Profit 2', values: profit2, money: true, totalVal: totals.profit2, signAware: true },
+        { type: 'ROI', values: roiArr, percent: true, totalVal: totalROI }, // cuối cùng
       ];
 
       group.forEach((row, idx) => {
@@ -151,9 +161,10 @@ const SaleReport = () => {
           _groupStart: addSeparator,
           _money: row.money,
           _percent: row.percent,
+          _signAware: row.signAware || false,
         };
 
-        dayKeys.forEach((k, i) => (record[k] = numberSafe(row.values[i])));
+        dayKeys.forEach((k, i) => (record[k] = row.values[i]));
         rows.push(record);
       });
     });
@@ -204,14 +215,24 @@ const SaleReport = () => {
       onHeaderCell: () => ({ style: { borderRight: '2px solid #e5e9eeff' } }),
       onCell: (row) => ({ style: { borderRight: '2px solid #e5e9eeff', ...sepStyle(row) } }),
       render: (val, row) => {
+        // ROI total có thể null nếu Ads tổng = 0
         if (row._percent) {
+          if (val === null || typeof val === 'undefined') return <span>-</span>;
           return (
-            <span className="font-medium" style={{ color: roiColor(val) }}>
+            <span className="font-medium" style={{ color: roiColor(Number(val)) }}>
               {Number(val).toFixed(2)}%
             </span>
           );
         }
-        if (row._money) return <span className="font-medium">{$(Number(val))}</span>;
+        if (row._money) {
+          const n = Number(val) || 0;
+          const color = row._signAware ? (n > 0 ? dataColors.success : n < 0 ? dataColors.cancelled : '#475569') : undefined;
+          return (
+            <span className="font-medium" style={{ color }}>
+              {$(n)}
+            </span>
+          );
+        }
         return <span className="font-medium">{Number(val)}</span>;
       },
     },
@@ -226,23 +247,31 @@ const SaleReport = () => {
       width: 120,
       onCell: (row) => ({ style: sepStyle(row) }),
       render: (val, row) => {
-        const v = Number(val) || 0;
+        // ROI theo ngày
         if (row._percent) {
-          return v === 0 ? (
-            '-'
-          ) : (
-            <span className="font-medium" style={{ color: roiColor(v) }}>
-              {v.toFixed(2)}%
+          if (val === null || typeof val === 'undefined') return '-';
+          const p = Number(val) || 0;
+          return (
+            <span className="font-medium" style={{ color: roiColor(p) }}>
+              {p.toFixed(2)}%
             </span>
           );
         }
-        if (row._money) return <span className="font-medium">{$(v)}</span>;
+        const v = Number(val) || 0;
+        if (row._money) {
+          const color = row._signAware ? (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : '#475569') : undefined;
+          return (
+            <span className="font-medium" style={{ color }}>
+              {$(v)}
+            </span>
+          );
+        }
         return <span className="font-medium">{v}</span>;
       },
     })),
   ];
 
-  // KPIs tổng trên đầu (cộng theo totals của từng seller)
+  // ----- KPIs tổng trên đầu -----
   const kpis = useMemo(() => {
     const totals = Object.values(normalized)
       .map((r) => r.totals)
@@ -251,18 +280,45 @@ const SaleReport = () => {
 
     const totalItems = get('items');
     const totalRevenue = get('revenue');
-    const totalBase = get('baseCost');
     const totalAds = get('ads');
-    const totalProfit1 = get('profit1');
     const totalProfit2 = get('profit2');
-    const roi = totalBase + totalAds > 0 ? +((totalProfit1 / (totalBase + totalAds)) * 100).toFixed(2) : 0;
 
-    return { totalItems, totalRevenue, roi, totalProfit2 };
+    // KPI ROI = Profit2 / Ads
+    const roiNum = totalAds > 0 ? +((totalProfit2 / totalAds) * 100).toFixed(2) : 0;
+
+    return { totalItems, totalRevenue, roiNum, totalProfit2 };
   }, [normalized]);
 
+  const fetchAllSellers = async () => {
+    if (user?.role === 'Admin') {
+      try {
+        const res = await getAllSellers();
+        if (res.status === 200) {
+          const result = res.data?.map((item) => {
+            return {
+              label: item?.full_name,
+              value: item?._id,
+            };
+          });
+          setSellers(result);
+        } else {
+          toast.error(res.data?.message || 'Fetch error');
+        }
+      } catch (err) {
+        toast.error(err?.response?.data?.message || 'Unexpected error');
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAllSellers();
+  }, []);
+
+  // ----- fetch & filter -----
   useEffect(() => {
     fetchAllReport(filters);
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.from, filters.to, filters.seller]);
 
   return (
     <div>
@@ -271,13 +327,35 @@ const SaleReport = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Sale Report
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setOpenModalImportReport(true)}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Report
+              </span>
+              <div style={{ color: 'black' }}>
+                <LuImport size={15} />
+              </div>
+            </button>
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setOpenModalImportAds(true)}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Ads
+              </span>
+              <div style={{ color: 'black' }}>
+                <LuImport size={15} />
+              </div>
+            </button>
             <DateRangePicker
               mode="range"
               showOutsideDays
               modifiersClassNames={{ selected: 'my-selected', range_middle: 'my-range-middle' }}
               modifiersStyles={{ range_middle: { backgroundColor: '#f3f4f6', fontWeight: 'normal' } }}
-              updateFilter={updateFilter}
+              updateFilter={(v) => updateFilter({ from: v?.from, to: v?.to })}
             />
           </div>
         </div>
@@ -313,11 +391,11 @@ const SaleReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">ROI</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
-                  {kpis.roi}%
+                <span className="text-xl font-bold" style={{ color: roiColor(kpis.roiNum) }}>
+                  {kpis.roiNum}%
                 </span>
               </div>
-              <FaArrowTrendUp size={25} color={dataColors.pending} />
+              {roiIcon(kpis.roiNum)}
             </div>
           </div>
 
@@ -336,8 +414,16 @@ const SaleReport = () => {
 
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
-            <div className="flex gap-2 items-center ">
-              <SelectFilter title="Report By Seller" ListData={Object.keys(reportBySeller)} />
+            <div className="flex gap-2 items-center">
+              <SelectSeller
+                title="Report By Seller"
+                ListData={sellers}
+                value={selectSeller}
+                onChange={(val) => {
+                  setSelectSeller(val);
+                  updateFilter({ seller: val });
+                }}
+              />
             </div>
           </div>
         </div>
@@ -354,6 +440,14 @@ const SaleReport = () => {
           />
         </div>
       </div>
+
+      <ModalReport
+        isModalOpen={openModalImportReport}
+        setIsModalOpen={setOpenModalImportReport}
+        fetchAllReport={fetchAllReport}
+        filters={filters}
+      />
+      <ModalAds isModalOpen={openModalImportAds} setIsModalOpen={setOpenModalImportAds} fetchAllReport={fetchAllReport} filters={filters} />
     </div>
   );
 };

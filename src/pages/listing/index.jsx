@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 import { getAllListing } from '../../apis/listing';
 import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
-import { FcShop } from 'react-icons/fc';
 import { LuImport } from 'react-icons/lu';
 import ModalAddListing from './ModalAddListing';
 import ModalImportListing from './ModalImportListing';

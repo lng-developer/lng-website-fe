@@ -12,4 +12,12 @@ const importReport = (payload) => {
   });
 };
 
-export { getAllReport, importReport };
+const importAds = (payload) => {
+  return instance.post('/ads/import-day', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export { getAllReport, importReport, importAds };

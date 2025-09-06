@@ -27,7 +27,14 @@ const SelectFilter = ({ ListData = [], value, onChange, title, isSeller = false 
   };
 
   const menu = (
-    <div style={{ width: 240, backgroundColor: 'white' }} className="shadow-sm rounded-lg">
+    <div
+      style={{
+        width: 240,
+        backgroundColor: 'white',
+        boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+      }}
+      className="rounded-lg"
+    >
       <div style={{ padding: '8px 8px 4px' }}>
         <Input allowClear value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search`} />
       </div>
