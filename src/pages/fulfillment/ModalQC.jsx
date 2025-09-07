@@ -45,29 +45,19 @@ function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected,
         onTap={onSelect}
         perfectDrawEnabled={false}
         onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
-        onTransformEnd={() => {
-          const node = shapeRef.current;
-          if (!node) return;
-          // chuyển scale về width/height thực để tránh degrade
-          const newWidth = node.width() * node.scaleX();
-          const newHeight = node.height() * node.scaleY();
-          node.scaleX(1);
-          node.scaleY(1);
-          onChange({
-            x: node.x(),
-            y: node.y(),
-            width: newWidth,
-            height: newHeight,
-            rotation: node.rotation(),
-          });
-        }}
+        // Loại bỏ onTransformEnd để không cho phép resize
       />
       {isSelected && (
         <Transformer
           ref={trRef}
-          rotateEnabled
-          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-          boundBoxFunc={(oldBox, newBox) => (newBox.width < 5 || newBox.height < 5 ? oldBox : newBox)}
+          rotateEnabled={false} // Tắt rotate
+          resizeEnabled={false} // Tắt resize
+          enabledAnchors={[]} // Không cho phép anchor nào
+          borderEnabled={true} // Hiển thị border để user biết đã chọn
+          anchorFill="transparent" // Ẩn các anchor
+          anchorStroke="transparent"
+          borderStroke="#1677ff"
+          borderStrokeWidth={2}
         />
       )}
     </Group>
@@ -87,6 +77,9 @@ function normalizeLayer(x, i) {
     visible: x.visible ?? true,
     opacity: num(x.opacity, 1),
     isSelected: false,
+    // Lưu kích thước gốc
+    originalWidth: null,
+    originalHeight: null,
   };
 }
 function num(v, d) {
@@ -151,34 +144,25 @@ export default function QcCanvasModal({
 
             const img = new window.Image();
             img.crossOrigin = 'anonymous';
-            img.onload = async () => {
-              // kích thước vẽ theo viewport
-              const dw = Math.max(1, Math.round(img.width * displayScale));
-              const dh = Math.max(1, Math.round(img.height * displayScale));
+            img.onload = () => {
+              // Lưu kích thước gốc
+              const originalWidth = img.width;
+              const originalHeight = img.height;
 
-              let bmp = img;
-              try {
-                // upscale/downscale chất lượng cao
-                bmp = await createImageBitmap(img, {
-                  resizeWidth: dw,
-                  resizeHeight: dh,
-                  resizeQuality: 'high',
-                });
-              } catch {
-                // fallback
-              }
+              // Tính kích thước hiển thị (không làm tròn để tránh lệch)
+              const displayWidth = originalWidth * displayScale;
+              const displayHeight = originalHeight * displayScale;
 
               resolve({
                 ...it,
-                htmlImg: bmp,
-                // lưu size gốc để tham chiếu khi cần
-                srcWidth: img.width,
-                srcHeight: img.height,
-                // toạ độ & size theo viewport
-                x: Math.round((it.x || 0) * displayScale),
-                y: Math.round((it.y || 0) * displayScale),
-                width: dw,
-                height: dh,
+                htmlImg: img, // Sử dụng ảnh gốc thay vì bitmap để tránh mất chất lượng
+                originalWidth,
+                originalHeight,
+                // Toạ độ & size theo viewport (không làm tròn)
+                x: (it.x || 0) * displayScale,
+                y: (it.y || 0) * displayScale,
+                width: displayWidth,
+                height: displayHeight,
               });
             };
             img.onerror = () => resolve(it);
@@ -189,7 +173,11 @@ export default function QcCanvasModal({
   }, [open, JSON.stringify(layersData), displayScale]);
 
   /* ===== Items ops ===== */
-  const selectId = (id) => setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
+  const selectId = (id) => {
+    setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
+    setActiveLayer(id);
+  };
+
   const updateItem = (id, patch) => setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
 
   /* ===== Size info for header box ===== */
@@ -199,14 +187,14 @@ export default function QcCanvasModal({
   }, [items, activeLayer]);
 
   const sizeInfo = useMemo(() => {
-    if (!activeItem) return null;
-    // width/height hiện đang theo viewport -> chia ngược displayScale để ra logical px
-    const wPx = Math.max(1, Math.round((activeItem.width || 0) / displayScale));
-    const hPx = Math.max(1, Math.round((activeItem.height || 0) / displayScale));
-    const wIn = numberFmt(wPx / DPI);
-    const hIn = numberFmt(hPx / DPI);
-    return { wPx, hPx, wIn, hIn };
-  }, [activeItem, displayScale]);
+    if (!activeItem || !activeItem.originalWidth || !activeItem.originalHeight) return null;
+
+    // Sử dụng kích thước gốc thay vì tính ngược từ displayScale
+    return {
+      wPx: activeItem.originalWidth,
+      hPx: activeItem.originalHeight,
+    };
+  }, [activeItem]);
 
   /* ===== Approve / Reject ===== */
   const handlePass = async () => {
@@ -282,7 +270,7 @@ export default function QcCanvasModal({
           {/* ======= KÍCH THƯỚC ẢNH (ô giữa) ======= */}
           <div
             style={{
-              minWidth: 240,
+              minWidth: 150,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -293,20 +281,12 @@ export default function QcCanvasModal({
               fontWeight: 500,
               color: '#111827',
             }}
-            title={
-              sizeInfo
-                ? `${sizeInfo.wPx}×${sizeInfo.hPx} px  •  ${sizeInfo.wIn}"×${sizeInfo.hIn}" @${DPI}DPI`
-                : 'Select a layer to show size'
-            }
           >
             {sizeInfo ? (
               <>
                 <span>Size:&nbsp;</span>
                 <span className="whitespace-nowrap">
                   {sizeInfo.wPx}×{sizeInfo.hPx} px
-                </span>
-                <span style={{ color: '#6b7280', marginLeft: 8 }}>
-                  ({sizeInfo.wIn}"×{sizeInfo.hIn}")
                 </span>
               </>
             ) : (
