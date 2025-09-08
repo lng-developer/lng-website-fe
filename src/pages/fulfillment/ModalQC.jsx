@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Typography, Input, Tooltip, Flex, Pagination } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import StatusComponent from '../../components/StatusComponent';
@@ -85,8 +85,6 @@ function normalizeLayer(x, i) {
 function num(v, d) {
   return Number.isFinite(+v) ? +v : d;
 }
-const numberFmt = (n, d = 2) => Number(n).toFixed(d);
-
 /* ===================== Main ===================== */
 export default function QcCanvasModal({
   open,

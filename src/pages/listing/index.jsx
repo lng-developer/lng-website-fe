@@ -273,7 +273,7 @@ const Listing = () => {
       dataIndex: 'actions',
       key: 'actions',
       align: 'center',
-      render: (data) => <ItemAction asin={data?.asin} />,
+      render: (data) => <ItemAction asin={data?.asin} fetchAllListing={fetchAllListing} filters={filters} />,
       fixed: 'right',
     },
   ];

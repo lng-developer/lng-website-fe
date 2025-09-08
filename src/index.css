@@ -250,7 +250,8 @@
 }
 
 .table-qc .ant-table-content {
-  border: 1px solid #f0f0f0 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  border-left: 1px solid #f0f0f0 !important;
   border-radius: 8px;
 }
 

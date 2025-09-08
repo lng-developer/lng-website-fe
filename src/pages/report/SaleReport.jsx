@@ -258,7 +258,7 @@ const SaleReport = () => {
         }
         const v = Number(val) || 0;
         if (row._money) {
-          const color = row._signAware ? (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : '#475569') : undefined;
+          const color = row._signAware ? (v > 0 ? dataColors.success : v < 0 ? dataColors.cancelled : 'black') : undefined;
           return (
             <span className="font-medium" style={{ color }}>
               {$(v)}
@@ -399,7 +399,7 @@ const SaleReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Profit</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.success }}>
+                <span className="text-xl font-bold" style={{ color: kpis.totalProfit2 > 0 ? dataColors.success : dataColors.cancelled }}>
                   {$(+kpis.totalProfit2)}
                 </span>
               </div>

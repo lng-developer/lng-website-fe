@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { dowloadPSD, uploadPSD } from '../../../apis/listing';
 
-const ItemAction = ({ asin }) => {
+const ItemAction = ({ asin, fetchAllListing, filters }) => {
   const [fileList, setFileList] = useState([]);
 
   const uploadProps = {
@@ -32,6 +32,8 @@ const ItemAction = ({ asin }) => {
         console.error(err);
         onError?.(err);
         toast.error(`${file.name} upload failed!`);
+      } finally {
+        fetchAllListing(filters);
       }
     },
     onChange(info) {
