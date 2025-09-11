@@ -154,7 +154,7 @@ const Home = () => {
 
   const columns = [
     { title: <span style={{ color: dataColors.title }}>Order</span>, dataIndex: 'order', key: 'ord', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'customer', align: 'center' },
+    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
     { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'created', key: 'date', align: 'center' },
     { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'order_date', key: 'order_date', align: 'center' },
     {
@@ -201,7 +201,7 @@ const Home = () => {
     const subColumns = [
       { title: <span style={{ color: dataColors.title }}>Image & Print Side</span>, dataIndex: 'product', key: 'product' },
       { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
-      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'price', key: 'price' },
+      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customer', key: 'customer', width: 300 },
       { title: <span style={{ color: dataColors.title }}>QTY</span>, dataIndex: 'quantity', key: 'quantity' },
       { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
       { title: <span style={{ color: dataColors.title }}>Tracking & Note</span>, dataIndex: 'tracking_note', key: 'tracking_note' },
@@ -290,7 +290,7 @@ const Home = () => {
           />
         ),
         status: (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-center gap-1">
             <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />
             <TbHistory size={16} className="cursor-pointer" />
           </div>
@@ -348,7 +348,9 @@ const Home = () => {
               />
             ),
             sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} seller={item?.seller} />,
-            price: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
+            customer: (
+              <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+            ),
             quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
             cost_center: (
               <SubItemCost

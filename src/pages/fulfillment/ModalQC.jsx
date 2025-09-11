@@ -106,6 +106,7 @@ export default function QcCanvasModal({
   const [errorNote, setErrorNote] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const [activeLayer, setActiveLayer] = useState(null);
+  const [decisionByItem, setDecisionByItem] = useState({});
 
   const currentItem = orderInfo?.items?.[currentIndex];
 
@@ -121,6 +122,20 @@ export default function QcCanvasModal({
   const displayScale = useMemo(() => {
     return Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight);
   }, [viewportWidth, viewportHeight, logicalWidth, logicalHeight]);
+
+  // Helper: kiểm tra còn đúng 1 item trong QC
+  const isSingleItem = (orderInfo?.items?.length ?? 0) <= 1;
+
+  // Sau khi pass/reject: nếu còn nhiều item thì chuyển trang, nếu chỉ 1 item thì đóng modal
+  const goNextOrClose = () => {
+    if (isSingleItem) {
+      onClose?.();
+    } else {
+      const total = orderInfo?.items?.length ?? 0;
+      if (currentIndex < total - 1) setCurrentIndex((i) => i + 1);
+      else setCurrentIndex((i) => Math.max(0, i - 1));
+    }
+  };
 
   useEffect(() => {
     setCurrentIndex(indexQC);
@@ -202,13 +217,14 @@ export default function QcCanvasModal({
         note: qcNote,
       });
       if (response.status === 200) toast.success(response.data?.message);
+      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
     } catch (error) {
       console.log(error);
       toast.error('Error');
     } finally {
       fetchAllQC?.(filters);
       fetchCountStatus?.();
-      if (orderInfo?.items && !orderInfo?.items?.length > 0) onClose?.();
+      goNextOrClose();
     }
   };
 
@@ -223,15 +239,26 @@ export default function QcCanvasModal({
         note: qcNote,
       });
       if (response.status === 200) toast.success(response.data?.message);
+      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'rejected' }));
     } catch (error) {
       console.log(error);
       toast.error('Error');
     } finally {
       fetchAllQC?.(filters);
       fetchCountStatus?.();
-      if (orderInfo?.items && !orderInfo?.items?.length > 0) onClose?.();
+      goNextOrClose();
     }
   };
+
+  useEffect(() => {
+    const map = {};
+    (orderInfo?.items || []).forEach((it) => {
+      const st = String(it?.scale_status || '').toLowerCase();
+      if (st === 'ready' || st === 'approved' || st === 'complete') map[it.orderItemId] = 'approved';
+      if (st === 'qc rejected' || st === 'rejected') map[it.orderItemId] = 'rejected';
+    });
+    setDecisionByItem((prev) => ({ ...map, ...prev })); // không ghi đè những gì user vừa thao tác
+  }, [orderInfo]);
 
   /* ===================== Render ===================== */
   return (
@@ -317,31 +344,78 @@ export default function QcCanvasModal({
         </div>
 
         {/* Buttons */}
+        {/* Buttons / Status Icon */}
         <div className="flex mr-10 w-[300px] ml-[15px]">
-          {currentItem?.scale_status === 'Pending' && (
-            <div className="flex gap-2">
-              <Button
-                type="dashed"
-                iconPosition="end"
-                icon={<FcApproval />}
-                onClick={handlePass}
-                style={{ fontWeight: 500 }}
-                className={`hover:!text-[#39a00d] hover:!border-[#39a00d]`}
-              >
-                Passed
-              </Button>
-              <Button
-                type="dashed"
-                iconPosition="end"
-                icon={<IoArrowUndo color="red" />}
-                onClick={handleReject}
-                style={{ fontWeight: 500 }}
-                className={`hover:!text-[#cd1323] hover:!border-[#cd1323]`}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
+          {(() => {
+            const decided = decisionByItem[currentItem?.orderItemId]; // 'approved' | 'rejected' | undefined
+
+            // Nếu đã quyết định (local) => hiển thị icon
+            if (decided === 'approved') {
+              return (
+                <div className="flex items-center gap-2">
+                  <FcApproval size={20} />
+                  <span className="font-medium text-[#39a00d]">Passed</span>
+                </div>
+              );
+            }
+            if (decided === 'rejected') {
+              return (
+                <div className="flex items-center gap-2">
+                  <IoArrowUndo size={18} color="#cd1323" />
+                  <span className="font-medium text-[#cd1323]">Rejected</span>
+                </div>
+              );
+            }
+
+            // Nếu chưa quyết định: chỉ hiển thị nút khi item đang ở trạng thái cần QC (Pending)
+            if (String(currentItem?.scale_status).toLowerCase() === 'pending') {
+              return (
+                <div className="flex gap-2">
+                  <Button
+                    type="dashed"
+                    iconPosition="end"
+                    icon={<FcApproval />}
+                    onClick={handlePass}
+                    style={{ fontWeight: 500 }}
+                    className="hover:!text-[#39a00d] hover:!border-[#39a00d]"
+                  >
+                    Passed
+                  </Button>
+                  <Button
+                    type="dashed"
+                    iconPosition="end"
+                    icon={<IoArrowUndo color="red" />}
+                    onClick={handleReject}
+                    style={{ fontWeight: 500 }}
+                    className="hover:!text-[#cd1323] hover:!border-[#cd1323]"
+                  >
+                    Reject
+                  </Button>
+                </div>
+              );
+            }
+
+            // Trường hợp item không phải Pending mà Ready/Rejected từ server => hiện icon theo server
+            const serverSt = String(currentItem?.scale_status || '').toLowerCase();
+            if (serverSt === 'ready' || serverSt === 'approved' || serverSt === 'complete') {
+              return (
+                <div className="flex items-center gap-2">
+                  <FcApproval size={20} />
+                  <span className="font-medium text-[#39a00d]">Passed</span>
+                </div>
+              );
+            }
+            if (serverSt === 'qc rejected' || serverSt === 'rejected') {
+              return (
+                <div className="flex items-center gap-2">
+                  <IoArrowUndo size={18} color="#cd1323" />
+                  <span className="font-medium text-[#cd1323]">Rejected</span>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </div>
       </div>
 
@@ -409,11 +483,10 @@ export default function QcCanvasModal({
         <Flex vertical gap={10}>
           <div
             style={{
-              flex: '0 0 280px',
               border: '1px solid #ddd',
               borderRadius: 8,
               padding: 12,
-              width: 350,
+              maxWidth: 350,
             }}
           >
             <Title level={5} style={{ marginTop: 0 }}>
@@ -444,21 +517,25 @@ export default function QcCanvasModal({
                   <span className="font-medium">Fulfillable Qty:</span>
                   <StatusComponent title={currentItem?.quantity} color={dataColors.default} isDefault={true} />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Vendor:</span>
-                  <StatusComponent
-                    title={currentItem?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
-                    color={dataColors.success}
-                  />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Product Name:</span>
-                  <StatusComponent
-                    title={currentItem?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
-                    color={dataColors.default}
-                    isDefault={true}
-                  />
-                </div>
+                {currentItem?.cost_center?.vendorProductDisplayName && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Vendor:</span>
+                    <StatusComponent
+                      title={currentItem?.cost_center?.vendorProductDisplayName?.split(/\s*[-–—]\s*/)[0]}
+                      color={dataColors.success}
+                    />
+                  </div>
+                )}
+                {currentItem?.cost_center?.vendorProductDisplayName && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Product Name:</span>
+                    <StatusComponent
+                      title={currentItem?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
+                      color={dataColors.default}
+                      isDefault={true}
+                    />
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Fulfill Name:</span>
                   <div
@@ -478,10 +555,12 @@ export default function QcCanvasModal({
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Vendor Product Sku:</span>
-                  <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
-                </div>
+                {currentItem?.cost_center?.vendorProductSKU && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Vendor Product Sku:</span>
+                    <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
+                  </div>
+                )}
               </Flex>
             )}
           </div>

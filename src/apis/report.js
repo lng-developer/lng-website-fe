@@ -20,4 +20,8 @@ const importAds = (payload) => {
   });
 };
 
-export { getAllReport, importReport, importAds };
+const getOrderCostStatistics = (params) => {
+  return instance.get('/report/order_cost/statistics', { params });
+};
+
+export { getAllReport, importReport, importAds, getOrderCostStatistics };
