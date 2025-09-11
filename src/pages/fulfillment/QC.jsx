@@ -17,6 +17,8 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import ItemProductInfoQC from './ItemProductInfoQC';
 import { debounce } from 'lodash';
+import { FcApproval } from 'react-icons/fc';
+import { IoArrowUndo } from 'react-icons/io5';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -232,20 +234,32 @@ const QC = () => {
               </div>
             ),
             action: (
-              <Tooltip title="QC">
-                <button
-                  className="cursor-pointer border rounded"
-                  style={{ padding: 6, borderColor: dataColors.default }}
-                  onClick={() => {
-                    // setDataView({ orderId: item?.orderId, data: itemSub });
-                    setDataView(item);
-                    setIndexQC(indexItem);
-                    setOpenMOdalQC(true);
-                  }}
-                >
-                  <MdOutlineImageSearch size={20} />
-                </button>
-              </Tooltip>
+              <>
+                {itemSub?.scale_status === 'Pending' ? (
+                  <Tooltip title="QC">
+                    <button
+                      className="cursor-pointer border rounded"
+                      style={{ padding: 6, borderColor: dataColors.default }}
+                      onClick={() => {
+                        // setDataView({ orderId: item?.orderId, data: itemSub });
+                        setDataView(item);
+                        setIndexQC(indexItem);
+                        setOpenMOdalQC(true);
+                      }}
+                    >
+                      <MdOutlineImageSearch size={20} />
+                    </button>
+                  </Tooltip>
+                ) : itemSub?.scale_status === 'Complete' ? (
+                  <div className="flex justify-center items-center">
+                    <FcApproval size={25} />
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center">
+                    <IoArrowUndo size={25} color={dataColors.cancelled} />
+                  </div>
+                )}
+              </>
             ),
           };
         }),
