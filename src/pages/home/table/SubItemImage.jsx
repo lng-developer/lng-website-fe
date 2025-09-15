@@ -1,4 +1,4 @@
-import { Flex, Image, Input, Modal } from 'antd';
+import { Flex, Image, Input, Modal, Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
@@ -8,7 +8,17 @@ import { memo, useState } from 'react';
 import { updateImage } from '../../../apis/order';
 import { toast } from 'sonner';
 
-const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, filters, linkFulfill = {}, seller }) => {
+const SubItemImage = ({
+  linkImage = '',
+  orderId,
+  orderItemId,
+  fetchAllOrder,
+  filters,
+  linkFulfill = {},
+  seller,
+  listing = {},
+  scale_status,
+}) => {
   const [showUpdate, setShowUpdate] = useState(false);
   const [valueImage, setValueImage] = useState('');
   const [checkError, setCheckError] = useState(false);
@@ -53,7 +63,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
             }}
           >
-            <Image height={130} width={130} src={linkImage || NoImage} className="rounded-lg" />
+            <Image height={130} width={130} src={listing?.product_image || linkImage || NoImage} className="rounded-lg" />
           </div>
           {arrFulfill.length > 0 &&
             arrFulfill?.map((f, i) => (
@@ -84,7 +94,25 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <FcApproval />
             </div>
             <div>
-              <StatusComponent title="No data" color="#38a00b" />
+              <Tooltip title="Download">
+                <div
+                  style={{ borderColor: dataColors.success }}
+                  className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
+                >
+                  <span
+                    style={{
+                      color: dataColors.success,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'inline-block',
+                    }}
+                    className="whitespace-nowrap"
+                  >
+                    Download
+                  </span>
+                </div>
+              </Tooltip>
             </div>
           </div>
           <div className="flex-col gap-2 mt-2">
@@ -92,7 +120,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <span className="mr-2 font-medium">ASIN Type:</span>
             </div>
             <div>
-              <StatusComponent title="No data" color="#0958d7" />
+              <StatusComponent title={listing?.asin_type || 'No data'} color="#0958d7" />
             </div>
           </div>
           <div className="flex-col gap-2 mt-2">
@@ -100,7 +128,7 @@ const SubItemImage = ({ linkImage = '', orderId, orderItemId, fetchAllOrder, fil
               <span className="mr-2 font-medium">PNG Status:</span>
             </div>
             <div>
-              <StatusComponent title="No data" color={dataColors.success} />
+              <StatusComponent title={scale_status || 'No data'} color={dataColors.success} />
             </div>
           </div>
           <div className="flex-col gap-2 mt-2">

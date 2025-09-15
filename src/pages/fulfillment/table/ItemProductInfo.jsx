@@ -5,7 +5,7 @@ import NoImage from '../../../assets/NoImage.jpg';
 import { RiLinkM } from 'react-icons/ri';
 import { Link } from 'react-router-dom';
 
-const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) => {
+const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true, listing }) => {
   const handleColorStatus = (stt) => {
     switch (stt) {
       case 'New':
@@ -33,7 +33,7 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true }) 
           <Image
             width={130}
             height={130}
-            src={imageUrl ? imageUrl : NoImage}
+            src={listing?.product_image || imageUrl || NoImage}
             className="rounded-lg object-cover"
             alt="Product"
             preview={{

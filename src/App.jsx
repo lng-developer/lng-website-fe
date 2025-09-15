@@ -20,6 +20,8 @@ import UnauthorizedPage from './pages/unauthorized';
 import QC from './pages/fulfillment/QC';
 import TitlePages from './utils/TitlePages';
 import Mapping from './pages/cost_center/Mapping';
+import PSDTasks from './pages/design/PSDTasks';
+import PNGTasks from './pages/design/PNGTasks';
 
 function App() {
   return (
@@ -49,6 +51,10 @@ function App() {
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
+
+          {/* Design */}
+          <Route path={routes.psd_design} element={<PSDTasks />} />
+          <Route path={routes.png_design} element={<PNGTasks />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

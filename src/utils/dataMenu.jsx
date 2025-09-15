@@ -132,8 +132,8 @@ export const detailMenus = {
     },
   ],
   design: [
-    { key: '', label: 'PSD Tasks', icon: <BsFiletypePsd size={20} /> },
-    { key: '', label: 'PNG Tasks', icon: <IoImageOutline size={20} /> },
+    { key: routes.psd_design, label: 'PSD Tasks', icon: <BsFiletypePsd size={20} /> },
+    { key: routes.png_design, label: 'PNG Tasks', icon: <IoImageOutline size={20} /> },
     { key: '', label: 'Embroider Listing', icon: <LuLayoutList size={20} /> },
     { key: '', label: 'Design Product Types', icon: <TbPackages size={20} /> },
   ],

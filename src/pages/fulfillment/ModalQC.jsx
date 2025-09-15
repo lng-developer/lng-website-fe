@@ -135,6 +135,7 @@ export default function QcCanvasModal({
       if (currentIndex < total - 1) setCurrentIndex((i) => i + 1);
       else setCurrentIndex((i) => Math.max(0, i - 1));
     }
+    setQcNote('');
   };
 
   useEffect(() => {

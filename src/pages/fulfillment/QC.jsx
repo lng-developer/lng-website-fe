@@ -10,7 +10,7 @@ import { dataFilterStatusQC } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
-import { getAllCountStatusQC, getAllQC } from '../../apis/order';
+import { getAllCountStatusQC, getAllQC, getALlShop } from '../../apis/order';
 import { toast } from 'sonner';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -19,6 +19,8 @@ import ItemProductInfoQC from './ItemProductInfoQC';
 import { debounce } from 'lodash';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
+import { getAllSellers } from '../../apis/user';
+import SelectSeller from '../../components/SelectSeller';
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -35,6 +37,10 @@ const QC = () => {
   const [dataView, setDataView] = useState({});
   const [tabFilter, setTabFilter] = useState(dataFilterStatusQC);
   const [indexQC, setIndexQC] = useState(0);
+  const [sellers, setSellers] = useState([]);
+  const [selectSeller, setSelectSeller] = useState();
+  const [shops, setShops] = useState([]);
+  const [selectShop, setSelectShop] = useState('');
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -42,6 +48,8 @@ const QC = () => {
     from: defaultFrom,
     to: defaultTo,
     search: '',
+    sellerId: '',
+    shopName: '',
   });
 
   const updateFilter = (newValues) => {
@@ -100,6 +108,12 @@ const QC = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>Shop</span>,
+      dataIndex: 'shopName',
+      key: 'shopName',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Status Order</span>,
       dataIndex: 'status',
       key: 'status',
@@ -121,12 +135,6 @@ const QC = () => {
       title: <span style={{ color: dataColors.title }}>Basecost</span>,
       dataIndex: 'base_cost',
       key: 'base_cost',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Store</span>,
-      dataIndex: 'shopName',
-      key: 'shopName',
       align: 'center',
     },
   ];
@@ -328,6 +336,44 @@ const QC = () => {
     updateFilter({ scale_status: status });
   };
 
+  const fetchAllSellers = async () => {
+    try {
+      const res = await getAllSellers();
+      if (res.status === 200) {
+        const result = res.data?.map((item) => {
+          return {
+            label: item?.full_name,
+            value: item?._id,
+          };
+        });
+        setSellers(result);
+      } else {
+        toast.error(res.data?.message || 'Fetch error');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unexpected error');
+    }
+  };
+
+  const fetchAllShop = async () => {
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        setShops(result.data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllShop();
+  }, []);
+
+  useEffect(() => {
+    fetchAllSellers();
+  }, []);
+
   useEffect(() => {
     fetchAllQC(filters);
     fetchCountStatus();
@@ -404,14 +450,23 @@ const QC = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center">
-              <SelectFilter
+              <SelectSeller
                 title="Seller"
-                ListData={['Nguyễn Huy Hoàng', 'Tạ Khánh Tùng']}
-                // value={selectShop}
-                // onChange={(val) => {
-                //   setSelectShop(val);
-                //   updateFilter({ shopName: val });
-                // }}
+                ListData={sellers}
+                value={selectSeller}
+                onChange={(val) => {
+                  setSelectSeller(val);
+                  updateFilter({ sellerId: val });
+                }}
+              />
+              <SelectFilter
+                title="Shop"
+                ListData={shops.map((item) => item.name)}
+                value={selectShop}
+                onChange={(val) => {
+                  setSelectShop(val);
+                  updateFilter({ shopName: val });
+                }}
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { Modal } from 'antd';
 
-const ModalDelete = ({ isShowModalDelete, setIsShowModalDelete, handleDelete, title = '' }) => {
+const ModalDelete = ({ isShowModalDelete, setIsShowModalDelete, handleDelete, title = '', text }) => {
   return (
     <Modal
       title={title}
@@ -12,7 +12,7 @@ const ModalDelete = ({ isShowModalDelete, setIsShowModalDelete, handleDelete, ti
       onOk={handleDelete}
       onCancel={() => setIsShowModalDelete(false)}
     >
-      <span className="font-medium text-[#64748b]">Are you sure you want to delete this product type? This action cannot be undone.</span>
+      <span className="font-medium text-[#64748b]">{`Are you sure you want to delete this ${text}? This action cannot be undone.`}</span>
     </Modal>
   );
 };

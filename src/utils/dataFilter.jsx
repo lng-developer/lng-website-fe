@@ -78,7 +78,7 @@ const dataFilterListing = [
   {
     key: 'First Sale',
     title: 'First Sale',
-    status: 'FirstSale',
+    status: 'First Sale',
   },
   {
     key: 'Normal',
@@ -93,12 +93,12 @@ const dataFilterListing = [
   {
     key: 'Custom Image',
     title: 'Custom Image',
-    status: 'CustomImage',
+    status: 'Custom Image',
   },
   {
     key: 'POD Lovers',
     title: 'POD Lovers',
-    status: 'PODLovers',
+    status: 'POD Lovers',
   },
   {
     key: 'Style',
@@ -113,7 +113,7 @@ const dataFilterListing = [
   {
     key: 'Auto Fulfill',
     title: 'Auto Fulfill',
-    status: 'AutoFulfill',
+    status: 'Auto Fulfill',
   },
   {
     key: 'Others',
@@ -150,4 +150,22 @@ const dataFilterStatusQC = [
   },
 ];
 
-export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing, dataFilterStatusQC };
+const dataFilterDesignTasks = [
+  {
+    key: 'all',
+    title: 'All',
+    status: 'all',
+  },
+  {
+    key: 'pending',
+    title: 'Pending',
+    status: 'Unavailable',
+  },
+  {
+    key: 'complete',
+    title: 'Complete',
+    status: 'Available',
+  },
+];
+
+export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing, dataFilterStatusQC, dataFilterDesignTasks };

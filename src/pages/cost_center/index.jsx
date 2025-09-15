@@ -505,12 +505,14 @@ const CostCenterProductTypes = () => {
         isShowModalDelete={isShowModalDelete}
         setIsShowModalDelete={setIsShowModalDelete}
         handleDelete={handleDeleteProductType}
+        text={'product type'}
       />
       <ModalDelete
         title="Delete Vendor Product"
         isShowModalDelete={isShowModalDeleteItem}
         setIsShowModalDelete={setIsShowModalDeleteItem}
         handleDelete={handleDeleteProductTypeItem}
+        text={'vendor product'}
       />
       <Modal
         open={isShowModalUpdate}

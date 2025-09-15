@@ -1,11 +1,10 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import { dataFilterListing } from '../../utils/dataFilter';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
-import { Flex, Image, Input, Pagination, Select, Table, Tooltip } from 'antd';
-import SelectFilter from '../../components/SelectFilter';
-import { FaDollarSign, FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
+import { FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import NoImage from '../../assets/NoImage.jpg';
 import StatusComponent from '../../components/StatusComponent';
 import { GoDotFill } from 'react-icons/go';
@@ -13,51 +12,19 @@ import ItemAction from './table/ItemAction';
 import { MdAdd } from 'react-icons/md';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { toast } from 'sonner';
-import { getAllListing } from '../../apis/listing';
+import { getAllListing, getListingStatictisc } from '../../apis/listing';
 import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
 import { LuImport } from 'react-icons/lu';
 import ModalAddListing from './ModalAddListing';
 import ModalImportListing from './ModalImportListing';
+import { IoGiftOutline } from 'react-icons/io5';
+import ModalUpdateListing from './ModalUpdateListing';
+import ButtonFilter from '../../components/ButtonFilter';
+import { getAllSellers } from '../../apis/user';
+import SelectSeller from '../../components/SelectSeller';
+import { getALlShop } from '../../apis/order';
 const PAGE_SIZE = 10;
-const stats = [
-  {
-    icon: <FaDollarSign className="w-4 h-4 text-gray-600" />,
-    label: 'Total Asin',
-    value: '1860',
-    bgColor: 'bg-gray-100',
-  },
-  {
-    icon: <FaBitcoin className="w-4 h-4 text-orange-600" />,
-    label: 'Anonymous Asin',
-    value: '12',
-    bgColor: 'bg-orange-100',
-  },
-  {
-    icon: <FaCheckCircle className="w-4 h-4 text-green-600" />,
-    label: 'PSD Available',
-    value: '896',
-    bgColor: 'bg-green-100',
-  },
-  {
-    icon: <FaTimesCircle className="w-4 h-4 text-red-600" />,
-    label: 'No PSD',
-    value: '65',
-    bgColor: 'bg-red-100',
-  },
-];
-
-const ASIN_TYPE_OPTS = [
-  { label: 'PODLovers', value: 'PODLovers' },
-  { label: 'First Sale', value: 'First Sale' },
-  { label: 'Normal', value: 'Normal' },
-  { label: 'Outline', value: 'Outline' },
-  { label: 'Style', value: 'Style' },
-  { label: 'Tool', value: 'Tool' },
-  { label: 'Custom Image', value: 'Custom Image' },
-  { label: 'Auto Fulfill', value: 'Auto Fulfill' },
-  { label: 'Other', value: 'Other' },
-];
 
 const Listing = () => {
   const { collapsed } = useOutletContext();
@@ -66,17 +33,25 @@ const Listing = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [tableHeight, setTableHeight] = useState(0);
   const [tabFilter, setTabFilter] = useState(dataFilterListing);
   const [openModalAdd, setOpenModalAdd] = useState(false);
   const [openModalImport, setOpenModalImport] = useState(false);
+  const [counts, setCounts] = useState({});
+  const [openModalUpdate, setOpenModalUpdate] = useState(false);
+  const [dataEdit, setDataEdit] = useState({});
+  const [sellers, setSellers] = useState([]);
+  const [selectSeller, setSelectSeller] = useState();
+  const [shops, setShops] = useState([]);
+  const [selectShop, setSelectShop] = useState('');
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    scale_status: '',
     from: defaultFrom,
     to: defaultTo,
     search: '',
+    asinType: '',
+    psdStatus: '',
+    store: '',
   });
 
   const updateFilter = (newValues) => {
@@ -94,33 +69,11 @@ const Listing = () => {
 
   const handleClickButton = (item) => {
     setIsActivefilter(item);
-  };
-
-  const renderColor = (stt) => {
-    switch (stt) {
-      case 'All':
-        return dataColors.black;
-      case 'FirstSale':
-        return dataColors.success;
-      case 'Normal':
-        return dataColors.process;
-      case 'Outline':
-        return dataColors.pending;
-      case 'CustomImage':
-        return dataColors.asin;
-      case 'PODLovers':
-        return dataColors.purple;
-      case 'Style':
-        return dataColors.pink;
-      case 'Tool':
-        return dataColors.yellow;
-      case 'AutoFulfill':
-        return dataColors.success;
-      case 'Others':
-        return dataColors.cancelled;
-      default:
-        return dataColors.pending;
+    if (item?.status === 'All') {
+      updateFilter({ asinType: '' });
+      return;
     }
+    updateFilter({ asinType: item?.status });
   };
 
   const columns = [
@@ -144,19 +97,21 @@ const Listing = () => {
       key: 'productInfo',
       align: 'center',
       render: (data) => (
-        <Flex vertical={true} justify="center">
-          <div
-            className="w-[100px] h-[100px] rounded-lg overflow-hidden"
-            style={{
-              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-            }}
-          >
-            <Image width={100} src={data?.product_image ? data?.product_image : NoImage} className="rounded-lg" />
+        <div className="">
+          <div className="flex justify-center mb-2">
+            <div
+              className="w-[100px] h-[100px] rounded-lg overflow-hidden"
+              style={{
+                boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+              }}
+            >
+              <Image width={100} height={100} src={data?.product_image ? data?.product_image : NoImage} className="rounded-lg" />
+            </div>
           </div>
-          <Link target="_blank" className="hover:underline font-medium mt-2" to={`http://amazon.com/gp/product/${data?.asin}`}>
+          <Link target="_blank" className="hover:underline font-medium" to={`http://amazon.com/gp/product/${data?.asin}`}>
             {data?.asin}
           </Link>
-        </Flex>
+        </div>
       ),
     },
     {
@@ -246,21 +201,6 @@ const Listing = () => {
       align: 'center',
       render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
     },
-    // {
-    //   title: <span style={{ color: dataColors.title }}>Thread Color </span>,
-    //   dataIndex: 'thread',
-    //   key: 'thread',
-    //   align: 'center',
-    //   render: (data) => (
-    //     <div
-    //       className="px-2 py-2 rounded-md flex justify-between items-center border cursor-pointer"
-    //       style={{ borderColor: dataColors.default }}
-    //     >
-    //       <span style={{ color: dataColors.title, marginRight: 5 }}>Add Config</span>
-    //       <MdAdd size={20} color="black" />
-    //     </div>
-    //   ),
-    // },
     {
       title: <span style={{ color: dataColors.title }}>Asin Type</span>,
       dataIndex: 'asin_type',
@@ -273,8 +213,17 @@ const Listing = () => {
       dataIndex: 'actions',
       key: 'actions',
       align: 'center',
-      render: (data) => <ItemAction asin={data?.asin} fetchAllListing={fetchAllListing} filters={filters} />,
-      fixed: 'right',
+      render: (data) => (
+        <ItemAction
+          id={data?._id}
+          asin={data?.asin}
+          fetchAllListing={fetchAllListing}
+          filters={filters}
+          setOpenModalUpdate={setOpenModalUpdate}
+          data={data}
+          setDataEdit={setDataEdit}
+        />
+      ),
     },
   ];
 
@@ -291,7 +240,7 @@ const Listing = () => {
               asin: item?.asin,
             },
             actions: {
-              asin: item?.asin,
+              ...item,
             },
           };
         });
@@ -323,24 +272,71 @@ const Listing = () => {
     debouncedSearch(e.target.value);
   };
 
+  // fetch count order by status
+  const fetchCountStatus = useCallback(async () => {
+    try {
+      const response = await getListingStatictisc(filters);
+      if (response.status === 200) {
+        const resultTabFilter = dataFilterListing.map(({ key, title, status }) => ({
+          key,
+          title,
+          status,
+          count: response.data?.asinTypeCounts[key] ?? 0,
+        }));
+        setTabFilter(resultTabFilter);
+        setCounts(response.data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, [filters]);
+
+  const fetchAllSellers = async () => {
+    try {
+      const res = await getAllSellers();
+      if (res.status === 200) {
+        const result = res.data?.map((item) => {
+          return {
+            label: item?.full_name,
+            value: item?._id,
+          };
+        });
+        setSellers(result);
+      } else {
+        toast.error(res.data?.message || 'Fetch error');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unexpected error');
+    }
+  };
+
+  const fetchAllShop = async () => {
+    try {
+      const res = await getALlShop();
+      if (res.status === 200) {
+        const result = res.data?.map((item) => {
+          return {
+            label: item?.name,
+            value: item?._id,
+          };
+        });
+        setShops(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
-    const handleResize = () => {
-      const headerHeight = 265; // Chiều cao header nếu có
-      const marginBottom = 20;
-
-      const availableHeight = window.innerHeight - headerHeight - marginBottom;
-      setTableHeight(availableHeight);
-    };
-
-    handleResize(); // Gọi lần đầu
-    window.addEventListener('resize', handleResize); // Lắng nghe resize
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    fetchAllShop();
   }, []);
 
   useEffect(() => {
+    fetchAllSellers();
+  }, []);
+
+  useEffect(() => {
+    fetchCountStatus();
     fetchAllListing(filters);
   }, [filters]);
 
@@ -394,40 +390,65 @@ const Listing = () => {
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex items-center gap-4 w-full">
-          {stats.map((stat, index) => (
-            <div key={index} className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
-              {/* Icon Circle */}
-              <div className={`${stat.bgColor} rounded-full p-2 flex items-center justify-center`}>{stat.icon}</div>
-
-              {/* Text Content & Value */}
-              <div className="flex flex-col">
-                <span className="text-sm text-gray-600 font-medium">{stat.label}</span>
-                <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-              </div>
+          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
+            {/* Icon Circle */}
+            <div className={`bg-gray-100 rounded-full p-2 flex items-center justify-center`}>
+              <IoGiftOutline className="w-4 h-4 text-gray-600" />
             </div>
-          ))}
+
+            {/* Text Content & Value */}
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 font-medium">Total Asin</span>
+              <div className="text-2xl font-bold text-gray-800">{counts?.totalAsin || 0}</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
+            {/* Icon Circle */}
+            <div className={`bg-orange-100 rounded-full p-2 flex items-center justify-center`}>
+              <FaBitcoin className="w-4 h-4 text-orange-600" />
+            </div>
+
+            {/* Text Content & Value */}
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 font-medium">Anonymous Asin</span>
+              <div className="text-2xl font-bold text-gray-800">{counts?.anonymousAsin || 0}</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
+            {/* Icon Circle */}
+            <div className={`bg-green-100 rounded-full p-2 flex items-center justify-center`}>
+              <FaCheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+
+            {/* Text Content & Value */}
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 font-medium">PSD Available</span>
+              <div className="text-2xl font-bold text-gray-800">{counts?.psdAvailable || 0}</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
+            {/* Icon Circle */}
+            <div className={`bg-red-100 rounded-full p-2 flex items-center justify-center`}>
+              <FaTimesCircle className="w-4 h-4 text-red-600" />
+            </div>
+
+            {/* Text Content & Value */}
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 font-medium">No PSD</span>
+              <div className="text-2xl font-bold text-gray-800">{counts?.noPsd || 0}</div>
+            </div>
+          </div>
         </div>
         <div className="flex gap-3 items-center mt-4">
-          {dataFilterListing.map((item, index) => (
-            <button
+          {tabFilter.map((item, index) => (
+            <ButtonFilter
               key={index}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-10 space-x-1 px-2 cursor-pointer hover:bg-[#f1f5f9]"
-              style={{
-                borderColor: isActiveFilter?.key === item?.key ? dataColors.pending : '#e2e8f0',
-                backgroundColor: isActiveFilter?.key === item?.key ? dataColors.backgroundHover : '',
-              }}
-              onClick={() => handleClickButton(item)}
-            >
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                {item?.title}
-              </span>
-              <div
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs transition-colors font-medium ml-[3px]"
-                style={{ backgroundColor: renderColor(item.status) }}
-              >
-                <span className="truncate font-bold text-white">{3}</span>
-              </div>
-            </button>
+              item={item}
+              isActive={isActiveFilter?.key}
+              handleFilterForStatus={() => handleClickButton(item)}
+              setIsActivefilter={setIsActivefilter}
+              count={item?.count}
+            />
           ))}
         </div>
         <div className="flex justify-between items-center mt-4">
@@ -438,25 +459,25 @@ const Listing = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
-              <SelectFilter
+              <SelectSeller
                 title="Seller"
-                ListData={['Chu Quang Hào', 'Tạ Khánh Tùng']}
-                // value={shippingType}
-                // onChange={(val) => {
-                //   setShippingType(val);
-                //   updateFilter({ shippingType: val });
-                // }}
+                ListData={sellers}
+                value={selectSeller}
+                onChange={(val) => {
+                  setSelectSeller(val);
+                  updateFilter({ seller: val });
+                  fetchCountStatus();
+                }}
               />
-              <SelectFilter
+              <SelectSeller
                 title="Shop"
-                // ListData={shops.map((item) => item.name)}
-                // value={selectShop}
-                // onChange={(val) => {
-                //   console.log(val);
-
-                //   setSelectShop(val);
-                //   updateFilter({ shopName: val });
-                // }}
+                ListData={shops}
+                value={selectShop}
+                onChange={(val) => {
+                  setSelectShop(val);
+                  updateFilter({ store: val });
+                  fetchCountStatus();
+                }}
               />
             </div>
           </div>
@@ -479,12 +500,18 @@ const Listing = () => {
             bordered={true}
             pagination={false}
             loading={loading}
-            scroll={{ x: 'max-content', y: tableHeight }}
           />
         </div>
       </div>
       <ModalAddListing open={openModalAdd} onClose={() => setOpenModalAdd(false)} fetchAllListing={fetchAllListing} filters={filters} />
       <ModalImportListing isModalOpen={openModalImport} setIsModalOpen={setOpenModalImport} />
+      <ModalUpdateListing
+        open={openModalUpdate}
+        onClose={() => setOpenModalUpdate(false)}
+        fetchAllListing={fetchAllListing}
+        filters={filters}
+        listing={dataEdit}
+      />
     </div>
   );
 };

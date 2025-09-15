@@ -15,6 +15,7 @@ import { getAllSellers } from '../../apis/user';
 import { useAuth } from '../../context/AuthContext';
 import SelectSeller from '../../components/SelectSeller';
 import { AiFillDollarCircle } from 'react-icons/ai';
+import { FaCircleDollarToSlot } from 'react-icons/fa6';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -281,8 +282,9 @@ const SaleReport = () => {
     const totalRevenue = get('revenue');
     const totalAds = get('ads');
     const totalProfit2 = get('profit2');
+    const baseCost = get('baseCost');
 
-    return { totalItems, totalRevenue, totalAds, totalProfit2 };
+    return { totalItems, totalRevenue, totalAds, totalProfit2, baseCost };
   }, [normalized]);
 
   const fetchAllSellers = async () => {
@@ -359,10 +361,10 @@ const SaleReport = () => {
 
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center">
-          <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
+          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-[#64748b]">Total Orders</div>
+                <div className="font-medium text-[#64748b]">Total orders</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.process }}>
                   {kpis.totalItems}
                 </span>
@@ -371,7 +373,7 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
+          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Revenue</div>
@@ -383,7 +385,19 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
+          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-[#64748b]">Base cost</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.process }}>
+                  {$(+kpis.baseCost)}
+                </span>
+              </div>
+              <FaCircleDollarToSlot size={25} color={dataColors.process} />
+            </div>
+          </div>
+
+          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Ads spend</div>
@@ -395,7 +409,7 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[24%] border border-[#e2e8f0] p-4 rounded-lg">
+          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Profit</div>

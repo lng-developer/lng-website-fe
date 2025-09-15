@@ -14,6 +14,8 @@ const routes = {
   product_cost_center: '/vendor/vendor-products/:id',
   fulfillment: '/fulfillment',
   design: '/design',
+  psd_design: '/design/psd',
+  png_design: '/design/png',
   fulfillmentQc: '/fulfillment/qc',
   fulfillmentScale: '/fulfillment/scale',
   fulfillmentWorkingStatus: '/fulfillment/working-status',

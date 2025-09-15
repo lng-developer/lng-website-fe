@@ -1,5 +1,4 @@
 import { useOutletContext } from 'react-router-dom';
-import { MdAdd } from 'react-icons/md';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
@@ -16,7 +15,7 @@ import TextArea from 'antd/es/input/TextArea';
 import ItemAction from './table/ItemAction';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
-import { getAllCountStatusScale, getAllFulfillScale } from '../../apis/order';
+import { getAllCountStatusScale, getAllFulfillScale, getALlShop } from '../../apis/order';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -35,6 +34,8 @@ const FulfillmentScale = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [tableHeight, setTableHeight] = useState(0);
   const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
+  const [shops, setShops] = useState([]);
+  const [selectShop, setSelectShop] = useState('');
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -42,6 +43,7 @@ const FulfillmentScale = () => {
     from: defaultFrom,
     to: defaultTo,
     search: '',
+    shopName: '',
   });
 
   const updateFilter = (newValues) => {
@@ -100,6 +102,12 @@ const FulfillmentScale = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>Shop</span>,
+      dataIndex: 'shopName',
+      key: 'shopName',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Order Status</span>,
       dataIndex: 'status',
       key: 'status',
@@ -148,6 +156,7 @@ const FulfillmentScale = () => {
         ),
         groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault={true} />,
         groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
+        shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
         status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
         orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
         scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
@@ -158,7 +167,13 @@ const FulfillmentScale = () => {
           return {
             key: `${index}-${indexItem}`,
             product_info: (
-              <ItemProductInfo imageUrl={itemSub?.baseImageUrl} asin={itemSub?.asin} sku={itemSub?.sku} status={item?.status} />
+              <ItemProductInfo
+                listing={itemSub?.listing}
+                imageUrl={itemSub?.baseImageUrl}
+                asin={itemSub?.asin}
+                sku={itemSub?.sku}
+                status={item?.status}
+              />
             ),
             customization: (
               <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
@@ -283,6 +298,21 @@ const FulfillmentScale = () => {
     updateFilter({ scale_status: status });
   };
 
+  const fetchAllShop = async () => {
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        setShops(result.data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllShop();
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       const headerHeight = 240; // Chiều cao header nếu có
@@ -320,15 +350,6 @@ const FulfillmentScale = () => {
             Manage Group Task Scale
           </h1>
           <div className="flex justify-center items-center gap-2">
-            <button
-              className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              //   onClick={handleClickAdd}
-            >
-              <MdAdd size={20} color="black" />
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Add Vendor Fulfill
-              </span>
-            </button>
             <DateRangePicker
               mode="range"
               showOutsideDays
@@ -370,12 +391,12 @@ const FulfillmentScale = () => {
             <div className="flex gap-2 items-center ">
               <SelectFilter
                 title="Shop"
-                ListData={['Outline', 'Custom Image', 'Manual Scale', 'Tool']}
-                // value={selectShop}
-                // onChange={(val) => {
-                //   setSelectShop(val);
-                //   updateFilter({ shopName: val });
-                // }}
+                ListData={shops.map((item) => item.name)}
+                value={selectShop}
+                onChange={(val) => {
+                  setSelectShop(val);
+                  updateFilter({ shopName: val });
+                }}
               />
             </div>
           </div>

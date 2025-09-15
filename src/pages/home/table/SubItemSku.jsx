@@ -4,7 +4,7 @@ import { dataColors } from '../../../utils/dataColors';
 import { RiLinkM } from 'react-icons/ri';
 import { Tooltip } from 'antd';
 
-const SubItemSku = ({ sku, asin, seller }) => {
+const SubItemSku = ({ sku, asin, seller, mapped_sku, listing }) => {
   return (
     <div className="text-left">
       {sku && (
@@ -14,6 +14,16 @@ const SubItemSku = ({ sku, asin, seller }) => {
           </div>
           <div>
             <StatusComponent title={sku} color={dataColors.asin} />
+          </div>
+        </div>
+      )}
+      {mapped_sku && (
+        <div className="flex-col gap-2 mb-2">
+          <div className="flex items-center">
+            <span className="font-medium">Map SKU:</span>
+          </div>
+          <div>
+            <StatusComponent title={mapped_sku} color={dataColors.asin} />
           </div>
         </div>
       )}
@@ -37,7 +47,7 @@ const SubItemSku = ({ sku, asin, seller }) => {
           <span className="font-medium">PSD ID:</span>
         </div>
         <div>
-          <StatusComponent title="No data" color={dataColors.success} />
+          <StatusComponent title={listing?.psd?.psd_id || 'No data'} color={dataColors.success} />
         </div>
       </div>
       <div className="flex-col gap-2 mb-2">

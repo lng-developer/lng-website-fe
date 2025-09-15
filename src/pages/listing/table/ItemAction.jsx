@@ -1,11 +1,13 @@
 import { Button, Space, Tooltip, Upload } from 'antd';
-import { UploadOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { UploadOutlined, DownloadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { dowloadPSD, uploadPSD } from '../../../apis/listing';
+import { deleteListing, dowloadPSD, uploadPSD } from '../../../apis/listing';
+import ModalDelete from '../../../components/ModalDelete';
 
-const ItemAction = ({ asin, fetchAllListing, filters }) => {
+const ItemAction = ({ id, asin, fetchAllListing, filters, isDelete = true, setOpenModalUpdate, data, setDataEdit }) => {
   const [fileList, setFileList] = useState([]);
+  const [openModalDelete, setOpenModalDelete] = useState(false);
 
   const uploadProps = {
     accept: '.psd',
@@ -71,28 +73,57 @@ const ItemAction = ({ asin, fetchAllListing, filters }) => {
   };
 
   const handleDelete = async () => {
-    // try {
-    // } catch (error) {
-    //   console.log(error);
-    //   toast.error('Download Failed!');
-    // }
+    try {
+      const response = await deleteListing(id);
+      if (response.status === 200) {
+        toast.success('Delete success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Delete Failed!');
+    } finally {
+      fetchAllListing(filters);
+    }
   };
   return (
-    <Space size="small">
-      <Tooltip title="Upload">
-        <Upload {...uploadProps}>
-          <Button icon={<UploadOutlined />} />
-        </Upload>
-      </Tooltip>
+    <>
+      <Space size="small">
+        <Tooltip title="Upload">
+          <Upload {...uploadProps}>
+            <Button icon={<UploadOutlined />} />
+          </Upload>
+        </Tooltip>
 
-      <Tooltip title="Download">
-        <Button icon={<DownloadOutlined />} onClick={downloadPSD} />
-      </Tooltip>
+        <Tooltip title="Download">
+          <Button icon={<DownloadOutlined />} onClick={downloadPSD} />
+        </Tooltip>
 
-      <Tooltip title="Delete">
-        <Button icon={<DeleteOutlined />} onClick={handleDelete} danger />
-      </Tooltip>
-    </Space>
+        {isDelete && (
+          <Tooltip title="Edit">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => {
+                setDataEdit(data);
+                setOpenModalUpdate(true);
+              }}
+            />
+          </Tooltip>
+        )}
+
+        {isDelete && (
+          <Tooltip title="Delete">
+            <Button icon={<DeleteOutlined />} onClick={() => setOpenModalDelete(true)} danger />
+          </Tooltip>
+        )}
+      </Space>
+      <ModalDelete
+        title="Delete asin"
+        isShowModalDelete={openModalDelete}
+        setIsShowModalDelete={setOpenModalDelete}
+        handleDelete={handleDelete}
+        text={'asin'}
+      />
+    </>
   );
 };
 

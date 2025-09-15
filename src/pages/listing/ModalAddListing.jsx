@@ -10,6 +10,7 @@ const STYLE_OPTS = [
   { label: 'T-Shirt', value: 'T-Shirt' },
   { label: 'Hoodie', value: 'Hoodie' },
   { label: 'Sweatshirt', value: 'Sweatshirt' },
+  { label: 'Napkins', value: 'Napkins' },
 ];
 
 const DESIGN_PRODUCT_OPTS = [
@@ -33,7 +34,7 @@ const PLATFORM_OPTS = [
 ];
 
 const ASIN_TYPE_OPTS = [
-  { label: 'PODLovers', value: 'PODLovers' },
+  { label: 'PODLovers', value: 'POD Lovers' },
   { label: 'First Sale', value: 'First Sale' },
   { label: 'Normal', value: 'Normal' },
   { label: 'Outline', value: 'Outline' },

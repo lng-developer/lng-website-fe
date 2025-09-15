@@ -345,9 +345,19 @@ const Home = () => {
                 orderId={item?.orderId}
                 orderItemId={itemSub?.orderItemId}
                 seller={item?.seller}
+                listing={itemSub?.listing}
+                scale_status={itemSub?.scale_status}
               />
             ),
-            sku: <SubItemSku sku={itemSub?.sku} asin={itemSub?.asin} seller={item?.seller} />,
+            sku: (
+              <SubItemSku
+                sku={itemSub?.sku}
+                mapped_sku={itemSub?.mapped_sku}
+                asin={itemSub?.asin}
+                seller={item?.seller}
+                listing={itemSub?.listing}
+              />
+            ),
             customer: (
               <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
             ),
