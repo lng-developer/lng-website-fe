@@ -347,6 +347,7 @@ const Home = () => {
                 seller={item?.seller}
                 listing={itemSub?.listing}
                 scale_status={itemSub?.scale_status}
+                asin={itemSub?.asin}
               />
             ),
             sku: (

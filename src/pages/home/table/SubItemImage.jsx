@@ -7,6 +7,9 @@ import { TbPhotoEdit } from 'react-icons/tb';
 import { memo, useState } from 'react';
 import { updateImage } from '../../../apis/order';
 import { toast } from 'sonner';
+import { dowloadPSD } from '../../../apis/listing';
+import { MdOutlineCloudDownload } from 'react-icons/md';
+import { ImSpinner10 } from 'react-icons/im';
 
 const SubItemImage = ({
   linkImage = '',
@@ -18,6 +21,7 @@ const SubItemImage = ({
   seller,
   listing = {},
   scale_status,
+  asin,
 }) => {
   const [showUpdate, setShowUpdate] = useState(false);
   const [valueImage, setValueImage] = useState('');
@@ -52,6 +56,33 @@ const SubItemImage = ({
     title: key,
     url,
   }));
+
+  const downloadPSD = async () => {
+    if (!(listing?.psd?.status === 'Available')) {
+      return;
+    }
+    try {
+      const response = await dowloadPSD(asin);
+      if (response.status === 200) {
+        const { signed_url, asin } = response.data || {};
+
+        if (signed_url) {
+          const link = document.createElement('a');
+          link.href = signed_url;
+          link.setAttribute('download', asin);
+          link.setAttribute('target', '_parent');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Download Failed!');
+    } finally {
+      toast.success('Download success!');
+    }
+  };
 
   return (
     <>
@@ -94,14 +125,22 @@ const SubItemImage = ({
               <FcApproval />
             </div>
             <div>
-              <Tooltip title="Download">
+              <Tooltip title={listing?.psd?.status === 'Available' ? 'Download' : false}>
                 <div
-                  style={{ borderColor: dataColors.success }}
-                  className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
+                  style={{ borderColor: listing?.psd?.status === 'Available' ? dataColors.success : dataColors.pending }}
+                  className="inline-flex items-center gap-1 rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
+                  onClick={downloadPSD}
                 >
+                  <span>
+                    {listing?.psd?.status === 'Available' ? (
+                      <MdOutlineCloudDownload color={dataColors.success} size={16} />
+                    ) : (
+                      <ImSpinner10 color={dataColors.pending} size={12} />
+                    )}
+                  </span>
                   <span
                     style={{
-                      color: dataColors.success,
+                      color: listing?.psd?.status === 'Available' ? dataColors.success : dataColors.pending,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -109,7 +148,7 @@ const SubItemImage = ({
                     }}
                     className="whitespace-nowrap"
                   >
-                    Download
+                    {listing?.psd?.status === 'Available' ? 'Download' : 'Pending'}
                   </span>
                 </div>
               </Tooltip>

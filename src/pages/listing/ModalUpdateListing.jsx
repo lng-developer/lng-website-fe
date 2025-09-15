@@ -39,7 +39,7 @@ const ASIN_TYPE_OPTS = [
   { label: 'Other', value: 'Other' },
 ];
 
-export default function ModalUpdateListing({ open, onClose, fetchAllListing, filters, listing = {} }) {
+export default function ModalUpdateListing({ open, onClose, fetchAllListing, filters, listing = {}, fetchCountStatus }) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [shops, setShops] = useState([]);
@@ -60,8 +60,6 @@ export default function ModalUpdateListing({ open, onClose, fetchAllListing, fil
       seller: listing?.seller?._id || undefined,
     };
   }, [listing]);
-
-  console.log('value', initialValues);
 
   const fetchSeller = async () => {
     try {
@@ -141,6 +139,7 @@ export default function ModalUpdateListing({ open, onClose, fetchAllListing, fil
     } finally {
       setSubmitting(false);
       fetchAllListing?.(filters);
+      fetchCountStatus();
       onClose?.();
       setLoading(false);
     }

@@ -511,6 +511,7 @@ const Listing = () => {
         fetchAllListing={fetchAllListing}
         filters={filters}
         listing={dataEdit}
+        fetchCountStatus={fetchCountStatus}
       />
     </div>
   );
