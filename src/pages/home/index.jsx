@@ -340,10 +340,6 @@ const Home = () => {
               <SubItemImage
                 linkImage={itemSub?.baseImageUrl}
                 linkFulfill={itemSub?.fulfillment_file}
-                fetchAllOrder={fetchAllOrder}
-                filters={filters}
-                orderId={item?.orderId}
-                orderItemId={itemSub?.orderItemId}
                 seller={item?.seller}
                 listing={itemSub?.listing}
                 scale_status={itemSub?.scale_status}

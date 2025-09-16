@@ -4,8 +4,12 @@ import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
 import { RiLinkM } from 'react-icons/ri';
 import { Link } from 'react-router-dom';
+import { dowloadPSD } from '../../../apis/listing';
+import { toast } from 'sonner';
+import { MdOutlineCloudDownload } from 'react-icons/md';
+import { ImSpinner10 } from 'react-icons/im';
 
-const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true, listing }) => {
+const ItemProductInfo = ({ imageUrl, asin, sku, status, listing }) => {
   const handleColorStatus = (stt) => {
     switch (stt) {
       case 'New':
@@ -18,6 +22,33 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true, li
         return dataColors.cancelled;
       default:
         return dataColors.default;
+    }
+  };
+
+  const downloadPSD = async () => {
+    if (!(listing?.psd?.status === 'Available')) {
+      return;
+    }
+    try {
+      const response = await dowloadPSD(asin);
+      if (response.status === 200) {
+        const { signed_url, asin } = response.data || {};
+
+        if (signed_url) {
+          const link = document.createElement('a');
+          link.href = signed_url;
+          link.setAttribute('download', asin);
+          link.setAttribute('target', '_parent');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Download Failed!');
+    } finally {
+      toast.success('Download success!');
     }
   };
   return (
@@ -69,18 +100,41 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, showPsdButton = true, li
 
         {/* Status Section */}
         {status && (
-          <div className="mb-2">
+          <div className="mb-1">
             <div className="font-semibold text-gray-800 ">Status:</div>
             <StatusComponent title={status} color={handleColorStatus(status)} />
           </div>
         )}
-        {/* PSD Download Button */}
-        {showPsdButton && (
-          <div>
-            <div className="font-semibold text-gray-800  mb-1">PSD:</div>
-            <StatusComponent title={'Download PSD'} color="#39A00D" />
-          </div>
-        )}
+        <div onClick={dowloadPSD}>
+          <div className="font-semibold text-gray-800  mb-1">PSD:</div>
+          <Tooltip title={listing?.psd?.status === 'Available' ? 'Download' : false}>
+            <div
+              style={{ borderColor: listing?.psd?.status === 'Available' ? dataColors.success : dataColors.pending }}
+              className="inline-flex items-center gap-1 rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
+              onClick={downloadPSD}
+            >
+              <span>
+                {listing?.psd?.status === 'Available' ? (
+                  <MdOutlineCloudDownload color={dataColors.success} size={16} />
+                ) : (
+                  <ImSpinner10 color={dataColors.pending} size={12} />
+                )}
+              </span>
+              <span
+                style={{
+                  color: listing?.psd?.status === 'Available' ? dataColors.success : dataColors.pending,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'inline-block',
+                }}
+                className="whitespace-nowrap"
+              >
+                {listing?.psd?.status === 'Available' ? 'Download PSD' : 'Pending'}
+              </span>
+            </div>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
