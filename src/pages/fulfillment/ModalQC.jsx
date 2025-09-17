@@ -514,10 +514,6 @@ export default function QcCanvasModal({
                   <span className="font-medium">Sku:</span>
                   <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Fulfillable Qty:</span>
-                  <StatusComponent title={currentItem?.quantity} color={dataColors.default} isDefault={true} />
-                </div>
                 {currentItem?.cost_center?.vendorProductDisplayName && (
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Vendor:</span>
@@ -573,7 +569,7 @@ export default function QcCanvasModal({
               padding: 12,
               height: 'auto',
               width: 350,
-              maxHeight: 270,
+              maxHeight: 370,
               overflowY: 'auto',
             }}
           >

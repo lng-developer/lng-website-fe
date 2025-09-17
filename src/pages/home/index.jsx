@@ -58,6 +58,7 @@ const Home = () => {
     search: '',
     isNoCostCenter: false,
     openCase: false,
+    shopName: '',
   });
 
   const updateFilter = (newValues) => {
@@ -203,8 +204,13 @@ const Home = () => {
       { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
       { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customer', key: 'customer', width: 300 },
       { title: <span style={{ color: dataColors.title }}>QTY</span>, dataIndex: 'quantity', key: 'quantity' },
-      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
-      { title: <span style={{ color: dataColors.title }}>Tracking & Note</span>, dataIndex: 'tracking_note', key: 'tracking_note' },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 320 },
+      {
+        title: <span style={{ color: dataColors.title }}>Tracking & Note</span>,
+        dataIndex: 'tracking_note',
+        key: 'tracking_note',
+        width: 300,
+      },
     ];
 
     return (
