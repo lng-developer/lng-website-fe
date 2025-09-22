@@ -101,7 +101,7 @@ const ReportOrderCost = () => {
       // Diff = tổng item_promotion_discount (theo backend bạn yêu cầu)
       {
         key: 'diff',
-        label: 'Diff',
+        label: 'Discount',
         value: num(s.diff),
         prefix: '$',
         icon: <FaPercentage className="text-white" />,
@@ -182,6 +182,12 @@ const ReportOrderCost = () => {
       align: 'center',
     },
     {
+      title: <span style={{ color: dataColors.title }}>S-Tax</span>,
+      dataIndex: 'shipping_tax',
+      key: 'shipping_tax',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Fee</span>,
       dataIndex: 'fee',
       key: 'fee',
@@ -191,13 +197,6 @@ const ReportOrderCost = () => {
       title: <span style={{ color: dataColors.title }}>Refund</span>,
       dataIndex: 'refund',
       key: 'refund',
-      align: 'center',
-      width: 90,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Profit</span>,
-      dataIndex: 'profit',
-      key: 'profit',
       align: 'center',
       width: 90,
     },
@@ -215,10 +214,17 @@ const ReportOrderCost = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Diff</span>,
+      title: <span style={{ color: dataColors.title }}>Discount</span>,
       dataIndex: 'diff',
       key: 'diff',
       align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Profit</span>,
+      dataIndex: 'profit',
+      key: 'profit',
+      align: 'center',
+      width: 90,
     },
   ];
 
@@ -255,11 +261,15 @@ const ReportOrderCost = () => {
         tax: <span className="font-medium">{fmtMoney(taxVal)}</span>,
         fee: <span className="font-medium">{fmtMoney(feeVal)}</span>,
         refund: <span className="font-medium">{refundVal === 0 ? 0 : fmtMoney(refundVal)}</span>,
-        profit: <span className="font-medium">{profit1Val < 0 ? 0 : fmtMoney(profit1Val)}</span>, // Profit = profit1
+        profit: (
+          <span className="font-medium" style={{ color: dataColors.success }}>
+            {profit1Val < 0 ? 0 : fmtMoney(profit1Val)}
+          </span>
+        ), // Profit = profit1
         lng_cost: <span className="font-medium">{opCostVal === 0 ? 0 : fmtMoney(opCostVal)}</span>,
         base_cost: <span className="font-medium">{fmtMoney(baseVal)}</span>,
         diff: <span className="font-medium">{fmtMoney(promoVal)}</span>,
-
+        shipping_tax: <span className="font-medium">{fmtMoney(shippingTax)}</span>,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {
             key: `${index}-${indexItem}`,
@@ -278,7 +288,7 @@ const ReportOrderCost = () => {
             sku: (
               <>
                 {itemSub?.sku && (
-                  <div className="flex mb-2">
+                  <div className="flex-col mb-2">
                     <div className="flex items-center mr-2">
                       <span className="font-medium">SKU:</span>
                     </div>
@@ -288,7 +298,7 @@ const ReportOrderCost = () => {
                   </div>
                 )}
                 {itemSub?.asin && (
-                  <div className="flex mb-2">
+                  <div className="flex-col mb-2">
                     <div className="flex items-center mr-2">
                       <span className="font-medium">ASIN:</span>
                     </div>
@@ -302,16 +312,9 @@ const ReportOrderCost = () => {
                     </div>
                   </div>
                 )}
-                <div className="flex gap-2 mb-2">
-                  <div className="flex items-center">
-                    <span className="font-medium">Seller:</span>
-                  </div>
-                  <div>
-                    <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />
-                  </div>
-                </div>
               </>
             ),
+            seller: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
             quantity: (
               <div>
                 <div>
@@ -346,7 +349,8 @@ const ReportOrderCost = () => {
   const expandedRowRender = (record) => {
     const subColumns = [
       { title: <span style={{ color: dataColors.title }}>Image & Print Side</span>, dataIndex: 'product_info', key: 'product' },
-      { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
+      { title: <span style={{ color: dataColors.title }}>SKU, Variant</span>, dataIndex: 'sku', key: 'sku' },
+      { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'seller', key: 'seller' },
       { title: <span style={{ color: dataColors.title }}>Quantity</span>, dataIndex: 'quantity', key: 'quantity' },
       { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center' },
     ];

@@ -4,7 +4,7 @@ import { dataColors } from '../../utils/dataColors';
 import { Link } from 'react-router-dom';
 import { RiLinkM } from 'react-icons/ri';
 
-const ItemProductInfoQC = ({ link, sku, asin, quantity }) => {
+const ItemProductInfoQC = ({ link, sku, asin, quantity, listing }) => {
   return (
     <div className="flex items-center gap-5">
       <div
@@ -13,7 +13,7 @@ const ItemProductInfoQC = ({ link, sku, asin, quantity }) => {
           boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
         }}
       >
-        <Image src={link} width={100} height={100} className="rounded-lg" />
+        <Image src={listing?.product_image || link} width={100} height={100} className="rounded-lg" />
       </div>
       <div className="">
         <div className="flex-col">
