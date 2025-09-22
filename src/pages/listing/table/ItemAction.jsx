@@ -101,7 +101,7 @@ const ItemAction = ({ id, asin, fetchAllListing, filters, isDelete = true, setOp
         )}
 
         <Tooltip title="Download">
-          <Button disabled={data?.psd?.status !== 'Available'} icon={<DownloadOutlined />} onClick={downloadPSD} />
+          <Button disabled={data?.psd?.status === 'Available' ? false : true} icon={<DownloadOutlined />} onClick={downloadPSD} />
         </Tooltip>
 
         {isDelete && (

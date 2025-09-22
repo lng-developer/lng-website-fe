@@ -143,7 +143,9 @@ const PSDTasks = () => {
       dataIndex: 'actions',
       key: 'actions',
       align: 'center',
-      render: (data) => <ItemAction id={data?._id} asin={data?.asin} fetchAllListing={fetchAllTask} filters={filters} isDelete={false} />,
+      render: (data) => (
+        <ItemAction id={data?._id} data={data} asin={data?.asin} fetchAllListing={fetchAllTask} filters={filters} isDelete={false} />
+      ),
     },
   ];
 
@@ -156,8 +158,7 @@ const PSDTasks = () => {
           return {
             ...item,
             actions: {
-              asin: item?.asin,
-              _id: item?._id,
+              ...item,
             },
           };
         });
