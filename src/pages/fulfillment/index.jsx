@@ -206,6 +206,7 @@ const FulfillmentScale = () => {
                 orderId={item?.orderId}
                 seller={item?.seller?.full_name}
                 fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+                quantity={itemSub?.quantity}
               />
             ),
           };
