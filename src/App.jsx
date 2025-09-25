@@ -31,7 +31,7 @@ function App() {
         <Route
           path={routes.home}
           element={
-            <PrivateRoute allowedRoles={['Admin', 'Seller', 'Designer', 'Customer Service']}>
+            <PrivateRoute allowedRoles={['Admin', 'Seller', 'Designer', 'Customer Service', 'Production']}>
               <OrderProvider>
                 <MainLayout />
               </OrderProvider>
