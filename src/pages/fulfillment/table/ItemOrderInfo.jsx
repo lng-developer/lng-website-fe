@@ -29,7 +29,7 @@ export default function OrderInfoForm({ orderId, seller, fulfillName, quantity }
         <StatusComponent title={seller || 'No data'} color={dataColors.process} />
       </div>
       <div className="mb-1">
-        <div className="font-semibold text-gray-800 mb-1">
+        <div className="font-semibold text-gray-800">
           Quantity: <span style={{ color: dataColors.asin }}>{quantity}</span>
         </div>
       </div>

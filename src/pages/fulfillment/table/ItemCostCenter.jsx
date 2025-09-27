@@ -30,15 +30,17 @@ const ItemCostCenter = ({ cost_center = {} }) => {
       </div>
 
       {/* Color Section */}
-      <div>
-        <div className="font-semibold text-gray-800 mb-1 ">Color:</div>
-        <div
-          className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center font-medium"
-          style={{ borderColor: '#08969b', fontWeight: 500 }}
-        >
-          {cost_center?.colorValue || <MdOutlineDoNotDisturb />}
+      {cost_center?.colorValue && (
+        <div>
+          <div className="font-semibold text-gray-800 mb-1 ">Color:</div>
+          <div
+            className="border px-2 py-1 rounded text-sm font-normal w-fit inline-flex items-center font-medium"
+            style={{ borderColor: '#08969b', fontWeight: 500 }}
+          >
+            {cost_center?.colorValue || <MdOutlineDoNotDisturb />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

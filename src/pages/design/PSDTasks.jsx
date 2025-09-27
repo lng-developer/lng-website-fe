@@ -2,15 +2,16 @@ import { useOutletContext } from 'react-router-dom';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataFilterDesignTasks } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { defaultFrom, defaultTo } from '../../utils/fomatDate';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { debounce } from 'lodash';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
 import { Image, Input, Pagination, Table } from 'antd';
-import ItemAction from '../listing/table/ItemAction';
 import ButtonFilter from '../../components/ButtonFilter';
-import { getAllListing, getStatictisc } from '../../apis/listing';
+import { getStatictisc } from '../../apis/listing';
 import { toast } from 'sonner';
+import { getAllPsdTask } from '../../apis/psdTask';
+import ItemActionPSD from './ItemActionPSD';
 const PAGE_SIZE = 10;
 
 const PSDTasks = () => {
@@ -27,8 +28,6 @@ const PSDTasks = () => {
     from: defaultFrom,
     to: defaultTo,
     search: '',
-    psdStatus: '',
-    asinTypeMode: 'excludeOutline',
   });
 
   const updateFilter = (newValues) => {
@@ -46,10 +45,10 @@ const PSDTasks = () => {
 
   const handleFilterForStatus = (status) => {
     if (status === 'all') {
-      updateFilter({ psdStatus: '' });
+      updateFilter({ status: '' });
       return;
     }
-    updateFilter({ psdStatus: status });
+    updateFilter({ status: status });
   };
 
   const debouncedSearch = useMemo(
@@ -69,16 +68,16 @@ const PSDTasks = () => {
   };
 
   const columns = [
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Due Date</span>,
+    //   dataIndex: 'dueAt',
+    //   key: 'dueAt',
+    //   align: 'center',
+    //   render: (data) => <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>,
+    // },
     {
-      title: <span style={{ color: dataColors.title }}>Asin</span>,
-      dataIndex: 'asin',
-      key: 'asin',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Asin / Product ID</span>,
-      dataIndex: 'product_image',
+      title: <span style={{ color: dataColors.title }}>Product Image</span>,
+      dataIndex: 'listing',
       key: 'product_image',
       align: 'center',
       render: (data) => (
@@ -89,25 +88,46 @@ const PSDTasks = () => {
               boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
             }}
           >
-            <Image width={100} height={100} src={data} className="rounded-lg" />
+            <Image width={100} height={100} src={data?.product_image} className="rounded-lg" />
           </div>
         </div>
       ),
     },
     {
-      title: <span style={{ color: dataColors.title }}>Style</span>,
-      dataIndex: 'template',
-      key: 'template',
+      title: <span style={{ color: dataColors.title }}>Asin</span>,
+      dataIndex: 'listing',
+      key: 'asin',
       align: 'center',
-      render: (data) => <StatusComponent title={data?.style} color={dataColors.default} isDefault={true} />,
+      render: (data) => <StatusComponent title={data?.asin} color={dataColors.pending} />,
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Status Task</span>,
+      dataIndex: 'status',
+      key: 'Status',
+      align: 'center',
+      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Assigned</span>,
+      dataIndex: 'designer',
+      key: 'designer',
+      align: 'center',
+      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.purple} />,
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Priority</span>,
+      dataIndex: 'priority',
+      key: 'priority',
+      align: 'center',
+      render: (data) => <StatusComponent title={data} color={dataColors.yellow} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>PSD Status</span>,
-      dataIndex: 'psd',
+      dataIndex: 'listing',
       key: 'psd',
       align: 'center',
       render: (data) => (
-        <StatusComponent title={data?.status} color={data?.status === 'Available' ? dataColors.success : dataColors.cancelled} />
+        <StatusComponent title={data?.psd?.status} color={data?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled} />
       ),
     },
     {
@@ -118,25 +138,18 @@ const PSDTasks = () => {
       render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Store</span>,
-      dataIndex: 'store',
-      key: 'store',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.name} color={dataColors.pending} />,
-    },
-    {
       title: <span style={{ color: dataColors.title }}>Platform</span>,
-      dataIndex: 'platform',
+      dataIndex: 'listing',
       key: 'platform',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.purple} />,
+      render: (data) => <StatusComponent title={data?.platform} color={dataColors.purple} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Asin Type</span>,
-      dataIndex: 'asin_type',
+      dataIndex: 'listing',
       key: 'asin_type',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
+      render: (data) => <StatusComponent title={data?.asin_type} color={dataColors.asin} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -144,7 +157,15 @@ const PSDTasks = () => {
       key: 'actions',
       align: 'center',
       render: (data) => (
-        <ItemAction id={data?._id} data={data} asin={data?.asin} fetchAllListing={fetchAllTask} filters={filters} isDelete={false} />
+        <ItemActionPSD
+          statusTask={data?.statusTask}
+          idTask={data?.idTask}
+          data={data}
+          asin={data?.asin}
+          fetchAllListing={fetchAllTask}
+          filters={filters}
+          isDelete={false}
+        />
       ),
     },
   ];
@@ -152,13 +173,15 @@ const PSDTasks = () => {
   const fetchAllTask = async (params) => {
     setLoading(true);
     try {
-      const response = await getAllListing(params);
+      const response = await getAllPsdTask(params);
       if (response.status === 200) {
-        const result = response.data?.listings?.map((item) => {
+        const result = response.data?.tasks?.map((item) => {
           return {
             ...item,
             actions: {
-              ...item,
+              idTask: item._id,
+              statusTask: item?.status,
+              ...item?.listing,
             },
           };
         });

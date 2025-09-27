@@ -69,6 +69,39 @@ const dataFilterStatusFulfillment = [
   },
 ];
 
+const dataFilterStatusFulfillmentDesign = [
+  {
+    key: 'All',
+    title: 'All',
+    status: 'All',
+  },
+  {
+    key: 'Unassigned',
+    title: 'Pending Assignment',
+    status: 'Unassigned',
+  },
+  {
+    key: 'Need Scale',
+    title: 'Need Scale',
+    status: 'Need Scale',
+  },
+  {
+    key: 'Pending',
+    title: 'Pending',
+    status: 'Pending',
+  },
+  {
+    key: 'Sent',
+    title: 'Completed',
+    status: 'Sent',
+  },
+  {
+    key: 'QC Rejected',
+    title: 'QC Rejected',
+    status: 'QC Rejected',
+  },
+];
+
 const dataFilterListing = [
   {
     key: 'All',
@@ -157,15 +190,47 @@ const dataFilterDesignTasks = [
     status: 'all',
   },
   {
-    key: 'pending',
-    title: 'Pending',
-    status: 'Unavailable',
+    key: 'New',
+    title: 'New',
+    status: 'New',
   },
   {
-    key: 'complete',
-    title: 'Complete',
-    status: 'Available',
+    key: 'Requested',
+    title: 'Requested',
+    status: 'Requested',
+  },
+  {
+    key: 'Assigned',
+    title: 'Assigned',
+    status: 'Assigned',
+  },
+  {
+    key: 'In Progress',
+    title: 'In Progress',
+    status: 'In Progress',
+  },
+  {
+    key: 'Uploaded',
+    title: 'Uploaded',
+    status: 'Uploaded',
+  },
+  {
+    key: 'QC Rejected',
+    title: 'QC Rejected',
+    status: 'QC Rejected',
+  },
+  {
+    key: 'QC Passed',
+    title: 'QC Passed',
+    status: 'QC Passed',
   },
 ];
 
-export { dataFilterStatus, dataFilterStatusFulfillment, dataFilterListing, dataFilterStatusQC, dataFilterDesignTasks };
+export {
+  dataFilterStatus,
+  dataFilterStatusFulfillment,
+  dataFilterListing,
+  dataFilterStatusQC,
+  dataFilterDesignTasks,
+  dataFilterStatusFulfillmentDesign,
+};

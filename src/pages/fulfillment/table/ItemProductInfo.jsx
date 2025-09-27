@@ -9,22 +9,7 @@ import { toast } from 'sonner';
 import { MdOutlineCloudDownload } from 'react-icons/md';
 import { ImSpinner10 } from 'react-icons/im';
 
-const ItemProductInfo = ({ imageUrl, asin, sku, status, listing }) => {
-  const handleColorStatus = (stt) => {
-    switch (stt) {
-      case 'New':
-        return dataColors.success;
-      case 'Fulfilled':
-        return dataColors.process;
-      case 'Shipped':
-        return dataColors.pending;
-      case 'Cancelled':
-        return dataColors.cancelled;
-      default:
-        return dataColors.default;
-    }
-  };
-
+const ItemProductInfo = ({ imageUrl, asin, sku, listing }) => {
   const downloadPSD = async () => {
     if (!(listing?.psd?.status === 'Available')) {
       return;
@@ -90,19 +75,17 @@ const ItemProductInfo = ({ imageUrl, asin, sku, status, listing }) => {
             </div>
           </div>
         )}
+        {listing?.asin_type && (
+          <div className="mb-1">
+            <div className="font-semibold text-gray-800 ">Asin Type:</div>
+            <StatusComponent title={listing?.asin_type} color={dataColors.pink} />
+          </div>
+        )}
         {/* SKU Section */}
         {sku && (
           <div className="mb-1">
             <div className="font-semibold text-gray-800 ">SKU:</div>
             <StatusComponent title={sku} color={dataColors.asin} />
-          </div>
-        )}
-
-        {/* Status Section */}
-        {status && (
-          <div className="mb-1">
-            <div className="font-semibold text-gray-800 ">Status:</div>
-            <StatusComponent title={status} color={handleColorStatus(status)} />
           </div>
         )}
         <div onClick={dowloadPSD}>

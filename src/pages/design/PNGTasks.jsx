@@ -1,34 +1,57 @@
 import { useOutletContext } from 'react-router-dom';
-import DateRangePicker from '../../components/DateRangePicker';
-import { dataFilterDesignTasks } from '../../utils/dataFilter';
+import { dataFilterStatusFulfillment, dataFilterStatusFulfillmentDesign } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { defaultFrom, defaultTo } from '../../utils/fomatDate';
-import { debounce } from 'lodash';
-import { dataColors } from '../../utils/dataColors';
-import StatusComponent from '../../components/StatusComponent';
-import { Image, Input, Pagination, Table } from 'antd';
-import ItemAction from '../listing/table/ItemAction';
 import ButtonFilter from '../../components/ButtonFilter';
-import { getAllListing, getStatictisc } from '../../apis/listing';
+import { dataColors } from '../../utils/dataColors';
+import { Flex, Input, Pagination, Table } from 'antd';
+import SelectFilter from '../../components/SelectFilter';
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import StatusComponent from '../../components/StatusComponent';
+import TextArea from 'antd/es/input/TextArea';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { formatDistanceToNow } from 'date-fns';
+import { getAllCountStatusScaleForDesign, getAllFulfillScaleForDesign, getALlShop } from '../../apis/order';
+import DynamicImageUpload from '../../components/DynamicImageUpload';
+import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
+import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
+import { debounce } from 'lodash';
+import OrderInfoForm from '../fulfillment/table/ItemOrderInfo';
+import ItemCustom from '../fulfillment/table/ItemCustom';
+import ItemCostCenter from '../fulfillment/table/ItemCostCenter';
+import ItemAction from '../fulfillment/table/ItemAction';
+import ItemProductInfo from '../fulfillment/table/ItemProductInfo';
+import ItemScaleBy from './ItemScaleBy';
+import { getAllDesigner } from '../../apis/user';
+import { useAuth } from '../../context/AuthContext';
 const PAGE_SIZE = 10;
 
-const PNGTasks = () => {
+const FulfillmentScale = () => {
   const { collapsed } = useOutletContext();
-  const [isActiveFilter, setIsActivefilter] = useState(dataFilterDesignTasks[0]);
+  const { user } = useAuth();
+  const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusFulfillmentDesign[0]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+  const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [dataSource, setDataSource] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [tabFilter, setTabFilter] = useState(dataFilterDesignTasks);
+  const [tableHeight, setTableHeight] = useState(0);
+  const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillmentDesign);
+  const [shops, setShops] = useState([]);
+  const [selectShop, setSelectShop] = useState('');
+  const [asinType, setAsinType] = useState('');
+  const [designers, setDesigners] = useState([]);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
+    scale_status: '',
     from: defaultFrom,
     to: defaultTo,
     search: '',
-    psdStatus: '',
-    asinTypeMode: 'onlyOutline',
+    shopName: '',
+    pngStatus: true,
+    asin_type: '',
   });
 
   const updateFilter = (newValues) => {
@@ -44,12 +67,204 @@ const PNGTasks = () => {
     setCurrentPage(page);
   };
 
-  const handleFilterForStatus = (status) => {
-    if (status === 'all') {
-      updateFilter({ psdStatus: '' });
-      return;
+  const handleExpand = (expanded, record) => {
+    if (expanded) {
+      setExpandedRowKeys([...expandedRowKeys, record.key]);
+    } else {
+      setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
     }
-    updateFilter({ psdStatus: status });
+  };
+
+  const handleShowRowKeys = () => {
+    if (isShowRowkeys) {
+      setExpandedRowKeys([]);
+    } else {
+      setExpandedRowKeys(dataSource.map((item) => item.orderId));
+    }
+    setIsShowRowKeys((prev) => !prev);
+  };
+
+  const columns = [
+    {
+      title: <span style={{ color: dataColors.title }}>Order Date</span>,
+      dataIndex: 'orderDate',
+      key: 'orderDate',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+      dataIndex: 'scaleStatus',
+      key: 'scaleStatus',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Scale By</span>,
+      dataIndex: 'scaleBy',
+      key: 'scaleBy',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Shop</span>,
+      dataIndex: 'shopName',
+      key: 'shopName',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Order Status</span>,
+      dataIndex: 'status',
+      key: 'status',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Order Owner</span>,
+      dataIndex: 'orderOwner',
+      key: 'orderOwner',
+      align: 'center',
+    },
+    { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qcBy', key: 'qcBy', align: 'center' },
+    {
+      title: <span style={{ color: dataColors.title }}>Express</span>,
+      dataIndex: 'express',
+      key: 'express',
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Action</span>,
+      dataIndex: 'actions',
+      key: 'actions',
+      align: 'center',
+    },
+  ];
+
+  const convertToArr = (object) => {
+    return Object?.entries(typeof object === 'object' ? object : {}).map(([key, url]) => ({
+      position: key,
+      url,
+    }));
+  };
+
+  // render Orders
+  const renderOrderInTable = (data = []) => {
+    const results = data.map((item, index) => {
+      return {
+        key: item?.orderId,
+        orderDate: (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+            </span>
+          </Flex>
+        ),
+        scaleBy: (
+          <ItemScaleBy
+            orderId={item?._id}
+            designers={designers}
+            fetchAllFulfill={fetchAllFulfill}
+            filters={filters}
+            scale_by={item?.scale_by?.full_name}
+            showSelect={user?.role === 'Design Leader' || user?.role === 'Admin'}
+          />
+        ),
+        shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
+        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+        orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
+        qcBy: <StatusComponent title={item?.qcBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
+        express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
+        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
+        actions: <ItemAction />,
+        subItems: item?.items?.map((itemSub, indexItem) => {
+          return {
+            key: `${index}-${indexItem}`,
+            product_info: (
+              <ItemProductInfo
+                listing={itemSub?.listing}
+                imageUrl={itemSub?.baseImageUrl}
+                asin={itemSub?.asin}
+                sku={itemSub?.sku}
+                status={item?.status}
+              />
+            ),
+            customization: (
+              <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+            ),
+            task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
+            cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
+            cs_note: (
+              <div className="mb-1 w-45">
+                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
+                <TextArea
+                  value={itemSub?.qc_note}
+                  placeholder="CS note"
+                  spellCheck={false}
+                  style={{ color: dataColors.cancelled, fontWeight: 500 }}
+                />
+              </div>
+            ),
+            action: (
+              <DynamicImageUpload
+                initialKinds={['front']}
+                serverItems={convertToArr(itemSub?.fulfillment_file)}
+                orderId={item?.orderId}
+                orderItemId={itemSub?.orderItemId}
+                fetchAllFulfill={fetchAllFulfill}
+                filters={filters}
+              />
+            ),
+            order_info: (
+              <OrderInfoForm
+                orderId={item?.orderId}
+                seller={item?.seller?.full_name}
+                fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+                quantity={itemSub?.quantity}
+              />
+            ),
+          };
+        }),
+      };
+    });
+    return results;
+  };
+
+  // Cột con trong bảng mở rộng
+  const expandedRowRender = (record) => {
+    const subColumns = [
+      { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info', width: 220 },
+      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
+      { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 220 },
+      { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
+      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
+      { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
+    ];
+
+    return (
+      <Table
+        columns={subColumns}
+        dataSource={record.subItems}
+        pagination={false}
+        rowKey="key"
+        rowClassName={() => 'table-row-center'}
+        style={{ padding: 10 }}
+      />
+    );
+  };
+
+  const fetchAllFulfill = async (params) => {
+    setLoading(true);
+    try {
+      const response = await getAllFulfillScaleForDesign(params);
+      if (response.status === 200) {
+        setDataSource(response.data?.data);
+        setTotalCount(response.data?.totalCount);
+      } else {
+        toast.error(response.data?.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const debouncedSearch = useMemo(
@@ -68,122 +283,25 @@ const PNGTasks = () => {
     debouncedSearch(e.target.value);
   };
 
-  const columns = [
-    {
-      title: <span style={{ color: dataColors.title }}>Asin</span>,
-      dataIndex: 'asin',
-      key: 'asin',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Asin / Product ID</span>,
-      dataIndex: 'product_image',
-      key: 'product_image',
-      align: 'center',
-      render: (data) => (
-        <div className="flex justify-center">
-          <div
-            className="w-[100px] h-[100px] rounded-lg overflow-hidden"
-            style={{
-              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-            }}
-          >
-            <Image width={100} height={100} src={data} className="rounded-lg" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Style</span>,
-      dataIndex: 'template',
-      key: 'template',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.style} color={dataColors.default} isDefault={true} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>PSD Status</span>,
-      dataIndex: 'psd',
-      key: 'psd',
-      align: 'center',
-      render: (data) => (
-        <StatusComponent title={data?.status} color={data?.status === 'Available' ? dataColors.success : dataColors.cancelled} />
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Seller</span>,
-      dataIndex: 'seller',
-      key: 'seller',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Store</span>,
-      dataIndex: 'store',
-      key: 'store',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.name} color={dataColors.pending} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Platform</span>,
-      dataIndex: 'platform',
-      key: 'platform',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.purple} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Asin Type</span>,
-      dataIndex: 'asin_type',
-      key: 'asin_type',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Actions</span>,
-      dataIndex: 'actions',
-      key: 'actions',
-      align: 'center',
-      render: (data) => <ItemAction id={data?._id} asin={data?.asin} fetchAllListing={fetchAllTask} filters={filters} isDelete={false} />,
-    },
-  ];
-
-  const fetchAllTask = async (params) => {
-    setLoading(true);
-    try {
-      const response = await getAllListing(params);
-      if (response.status === 200) {
-        const result = response.data?.listings?.map((item) => {
-          return {
-            ...item,
-            actions: {
-              asin: item?.asin,
-              _id: item?._id,
-            },
-          };
-        });
-        setDataSource(result);
-        setTotalCount(response.data?.total);
-      } else {
-        toast.error(response.data?.message);
-      }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getStatictisc(filters);
+      const response = await getAllCountStatusScaleForDesign(filters);
       if (response.status === 200) {
-        const resultTabFilter = dataFilterDesignTasks.map(({ key, title, status }) => ({
-          key,
-          title,
-          status,
-          count: response.data?.[key] ?? 0,
-        }));
+        const resultTabFilter =
+          user?.role === 'Design Leader' || user?.role === 'Admin'
+            ? dataFilterStatusFulfillmentDesign.map(({ key, title, status }) => ({
+                key,
+                title,
+                status,
+                count: response.data?.overall?.counts[key] ?? 0,
+              }))
+            : dataFilterStatusFulfillment.map(({ key, title, status }) => ({
+                key,
+                title,
+                status,
+                count: response.data?.overall?.counts[key] ?? 0,
+              }));
         setTabFilter(resultTabFilter);
       }
     } catch (error) {
@@ -191,16 +309,89 @@ const PNGTasks = () => {
     }
   }, [filters]);
 
+  const handleFilterForStatus = (status) => {
+    if (status === 'All') {
+      updateFilter({ scale_status: '' });
+      return;
+    }
+
+    if (status === 'Unassigned') {
+      updateFilter({ unassigned: true });
+      return;
+    }
+    updateFilter({ scale_status: status });
+  };
+
+  const fetchAllShop = async () => {
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        setShops(result.data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const fetchAllDesigner = async () => {
+    try {
+      const res = await getAllDesigner();
+      if (res.status === 200) {
+        const result = res.data?.map((item) => {
+          return {
+            label: item?.full_name,
+            value: item?._id,
+          };
+        });
+        setDesigners(result);
+      } else {
+        toast.error(res.data?.message || 'Fetch error');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unexpected error');
+    }
+  };
+
   useEffect(() => {
+    fetchAllShop();
+    fetchAllDesigner();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 240; // Chiều cao header nếu có
+      const marginBottom = 20;
+
+      const availableHeight = window.innerHeight - headerHeight - marginBottom;
+      setTableHeight(availableHeight);
+    };
+
+    handleResize(); // Gọi lần đầu
+    window.addEventListener('resize', handleResize); // Lắng nghe resize
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchAllFulfill(filters);
     fetchCountStatus();
-    fetchAllTask(filters);
   }, [filters]);
+
+  useEffect(() => {
+    if (isShowRowkeys) {
+      // Tự động mở tất cả dòng khi component mount
+      setExpandedRowKeys(dataSource.map((item) => item.orderId));
+    }
+  }, [dataSource, isShowRowkeys]);
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
-            PSD Tasks
+            PNG Tasks
           </h1>
           <div className="flex justify-center items-center gap-2">
             <DateRangePicker
@@ -241,6 +432,27 @@ const PNGTasks = () => {
               placeholder="Search..."
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
+            <div className="flex gap-2 items-center ">
+              <SelectFilter
+                title="Shop"
+                ListData={shops.map((item) => item.name)}
+                value={selectShop}
+                onChange={(val) => {
+                  setSelectShop(val);
+                  updateFilter({ shopName: val });
+                }}
+              />
+
+              <SelectFilter
+                title="Asin Type"
+                ListData={['Custom Image', 'Outline']}
+                value={asinType}
+                onChange={(val) => {
+                  setAsinType(val);
+                  updateFilter({ asin_type: val });
+                }}
+              />
+            </div>
           </div>
           <div>
             <Pagination
@@ -255,13 +467,32 @@ const PNGTasks = () => {
         </div>
         <div className="mt-4">
           <Table
-            className="no-indent-table"
+            className="no-indent-table no-backgroud-title scale"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={renderOrderInTable(dataSource)}
+            expandable={{
+              indentSize: 0,
+              expandedRowRender,
+              expandIcon: ({ expanded, onExpand, record }) => (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
+                  {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+              expandedRowKeys: expandedRowKeys,
+              onExpand: handleExpand,
+              columnTitle: (
+                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                  {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+            }}
             rowKey="key"
             bordered={true}
             pagination={false}
             loading={loading}
+            sticky={{ offsetHeader: 0 }}
+            scroll={{ y: tableHeight }}
+            tableLayout="auto"
           />
         </div>
       </div>
@@ -269,4 +500,4 @@ const PNGTasks = () => {
   );
 };
 
-export default PNGTasks;
+export default FulfillmentScale;

@@ -9,7 +9,7 @@ import { dowloadPSD } from '../../../apis/listing';
 import { MdOutlineCloudDownload } from 'react-icons/md';
 import { ImSpinner10 } from 'react-icons/im';
 
-const SubItemImage = ({ linkImage = '', linkFulfill = {}, seller, listing = {}, scale_status, asin }) => {
+const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_status, asin, scale_by }) => {
   const arrFulfill = Object.entries(typeof linkFulfill === 'object' ? linkFulfill : {}).map(([key, url]) => ({
     title: key,
     url,
@@ -39,6 +39,20 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, seller, listing = {}, 
       toast.error('Download Failed!');
     } finally {
       toast.success('Download success!');
+    }
+  };
+
+  const makeDownloadUrl = (url, filename) => {
+    if (url) {
+      // tách phần trước "upload/"
+      const parts = url?.split('/upload/');
+      if (parts?.length !== 2) {
+        throw new Error("URL không hợp lệ, thiếu '/upload/'");
+      }
+
+      // thêm fl_attachment (có filename nếu truyền vào)
+      const attach = filename ? `fl_attachment:${filename}` : 'fl_attachment';
+      return `${parts[0]}/upload/${attach}/${parts[1]}`;
     }
   };
 
@@ -102,6 +116,20 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, seller, listing = {}, 
             </Tooltip>
           </div>
         </div>
+        {linkFulfill?.front && (
+          <div className="flex-col gap-2 mt-2">
+            <div className="flex items-center">
+              <span className="mr-2 font-medium">Download:</span>
+            </div>
+            <a
+              href={`${makeDownloadUrl(linkFulfill ? linkFulfill?.front : '', asin)}`}
+              className="inline-flex items-center gap-1 rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
+            >
+              <MdOutlineCloudDownload color={dataColors.pending} size={16} />
+              <span>Download Fulfill</span>
+            </a>
+          </div>
+        )}
         <div className="flex-col gap-2 mt-2">
           <div className="flex items-center">
             <span className="mr-2 font-medium">ASIN Type:</span>
@@ -123,7 +151,7 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, seller, listing = {}, 
             <span className="mr-2 font-medium">Scale By:</span>
           </div>
           <div>
-            <StatusComponent title={seller?.full_name || 'No data'} color={dataColors.process} />
+            <StatusComponent title={scale_by?.full_name || 'No data'} color={dataColors.process} />
           </div>
         </div>
         <div className="flex-col gap-2 mt-2">

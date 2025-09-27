@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button, Tooltip } from 'antd';
 import { UploadOutlined, CopyOutlined, DownloadOutlined, ScissorOutlined } from '@ant-design/icons';
 

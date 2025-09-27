@@ -96,8 +96,20 @@ const getAllFulfillScale = (params) => {
   return instance.get('/scale/list', { params });
 };
 
+const getAllFulfillScaleForDesign = (params) => {
+  return instance.get('/scale/list/design', { params });
+};
+
 const getAllCountStatusScale = (params) => {
   return instance.get('/scale/statistics', { params });
+};
+
+const getAllCountStatusScaleForDesign = (params) => {
+  return instance.get('/scale/statistics/design', { params });
+};
+
+const updateOrder = (id, payload) => {
+  return instance.put(`/order/${id}`, payload);
 };
 
 export {
@@ -121,4 +133,7 @@ export {
   getAllCountStatusQC,
   getAllFulfillScale,
   getAllCountStatusScale,
+  getAllFulfillScaleForDesign,
+  getAllCountStatusScaleForDesign,
+  updateOrder,
 };
