@@ -249,7 +249,11 @@ const ReportOrderCost = () => {
           <div>
             <span className="font-medium whitespace-nowrap mr-2">{formatDate(item?.purchase_date)}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+              (
+              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
             </span>
           </div>
         ),

@@ -1,4 +1,4 @@
-import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -10,7 +10,7 @@ import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getAllCountStatus, getALlOrder, getALlShop, retestBasecode } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import ItemCustomer from './table/ItemCustomer';
 import { dataFilterStatus } from '../../utils/dataFilter';
@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { getALlVendorProduct } from '../../apis/vendor';
 import { TbHistory } from 'react-icons/tb';
 import { debounce } from 'lodash';
+import { TbReplace } from 'react-icons/tb';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -49,6 +50,8 @@ const Home = () => {
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [vendorProduct, setVendorProduct] = useState([]);
   const [tableHeight, setTableHeight] = useState(0);
+  const [isShowModalReplace, setIsShowModalReplace] = useState(false);
+  const [orderInfo, setOrderInfo] = useState({});
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -180,19 +183,17 @@ const Home = () => {
       align: 'center',
     },
     { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
-    // {
-    //   title: <span style={{ color: dataColors.title }}>Delivery Date</span>,
-    //   dataIndex: 'delivery_date',
-    //   key: 'delivery_date',
-    //   align: 'center',
-    //   width: 130,
-    // },
+    {
+      title: <span style={{ color: dataColors.title }}>Replace</span>,
+      dataIndex: 'replace',
+      key: 'replace',
+      align: 'center',
+    },
     {
       title: <span style={{ color: dataColors.title }}>Handling</span>,
       dataIndex: 'handling_time',
       key: 'handling_time',
       align: 'center',
-      with: 120,
     },
     { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
   ];
@@ -276,6 +277,24 @@ const Home = () => {
     }
   };
 
+  const handleReplace = async () => {
+    // try {
+    //   const response = await replaceOrder(orderInfo?.orderId, {
+    //     orderId: idOrder,
+    //   });
+    //   if (response.status === 200) {
+    //     toast.success('Retest success!');
+    //     console.log(response.data);
+    //   }
+    // } catch (error) {
+    //   console.log(error);
+    //   toast.error('Retest error!');
+    // } finally {
+    //   fetchAllOrder(filters);
+    //   fetchCountStatus();
+    // }
+  };
+
   // render Orders
   const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
@@ -305,7 +324,11 @@ const Home = () => {
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              ({formatDistanceToNow(item?.createdAt, { addSuffix: true })})
+              (
+              {formatDistanceToNow(item?.createdAt, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
             </span>
           </Flex>
         ),
@@ -313,7 +336,11 @@ const Home = () => {
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+              (
+              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
             </span>
           </Flex>
         ),
@@ -322,12 +349,12 @@ const Home = () => {
         ),
         config_cost_center: (
           <div
-            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center"
+            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
             style={{ borderColor: dataColors.pending }}
             onClick={() => handleRetest(item?.orderId)}
           >
             <div>
-              <BiRefresh size={18} color={dataColors.pending} />
+              <BiRefresh size={16} color={dataColors.pending} />
             </div>
             <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
               Re-Test
@@ -335,6 +362,23 @@ const Home = () => {
           </div>
         ),
         base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
+        replace: (
+          <div
+            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+            style={{ borderColor: dataColors.pending }}
+            onClick={() => {
+              setOrderInfo(item);
+              setIsShowModalReplace(true);
+            }}
+          >
+            <div>
+              <TbReplace color={dataColors.pending} />
+            </div>
+            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+              Replace
+            </span>
+          </div>
+        ),
         store: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
         // delivery_date: <span className="font-medium">July 25, 2025</span>,
         handling_time: <span className="font-medium">6 Days</span>,
@@ -611,6 +655,18 @@ const Home = () => {
         </div>
       </div>
       <ModalImportOrder isModalOpen={isShowModal} setIsModalOpen={setIsShowModal} />
+      <Modal
+        title="Replace order"
+        width={500}
+        style={{ top: '30%' }}
+        okText="Confirm"
+        closable={{ 'aria-label': 'Custom Close Button' }}
+        open={isShowModalReplace}
+        onOk={handleReplace}
+        onCancel={() => setIsShowModalReplace(false)}
+      >
+        <span className="font-medium text-[#64748b]">Are you sure you want to replace this order? This action cannot be undone.</span>
+      </Modal>
     </div>
   );
 };

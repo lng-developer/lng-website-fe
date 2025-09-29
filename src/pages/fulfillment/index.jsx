@@ -150,7 +150,11 @@ const FulfillmentScale = () => {
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              ({formatDistanceToNow(item?.purchase_date, { addSuffix: true })})
+              (
+              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
             </span>
           </Flex>
         ),

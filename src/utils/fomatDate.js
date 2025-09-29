@@ -1,7 +1,7 @@
 import { endOfDay, format, startOfDay, subDays } from 'date-fns';
 
 const formatDate = (dateValue) => {
-  const formattedDate = format(new Date(dateValue), 'MMMM d, yyyy');
+  const formattedDate = format(new Date(dateValue), 'MMM d, yyyy');
   return formattedDate;
 };
 

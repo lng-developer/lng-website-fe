@@ -88,7 +88,11 @@ const Listing = () => {
         <Flex vertical={true}>
           <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
           <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            ({formatDistanceToNow(data, { addSuffix: true })})
+            (
+            {formatDistanceToNow(data, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
           </span>
         </Flex>
       ),

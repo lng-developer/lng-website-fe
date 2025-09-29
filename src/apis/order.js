@@ -112,6 +112,10 @@ const updateOrder = (id, payload) => {
   return instance.put(`/order/${id}`, payload);
 };
 
+const replaceOrder = (id, payload) => {
+  return instance.put(`/order/${id}/replace`, payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -136,4 +140,5 @@ export {
   getAllFulfillScaleForDesign,
   getAllCountStatusScaleForDesign,
   updateOrder,
+  replaceOrder,
 };
