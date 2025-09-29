@@ -14,7 +14,7 @@ import { TfiControlBackward } from 'react-icons/tfi';
 const { Title } = Typography;
 const DPI = 300; // dùng để đổi px -> inch
 
-/* ===================== EditableImage ===================== */
+/* ===================== EditableImage (updated) ===================== */
 function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected, visible = true, opacity = 1, onSelect, onChange }) {
   const shapeRef = useRef(null);
   const trRef = useRef(null);
@@ -45,19 +45,56 @@ function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected,
         onTap={onSelect}
         perfectDrawEnabled={false}
         onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
-        // Loại bỏ onTransformEnd để không cho phép resize
+        /* === BAKING SIZE khi kéo góc ===
+           Konva Transformer chỉ thay đổi scaleX/scaleY, nên cần "bake" về width/height
+           để tránh tình trạng nhảy/giật và giữ state sạch. */
+        onTransformEnd={() => {
+          const node = shapeRef.current;
+          if (!node) return;
+
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
+
+          const prevW = width || htmlImg.width;
+          const prevH = height || htmlImg.height;
+
+          const nextW = Math.max(20, prevW * scaleX);
+          const nextH = Math.max(20, prevH * scaleY);
+
+          // Reset scale về 1 sau khi đã bake sang width/height
+          node.scaleX(1);
+          node.scaleY(1);
+
+          onChange({
+            x: node.x(),
+            y: node.y(),
+            width: nextW,
+            height: nextH,
+          });
+        }}
       />
+
       {isSelected && (
         <Transformer
           ref={trRef}
-          rotateEnabled={false} // Tắt rotate
-          resizeEnabled={false} // Tắt resize
-          enabledAnchors={[]} // Không cho phép anchor nào
-          borderEnabled={true} // Hiển thị border để user biết đã chọn
-          anchorFill="transparent" // Ẩn các anchor
-          anchorStroke="transparent"
+          rotateEnabled={false} // không cho rotate
+          resizeEnabled={true} // bật resize
+          keepRatio={true} // giữ tỉ lệ ảnh khi kéo góc
+          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']} // chỉ dùng 4 góc
+          padding={6}
+          borderEnabled={true}
           borderStroke="#1677ff"
           borderStrokeWidth={2}
+          anchorSize={8}
+          anchorFill="#ffffff"
+          anchorStroke="#1677ff"
+          anchorStrokeWidth={1}
+          /* Chặn resize quá nhỏ (tránh nhảy) */
+          boundBoxFunc={(oldBox, newBox) => {
+            const MIN = 20; // px hiển thị
+            if (newBox.width < MIN || newBox.height < MIN) return oldBox;
+            return newBox;
+          }}
         />
       )}
     </Group>

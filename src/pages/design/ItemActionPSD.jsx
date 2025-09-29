@@ -1,12 +1,15 @@
 import { Button, Space, Tooltip, Upload, Spin } from 'antd';
-import { UploadOutlined, DownloadOutlined, SolutionOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { UploadOutlined, DownloadOutlined, SolutionOutlined, PlayCircleOutlined, HourglassOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { dowloadPSD, uploadPSD } from '../../apis/listing';
+import { dowloadPSD } from '../../apis/listing';
 import ModalAssign from './ModalAssign';
-import { requestPsd } from '../../apis/psdTask';
+import { qctPsd, requestPsd, startPsd, uploadPsd } from '../../apis/psdTask';
+import { FcApproval } from 'react-icons/fc';
+import { IoArrowUndo } from 'react-icons/io5';
+import { dataColors } from '../../utils/dataColors';
 
-const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTask }) => {
+const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTask, fetchCountStatus }) => {
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false); // <-- Spin pending
   const [isShowModal, setIsShowModal] = useState(false);
@@ -20,10 +23,10 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
     customRequest: async ({ file, onSuccess, onError, onProgress }) => {
       const formData = new FormData();
       formData.append('file', file);
-
+      formData.append('asin', asin);
       try {
         setUploading(true); // bật Spin ngay khi bắt đầu
-        const res = await uploadPSD(asin, formData, {
+        const res = await uploadPsd(idTask, formData, {
           onUploadProgress: (evt) => {
             if (evt.total) {
               const percent = Math.round((evt.loaded / evt.total) * 100);
@@ -43,6 +46,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
       } finally {
         setUploading(false); // tắt Spin
         setFileList([]); // clear nếu cần
+        fetchCountStatus();
       }
     },
     onChange(info) {
@@ -85,6 +89,58 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
       console.log(error);
     } finally {
       fetchAllListing(filters);
+      fetchCountStatus();
+    }
+  };
+
+  const handleStart = async () => {
+    try {
+      const response = await startPsd(idTask);
+      if (response.status === 200) {
+        toast.success('Change status success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error server!');
+    } finally {
+      fetchAllListing(filters);
+      fetchCountStatus();
+    }
+  };
+
+  const handlePassed = async () => {
+    try {
+      const response = await qctPsd(idTask, {
+        result: 'pass',
+        note: '',
+      });
+      if (response.status === 200) {
+        toast.success('Change status success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error server!');
+    } finally {
+      fetchAllListing(filters);
+      fetchCountStatus();
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      const response = await qctPsd(idTask, {
+        result: 'reject',
+        note: '',
+      });
+      if (response.status === 200) {
+        toast.success('Change status success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error server!');
+    } finally {
+      fetchAllListing(filters);
+      fetchCountStatus();
     }
   };
 
@@ -109,7 +165,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
         </Tooltip>
 
         {statusTask === 'New' && (
-          <Tooltip title="Skip">
+          <Tooltip title="Request upload">
             <Button icon={<PlayCircleOutlined />} onClick={handleRequestPsd} />
           </Tooltip>
         )}
@@ -119,6 +175,23 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
             <Button icon={<SolutionOutlined />} onClick={() => setIsShowModal(true)} />
           </Tooltip>
         )}
+
+        {statusTask === 'Assigned' && (
+          <Tooltip title="Start doing">
+            <Button icon={<HourglassOutlined />} onClick={handleStart} />
+          </Tooltip>
+        )}
+
+        {statusTask === 'Uploaded' && (
+          <>
+            <Tooltip title="Passed">
+              <Button icon={<FcApproval />} onClick={handlePassed} />
+            </Tooltip>
+            <Tooltip title="Reject">
+              <Button icon={<IoArrowUndo color={dataColors.cancelled} />} onClick={handleReject} />
+            </Tooltip>
+          </>
+        )}
       </Space>
 
       <ModalAssign
@@ -127,6 +200,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
         idTask={idTask}
         fetchAllListing={fetchAllListing}
         filters={filters}
+        fetchCountStatus={fetchCountStatus}
       />
     </>
   );

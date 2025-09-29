@@ -183,7 +183,7 @@ const dataFilterStatusQC = [
   },
 ];
 
-const dataFilterDesignTasks = [
+const dataFilterTasks = [
   {
     key: 'all',
     title: 'All',
@@ -226,6 +226,39 @@ const dataFilterDesignTasks = [
   },
 ];
 
+const dataFilterDesignTasks = [
+  {
+    key: 'all',
+    title: 'All',
+    status: 'all',
+  },
+  {
+    key: 'Assigned',
+    title: 'Assigned',
+    status: 'Assigned',
+  },
+  {
+    key: 'In Progress',
+    title: 'In Progress',
+    status: 'In Progress',
+  },
+  {
+    key: 'Uploaded',
+    title: 'Uploaded',
+    status: 'Uploaded',
+  },
+  {
+    key: 'QC Rejected',
+    title: 'QC Rejected',
+    status: 'QC Rejected',
+  },
+  {
+    key: 'QC Passed',
+    title: 'QC Passed',
+    status: 'QC Passed',
+  },
+];
+
 export {
   dataFilterStatus,
   dataFilterStatusFulfillment,
@@ -233,4 +266,5 @@ export {
   dataFilterStatusQC,
   dataFilterDesignTasks,
   dataFilterStatusFulfillmentDesign,
+  dataFilterTasks,
 };

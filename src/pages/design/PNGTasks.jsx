@@ -319,7 +319,7 @@ const FulfillmentScale = () => {
       updateFilter({ unassigned: true });
       return;
     }
-    updateFilter({ scale_status: status });
+    updateFilter({ scale_status: status, unassigned: false });
   };
 
   const fetchAllShop = async () => {

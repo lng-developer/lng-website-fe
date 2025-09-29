@@ -4,7 +4,7 @@ import { getAllDesigner } from '../../apis/user';
 import { assignDesigner } from '../../apis/psdTask';
 import { toast } from 'sonner';
 
-const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, fillters }) => {
+const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, filters, fetchCountStatus }) => {
   const [designerId, setDesignerId] = useState('');
   const [priority, setPriority] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -42,13 +42,16 @@ const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, fil
       console.log(error);
     } finally {
       setIsShowModal(false);
-      fetchAllListing(fillters);
+      fetchAllListing(filters);
+      fetchCountStatus();
     }
   };
 
   useEffect(() => {
-    fetchDesigner();
-  }, []);
+    if (isShowModal) {
+      fetchDesigner();
+    }
+  }, [isShowModal]);
 
   return (
     <Modal

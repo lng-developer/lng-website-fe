@@ -24,10 +24,12 @@ import ButtonFilter from '../../components/ButtonFilter';
 import { getAllSellers } from '../../apis/user';
 import SelectSeller from '../../components/SelectSeller';
 import { getALlShop } from '../../apis/order';
+import { useAuth } from '../../context/AuthContext';
 const PAGE_SIZE = 10;
 
 const Listing = () => {
   const { collapsed } = useOutletContext();
+  const { user } = useAuth();
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterListing[0]);
   const [dataSource, setDataSource] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -332,7 +334,9 @@ const Listing = () => {
   }, []);
 
   useEffect(() => {
-    fetchAllSellers();
+    if (user?.role === 'Admin') {
+      fetchAllSellers();
+    }
   }, []);
 
   useEffect(() => {
@@ -459,16 +463,18 @@ const Listing = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
-              <SelectSeller
-                title="Seller"
-                ListData={sellers}
-                value={selectSeller}
-                onChange={(val) => {
-                  setSelectSeller(val);
-                  updateFilter({ seller: val });
-                  fetchCountStatus();
-                }}
-              />
+              {user?.role === 'Admin' && (
+                <SelectSeller
+                  title="Seller"
+                  ListData={sellers}
+                  value={selectSeller}
+                  onChange={(val) => {
+                    setSelectSeller(val);
+                    updateFilter({ seller: val });
+                    fetchCountStatus();
+                  }}
+                />
+              )}
               <SelectSeller
                 title="Shop"
                 ListData={shops}

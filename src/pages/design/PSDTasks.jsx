@@ -1,27 +1,29 @@
 import { useOutletContext } from 'react-router-dom';
 import DateRangePicker from '../../components/DateRangePicker';
-import { dataFilterDesignTasks } from '../../utils/dataFilter';
+import { dataFilterDesignTasks, dataFilterTasks } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { debounce } from 'lodash';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
-import { Image, Input, Pagination, Table } from 'antd';
+import { Flex, Image, Input, Pagination, Table } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
-import { getStatictisc } from '../../apis/listing';
 import { toast } from 'sonner';
-import { getAllPsdTask } from '../../apis/psdTask';
+import { getAllPsdTask, getTaskStatictisc } from '../../apis/psdTask';
 import ItemActionPSD from './ItemActionPSD';
+import { useAuth } from '../../context/AuthContext';
+import { formatDistanceToNow } from 'date-fns';
 const PAGE_SIZE = 10;
 
 const PSDTasks = () => {
   const { collapsed } = useOutletContext();
-  const [isActiveFilter, setIsActivefilter] = useState(dataFilterDesignTasks[0]);
+  const { user } = useAuth();
+  const [isActiveFilter, setIsActivefilter] = useState(dataFilterTasks[0]);
   const [dataSource, setDataSource] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [tabFilter, setTabFilter] = useState(dataFilterDesignTasks);
+  const [tabFilter, setTabFilter] = useState(dataFilterTasks);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -51,6 +53,42 @@ const PSDTasks = () => {
     updateFilter({ status: status });
   };
 
+  const handleColorStatus = (stt) => {
+    switch (stt) {
+      case 'New':
+        return dataColors.success;
+      case 'Requested':
+        return dataColors.process;
+      case 'Assigned':
+        return dataColors.process;
+      case 'In Progress':
+        return dataColors.process;
+      case 'Uploaded':
+        return dataColors.success;
+      case 'QC Rejected':
+        return dataColors.cancelled;
+      case 'QC Passed':
+        return dataColors.success;
+      default:
+        return dataColors.default;
+    }
+  };
+
+  const handleColorPriority = (stt) => {
+    switch (stt) {
+      case 'Low':
+        return dataColors.yellow;
+      case 'Normal':
+        return dataColors.success;
+      case 'High':
+        return dataColors.process;
+      case 'Urgent':
+        return dataColors.purple;
+      default:
+        return dataColors.default;
+    }
+  };
+
   const debouncedSearch = useMemo(
     () =>
       debounce(async (keyword) => {
@@ -68,13 +106,20 @@ const PSDTasks = () => {
   };
 
   const columns = [
-    // {
-    //   title: <span style={{ color: dataColors.title }}>Due Date</span>,
-    //   dataIndex: 'dueAt',
-    //   key: 'dueAt',
-    //   align: 'center',
-    //   render: (data) => <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>,
-    // },
+    {
+      title: <span style={{ color: dataColors.title }}>Created At</span>,
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      align: 'center',
+      render: (data) => (
+        <Flex vertical={true}>
+          <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            ({formatDistanceToNow(data, { addSuffix: true })})
+          </span>
+        </Flex>
+      ),
+    },
     {
       title: <span style={{ color: dataColors.title }}>Product Image</span>,
       dataIndex: 'listing',
@@ -105,21 +150,21 @@ const PSDTasks = () => {
       dataIndex: 'status',
       key: 'Status',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
+      render: (data) => <StatusComponent title={data} color={handleColorStatus(data)} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Assigned</span>,
       dataIndex: 'designer',
       key: 'designer',
       align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.purple} />,
+      render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.purple} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>Priority</span>,
       dataIndex: 'priority',
       key: 'priority',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.yellow} />,
+      render: (data) => <StatusComponent title={data} color={handleColorPriority(data)} />,
     },
     {
       title: <span style={{ color: dataColors.title }}>PSD Status</span>,
@@ -127,7 +172,10 @@ const PSDTasks = () => {
       key: 'psd',
       align: 'center',
       render: (data) => (
-        <StatusComponent title={data?.psd?.status} color={data?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled} />
+        <StatusComponent
+          title={data?.psd?.status || 'Unavailable'}
+          color={data?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled}
+        />
       ),
     },
     {
@@ -165,6 +213,7 @@ const PSDTasks = () => {
           fetchAllListing={fetchAllTask}
           filters={filters}
           isDelete={false}
+          fetchCountStatus={fetchCountStatus}
         />
       ),
     },
@@ -200,14 +249,22 @@ const PSDTasks = () => {
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getStatictisc(filters);
+      const response = await getTaskStatictisc(filters);
       if (response.status === 200) {
-        const resultTabFilter = dataFilterDesignTasks.map(({ key, title, status }) => ({
-          key,
-          title,
-          status,
-          count: response.data?.[key] ?? 0,
-        }));
+        const resultTabFilter =
+          user?.role === 'Designer'
+            ? dataFilterDesignTasks.map(({ key, title, status }) => ({
+                key,
+                title,
+                status,
+                count: response.data?.[key] ?? 0,
+              }))
+            : dataFilterTasks.map(({ key, title, status }) => ({
+                key,
+                title,
+                status,
+                count: response.data?.[key] ?? 0,
+              }));
         setTabFilter(resultTabFilter);
       }
     } catch (error) {
