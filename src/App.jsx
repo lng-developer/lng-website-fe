@@ -22,6 +22,7 @@ import TitlePages from './utils/TitlePages';
 import Mapping from './pages/cost_center/Mapping';
 import PSDTasks from './pages/design/PSDTasks';
 import PNGTasks from './pages/design/PNGTasks';
+import IdeaTask from './pages/design/IdeaTask';
 
 function App() {
   return (
@@ -55,6 +56,7 @@ function App() {
           {/* Design */}
           <Route path={routes.psd_design} element={<PSDTasks />} />
           <Route path={routes.png_design} element={<PNGTasks />} />
+          <Route path={routes.idea_task} element={<IdeaTask />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

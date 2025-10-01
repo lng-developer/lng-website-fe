@@ -278,21 +278,19 @@ const Home = () => {
   };
 
   const handleReplace = async () => {
-    // try {
-    //   const response = await replaceOrder(orderInfo?.orderId, {
-    //     orderId: idOrder,
-    //   });
-    //   if (response.status === 200) {
-    //     toast.success('Retest success!');
-    //     console.log(response.data);
-    //   }
-    // } catch (error) {
-    //   console.log(error);
-    //   toast.error('Retest error!');
-    // } finally {
-    //   fetchAllOrder(filters);
-    //   fetchCountStatus();
-    // }
+    try {
+      const response = await replaceOrder(orderInfo?.orderId);
+      if (response.status === 200) {
+        toast.success('Retest success!');
+        console.log(response.data);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Retest error!');
+    } finally {
+      fetchAllOrder(filters);
+      fetchCountStatus();
+    }
   };
 
   // render Orders

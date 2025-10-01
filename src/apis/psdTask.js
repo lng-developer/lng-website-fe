@@ -32,4 +32,56 @@ const qctPsd = (id, payload) => {
   return instance.post(`/psd-task/${id}/qc`, payload);
 };
 
-export { getAllPsdTask, assignDesigner, requestPsd, startPsd, uploadPsd, qctPsd, getTaskStatictisc };
+const getAllIdeaTask = (params) => {
+  return instance.get('/idea-task', { params });
+};
+
+const createIdeaTask = (payload) => {
+  return instance.post('/idea-task', payload);
+};
+
+const getIdeaTaskStatictisc = (params) => {
+  return instance.get('/idea-task/stats', { params });
+};
+
+const assignIdeaDesigner = (id, payload) => {
+  return instance.post(`/idea-task/${id}/assign`, payload);
+};
+
+const startIdeaPsd = (id, payload) => {
+  return instance.post(`/idea-task/${id}/start`, payload);
+};
+
+const approveIdeaTask = (id, payload) => {
+  return instance.post(`/idea-task/${id}/approve`, payload);
+};
+
+const rejectIdeaTask = (id, payload) => {
+  return instance.post(`/idea-task/${id}/reject`, payload);
+};
+
+const uploadIdaeTask = (id, payload) => {
+  return instance.post(`/idea-task/${id}/upload-psd`, payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export {
+  getAllPsdTask,
+  assignDesigner,
+  requestPsd,
+  startPsd,
+  uploadPsd,
+  qctPsd,
+  getTaskStatictisc,
+  getAllIdeaTask,
+  createIdeaTask,
+  getIdeaTaskStatictisc,
+  assignIdeaDesigner,
+  startIdeaPsd,
+  approveIdeaTask,
+  rejectIdeaTask,
+  uploadIdaeTask,
+};

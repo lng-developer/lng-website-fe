@@ -9,7 +9,7 @@ import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { dataColors } from '../../utils/dataColors';
 
-const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTask, fetchCountStatus }) => {
+const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTask, fetchCountStatus, user }) => {
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false); // <-- Spin pending
   const [isShowModal, setIsShowModal] = useState(false);
@@ -182,7 +182,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
           </Tooltip>
         )}
 
-        {statusTask === 'Uploaded' && (
+        {(user?.role === 'Admin' || user?.role === 'Seller') && statusTask === 'Uploaded' && (
           <>
             <Tooltip title="Passed">
               <Button icon={<FcApproval />} onClick={handlePassed} />

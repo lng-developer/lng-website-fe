@@ -1,5 +1,5 @@
 // Feather, Lucide, Remix...
-import { LuBox, LuLayoutList, LuStar } from 'react-icons/lu';
+import { LuBox, LuLayoutList, LuStar, LuBrain } from 'react-icons/lu';
 import { LiaReact } from 'react-icons/lia';
 import {
   RiPaletteLine,
@@ -28,7 +28,7 @@ import { HiOutlineBuildingStorefront, HiOutlineKey } from 'react-icons/hi2';
 import { BsFiletypePsd, BsGraphUp } from 'react-icons/bs';
 import { CgShoppingBag, CgFileDocument } from 'react-icons/cg';
 import { IoImageOutline, IoStorefrontOutline } from 'react-icons/io5';
-import { AiOutlineFileSync } from 'react-icons/ai';
+import { AiOutlineFileSync, AiOutlineCopy } from 'react-icons/ai';
 import { GrDocumentConfig } from 'react-icons/gr';
 import { BiCubeAlt } from 'react-icons/bi';
 import { TbBrandEtsy } from 'react-icons/tb';
@@ -132,7 +132,12 @@ export const detailMenus = {
     },
   ],
   design: [
-    { key: routes.psd_design, label: 'PSD Tasks', icon: <BsFiletypePsd size={20} /> },
+    { key: routes.idea_task, label: 'Idea Tasks', icon: <LuBrain size={20} /> },
+    {
+      key: routes.psd_design,
+      label: 'PSD Tasks',
+      icon: <BsFiletypePsd size={20} />,
+    },
     { key: routes.png_design, label: 'PNG Tasks', icon: <IoImageOutline size={20} /> },
     { key: '', label: 'Embroider Listing', icon: <LuLayoutList size={20} /> },
     { key: '', label: 'Design Product Types', icon: <TbPackages size={20} /> },

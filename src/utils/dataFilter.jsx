@@ -259,6 +259,44 @@ const dataFilterDesignTasks = [
   },
 ];
 
+const dataFilterIdeaTasks = [
+  {
+    key: 'all',
+    title: 'All',
+    status: 'All',
+  },
+  {
+    key: 'New',
+    title: 'New',
+    status: 'New',
+  },
+  {
+    key: 'Assigned',
+    title: 'Assigned',
+    status: 'Assigned',
+  },
+  {
+    key: 'In Progress',
+    title: 'In Progress',
+    status: 'In Progress',
+  },
+  {
+    key: 'Uploaded',
+    title: 'Uploaded',
+    status: 'Uploaded',
+  },
+  {
+    key: 'QC Passed',
+    title: 'QC Passed',
+    status: 'QC Passed',
+  },
+  {
+    key: 'QC Rejected',
+    title: 'QC Rejected',
+    status: 'QC Rejected',
+  },
+];
+
 export {
   dataFilterStatus,
   dataFilterStatusFulfillment,
@@ -267,4 +305,5 @@ export {
   dataFilterDesignTasks,
   dataFilterStatusFulfillmentDesign,
   dataFilterTasks,
+  dataFilterIdeaTasks,
 };

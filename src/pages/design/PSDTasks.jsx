@@ -2,17 +2,19 @@ import { useOutletContext } from 'react-router-dom';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataFilterDesignTasks, dataFilterTasks } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { defaultFrom, defaultTo, formatDate, formatDateDetail } from '../../utils/fomatDate';
 import { debounce } from 'lodash';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
-import { Flex, Image, Input, Pagination, Table } from 'antd';
+import { Flex, Image, Input, Pagination, Popover, Table } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import { toast } from 'sonner';
 import { getAllPsdTask, getTaskStatictisc } from '../../apis/psdTask';
 import ItemActionPSD from './ItemActionPSD';
 import { useAuth } from '../../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
+import { TbHistory } from 'react-icons/tb';
+import { FaLongArrowAltRight } from 'react-icons/fa';
 const PAGE_SIZE = 10;
 
 const PSDTasks = () => {
@@ -105,6 +107,19 @@ const PSDTasks = () => {
     debouncedSearch(e.target.value);
   };
 
+  const contentHistory = (data = []) => {
+    return data?.map((item) => (
+      <div className="mb-2">
+        <div className="flex gap-4 items-center">
+          <span className="font-medium">{item?.from}</span>
+          <FaLongArrowAltRight color={dataColors.success} />
+          <span className="font-medium">{item?.to}</span>
+        </div>
+        <div>{formatDateDetail(item.at)}</div>
+      </div>
+    ));
+  };
+
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Created At</span>,
@@ -154,7 +169,14 @@ const PSDTasks = () => {
       dataIndex: 'status',
       key: 'Status',
       align: 'center',
-      render: (data) => <StatusComponent title={data} color={handleColorStatus(data)} />,
+      render: (data) => (
+        <div className="flex items-center justify-center gap-1">
+          <StatusComponent title={data?.stt} color={handleColorStatus(data?.stt)} />
+          <Popover placement="bottomLeft" arrow={false} title={'History'} content={contentHistory(data?.history)}>
+            <TbHistory size={16} className="cursor-pointer" />
+          </Popover>
+        </div>
+      ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Assigned</span>,
@@ -218,6 +240,7 @@ const PSDTasks = () => {
           filters={filters}
           isDelete={false}
           fetchCountStatus={fetchCountStatus}
+          user={user}
         />
       ),
     },
@@ -231,6 +254,10 @@ const PSDTasks = () => {
         const result = response.data?.tasks?.map((item) => {
           return {
             ...item,
+            status: {
+              stt: item?.status,
+              history: item?.history,
+            },
             actions: {
               idTask: item._id,
               statusTask: item?.status,
