@@ -1,8 +1,9 @@
 import { DatePicker, Flex, Modal, Radio, Select, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { importAds } from '../../apis/report';
+import { getALlShop } from '../../apis/order';
 const { Dragger } = Upload;
 
 const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
@@ -10,6 +11,9 @@ const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
   const [date, setDate] = useState('');
   const [checkErrorDate, setCheckErrorDate] = useState(false);
+  const [shops, setShops] = useState([]);
+  const [shopId, setShopId] = useState('');
+  const [checkErrorShop, setCheckErrorShop] = useState(false);
 
   const handleResetValue = () => {
     setFileList([]);
@@ -32,6 +36,7 @@ const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
     const formData = new FormData();
     formData.append('day', date);
     formData.append('file', fileFormat);
+    formData.append('shopId', shopId);
     try {
       const response = await importAds(formData);
       if (response.status === 200) {
@@ -58,6 +63,37 @@ const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
     setDate(dateString);
   };
 
+  const fetchAllShop = async () => {
+    if (!isModalOpen) {
+      return;
+    }
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        const formatData = result.data.map((item) => {
+          return {
+            value: item.name,
+            label: item.name,
+            id: item?._id,
+          };
+        });
+        setShops(formatData);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleChangeSelect = (value) => {
+    const result = shops.find((shop) => shop.value === value);
+    setShopId(result?.id);
+    setCheckErrorShop(false);
+  };
+
+  useEffect(() => {
+    fetchAllShop();
+  }, [isModalOpen]);
+
   return (
     <Modal
       title="Import Ads"
@@ -68,22 +104,46 @@ const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
       width={400}
       onCancel={handleResetValue}
     >
-      <div className="">
-        <Flex vertical={true} gap={5} style={{ marginBottom: 10 }}>
+      <Flex gap={5} vertical={true}>
+        <div>
           <div>
-            <div>
-              <span className="font-medium">Select Date</span>
-            </div>
-            <div className="w-full">
-              <DatePicker onChange={onChange} />
-            </div>
+            <span className="font-medium">Select Date</span>
+          </div>
+          <div className="w-full">
+            <DatePicker onChange={onChange} className="w-full" />
           </div>
           {checkErrorDate && (
             <div>
               <span className="text-[#ff0000]">Please select date</span>
             </div>
           )}
-        </Flex>
+        </div>
+        <div className="mb-2">
+          <div>
+            <span className="font-medium">Store:</span>
+          </div>
+          <Select
+            showSearch
+            placeholder="Select Shop"
+            style={{ width: 350 }}
+            optionFilterProp="label"
+            onChange={handleChangeSelect}
+            filterSort={(optionA, optionB) => {
+              var _a, _b;
+              return ((_a = optionA === null || optionA === void 0 ? void 0 : optionA.label) !== null && _a !== void 0 ? _a : '')
+                .toLowerCase()
+                .localeCompare(
+                  ((_b = optionB === null || optionB === void 0 ? void 0 : optionB.label) !== null && _b !== void 0 ? _b : '').toLowerCase()
+                );
+            }}
+            options={shops}
+          />
+          {checkErrorShop && (
+            <div className="my-2">
+              <span className="text-[#ff0000]">Please select shop</span>
+            </div>
+          )}
+        </div>
         <div>
           <Dragger
             beforeUpload={beforeUpload}
@@ -104,7 +164,7 @@ const ModalAds = ({ isModalOpen, setIsModalOpen, fetchAllReport, filters }) => {
             <span className="text-[#ff0000]">Please upload file</span>
           </div>
         )}
-      </div>
+      </Flex>
     </Modal>
   );
 };

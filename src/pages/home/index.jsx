@@ -290,6 +290,7 @@ const Home = () => {
     } finally {
       fetchAllOrder(filters);
       fetchCountStatus();
+      setIsShowModalReplace(false);
     }
   };
 
@@ -379,7 +380,7 @@ const Home = () => {
         ),
         store: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
         // delivery_date: <span className="font-medium">July 25, 2025</span>,
-        handling_time: <span className="font-medium">6 Days</span>,
+        handling_time: <span className="font-medium whitespace-nowrap">6 Days</span>,
         case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
         subItems: item?.items?.map((itemSub, indexItem) => {
           return {

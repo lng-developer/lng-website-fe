@@ -113,7 +113,7 @@ const updateOrder = (id, payload) => {
 };
 
 const replaceOrder = (id, payload) => {
-  return instance.put(`/order/${id}/replace`, payload);
+  return instance.post(`/order/${id}/replace`, payload);
 };
 
 export {

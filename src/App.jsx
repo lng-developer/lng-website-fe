@@ -23,6 +23,7 @@ import Mapping from './pages/cost_center/Mapping';
 import PSDTasks from './pages/design/PSDTasks';
 import PNGTasks from './pages/design/PNGTasks';
 import IdeaTask from './pages/design/IdeaTask';
+import AdsReport from './pages/report/AdsReport';
 
 function App() {
   return (
@@ -49,9 +50,12 @@ function App() {
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.cost_center_mapping} element={<Mapping />} />
+
+          {/* Report */}
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
+          <Route path={routes.report_ads} element={<AdsReport />} />
 
           {/* Design */}
           <Route path={routes.psd_design} element={<PSDTasks />} />

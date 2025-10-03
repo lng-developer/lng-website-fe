@@ -24,4 +24,8 @@ const getOrderCostStatistics = (params) => {
   return instance.get('/report/order_cost/statistics', { params });
 };
 
-export { getAllReport, importReport, importAds, getOrderCostStatistics };
+const getAds = (params) => {
+  return instance.get('/ads', { params });
+};
+
+export { getAllReport, importReport, importAds, getOrderCostStatistics, getAds };
