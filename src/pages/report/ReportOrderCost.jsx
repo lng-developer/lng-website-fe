@@ -239,7 +239,6 @@ const ReportOrderCost = () => {
       const opCostVal = num(aft.opCost); // LNG cost
       const itemTax = num(aft.item_tax);
       const shippingTax = num(aft.shipping_tax);
-      const taxVal = itemTax + shippingTax;
       const profit1Val = num(aft.profit1 ?? revenueVal - (baseVal + feeVal));
       const promoVal = num(aft.item_promotion_discount); // Diff
 
@@ -262,7 +261,7 @@ const ReportOrderCost = () => {
         platForm: <span className="font-medium">Amazon</span>,
 
         revenue: <span className="font-medium">{fmtMoney(revenueVal)}</span>,
-        tax: <span className="font-medium">{fmtMoney(taxVal)}</span>,
+        tax: <span className="font-medium">{fmtMoney(itemTax)}</span>,
         fee: <span className="font-medium">{fmtMoney(feeVal)}</span>,
         refund: <span className="font-medium">{refundVal === 0 ? 0 : fmtMoney(refundVal)}</span>,
         profit: (

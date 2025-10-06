@@ -1,13 +1,10 @@
-import { data, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
-import { LuBoxes } from 'react-icons/lu';
-import { FaSackDollar, FaMoneyBillWave } from 'react-icons/fa6';
-import { AiFillDollarCircle } from 'react-icons/ai';
-import { FaCircleDollarToSlot } from 'react-icons/fa6';
+import { FaMoneyBillWave } from 'react-icons/fa6';
 import { FcCalendar } from 'react-icons/fc';
 import { FcShop } from 'react-icons/fc';
 import { getAds } from '../../apis/report';
@@ -268,12 +265,11 @@ const AdsReport = () => {
 
                   {/* Expanded - Sellers and Shops */}
                   {isExpanded && (
-                    <div style={{ padding: '20px', paddingTop: '5px' }} class="grid grid-cols-2 gap-4">
+                    <div style={{ padding: '20px', paddingTop: '5px' }} class="grid grid-cols-2 gap-5">
                       {dayData.by_seller.map((sellerData) => (
                         <div
                           key={sellerData.seller._id}
                           style={{
-                            marginBottom: '20px',
                             padding: '15px 20px',
                             borderRadius: '8px',
                             boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
