@@ -116,6 +116,14 @@ const replaceOrder = (id, payload) => {
   return instance.post(`/order/${id}/replace`, payload);
 };
 
+const importAsyncOrder = (payload) => {
+  return instance.post('/admin/run-now', payload);
+};
+
+const ChangeTimeAutoOrder = (payload) => {
+  return instance.post('/admin/schedule', payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,
@@ -141,4 +149,6 @@ export {
   getAllCountStatusScaleForDesign,
   updateOrder,
   replaceOrder,
+  importAsyncOrder,
+  ChangeTimeAutoOrder,
 };

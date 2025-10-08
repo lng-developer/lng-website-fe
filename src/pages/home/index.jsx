@@ -31,6 +31,9 @@ import { getALlVendorProduct } from '../../apis/vendor';
 import { TbHistory } from 'react-icons/tb';
 import { debounce } from 'lodash';
 import { TbReplace } from 'react-icons/tb';
+import { LiaSyncAltSolid } from 'react-icons/lia';
+import { CloudDownloadOutlined } from '@ant-design/icons';
+import AsyncOrderModal from './ModalAsyncOrder';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -52,6 +55,7 @@ const Home = () => {
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [orderInfo, setOrderInfo] = useState({});
+  const [isShowModalAsync, setIsShowModalAsync] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -521,6 +525,17 @@ const Home = () => {
           <div className="flex justify-center items-center gap-2">
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setIsShowModalAsync(true)}
+            >
+              <div style={{ color: 'black' }}>
+                <CloudDownloadOutlined size={15} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Async Orders
+              </span>
+            </button>
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={handleOnclick}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
@@ -666,6 +681,8 @@ const Home = () => {
       >
         <span className="font-medium text-[#64748b]">Are you sure you want to replace this order? This action cannot be undone.</span>
       </Modal>
+
+      <AsyncOrderModal isModalOpen={isShowModalAsync} setIsModalOpen={setIsShowModalAsync} />
     </div>
   );
 };
