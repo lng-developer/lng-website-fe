@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Button, Card, Input, Space, Divider, Tag } from 'antd';
+import { Modal, Button, Card, Space, Divider, Tag, Switch } from 'antd';
 import {
   CloudDownloadOutlined,
   CheckCircleOutlined,
@@ -9,17 +9,17 @@ import {
   ClockCircleFilled,
 } from '@ant-design/icons';
 import { dataColors } from '../../utils/dataColors';
-import { io as socketIOClient } from 'socket.io-client'; // NEW
+import { io as socketIOClient } from 'socket.io-client';
 
 const API_BASE = 'https://api.lngmerch.co';
+const DEFAULT_ANCHORS = [0, 4, 8, 12, 16, 20]; // giờ cố định mỗi ngày
 
 const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   // ===== UI state =====
   const [isImporting, setIsImporting] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [autoImportInterval, setAutoImportInterval] = useState(5); // UI hiển thị giờ, BE nhận phút
-  const [isAutoImportEnabled, setIsAutoImportEnabled] = useState(false);
   const [clients, setClients] = useState([]);
+  const [isAutoImportEnabled, setIsAutoImportEnabled] = useState(false);
 
   // ===== refs =====
   const logsSinceRef = useRef(0);
@@ -38,7 +38,7 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   const logsPollTimerRef = useRef(null);
   const pollingAbortRef = useRef(null);
 
-  // ===== helpers =====
+  // ===== helpers UI =====
   const addUILog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString('vi-VN');
     setLogs((prev) => [...prev, { message, type, timestamp, id: `${Date.now()}-${Math.random()}` }]);
@@ -138,48 +138,81 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     }
   };
 
-  // ===== API calls =====
+  // ===== API: Clients =====
   const fetchClients = async () => {
     try {
       const res = await fetch(`${API_BASE}/clients`, { cache: 'no-store' });
       const arr = await res.json();
-
-      // CHỈ hiện client thực (extension):
-      // - ưu tiên có clientId, hoặc
-      // - version bắt đầu bằng 'ext-' (extension gửi trong HELLO),
-      // - (tuỳ chọn) label bắt đầu bằng 'Machine-' nếu bạn đặt như vậy
       const realExts = (arr || []).filter(
         (c) =>
           (c.clientId && c.clientId.trim() !== '') ||
           (c.version && String(c.version).startsWith('ext-')) ||
           (c.label && String(c.label).startsWith('Machine-'))
       );
-
       const mapped = realExts.map((c, idx) => {
         const id = c.clientId || c.label || c.socketId || `c-${idx}`;
         const name = c.label || c.clientId || `Client ${idx + 1}`;
-        const status =
-          (c?.statusSummary?.overall === 'success' && 'success') ||
-          (c?.statusSummary?.overall === 'running' && 'processing') ||
-          (c?.statusSummary?.overall === 'error' && 'error') ||
-          'idle';
+        const status = mapOverallToUiStatus(c?.statusSummary?.overall || 'idle');
         const lastSync = c?.statusSummary?.lastTs ? new Date(c.statusSummary.lastTs).toLocaleTimeString('vi-VN') : null;
-
         return { id, name, status, lastSync };
       });
-
       setClients(mapped);
     } catch {
-      /* noop */
+      console.log('Error system');
     }
   };
 
-  // ===== Socket.IO (ưu tiên số 1) =====
+  // ===== DB Logs for TODAY on open =====
+  const loadTodayLogsFromDB = async () => {
+    try {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const url = new URL(`${API_BASE}/logs`, window.location.origin);
+      url.searchParams.set('view', 'activity');
+      url.searchParams.set('since', String(startOfDay));
+      url.searchParams.set('limit', '500');
+      const res = await fetch(url.toString().replace(window.location.origin, ''), { cache: 'no-store' });
+      const j = await res.json();
+      setLogs([]);
+      appendActivityEntries(j?.entries || []);
+    } catch {
+      setLogs([]);
+    }
+  };
+
+  // ======== REALTIME CLIENT STATUS ========
+  const upsertClientStatus = ({ clientId, label, status, ts }) => {
+    const id = clientId || label;
+    if (!id) return;
+    setClients((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      const name = label || clientId || id;
+      const lastSync = ts ? new Date(ts).toLocaleTimeString('vi-VN') : undefined;
+      if (idx === -1) return [...prev, { id, name, status, lastSync }];
+      const next = [...prev];
+      next[idx] = { ...next[idx], status, ...(lastSync ? { lastSync } : {}) };
+      return next;
+    });
+  };
+
+  const handleAdminEventForClients = (raw) => {
+    if (!raw || raw.type !== 'STATUS') return;
+    const d = raw.data || {};
+    const idOrLabel = d.clientId || d.label;
+    if (!idOrLabel) return;
+    let uiStatus = 'idle';
+    if (d.status === 'start') uiStatus = 'processing';
+    else if (d.status === 'success') uiStatus = 'success';
+    else if (d.status === 'fail') uiStatus = 'error';
+    upsertClientStatus({ clientId: d.clientId, label: d.label || idOrLabel, status: uiStatus, ts: raw.ts });
+  };
+
+  // ===== Socket.IO (priority #1) =====
   const stopSocket = () => {
     try {
       sockRef.current?.close();
     } catch {
-      console.log('Error');
+      console.log('Error system');
     }
     sockRef.current = null;
     usingSocketRef.current = false;
@@ -196,24 +229,16 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
 
     sock.on('connect', () => {
       usingSocketRef.current = true;
-      // khi có socket realtime, tắt SSE/polling
       stopLogsSSE();
       clearTimeout(logsPollTimerRef.current);
       pollingAbortRef.current?.abort();
     });
 
-    // server đã phát sẵn bản rút gọn cho UI
-    sock.on('ADMIN_ACTIVITY', (entry) => {
-      // entry: { ts, type: 'info'|'success'|'error', text }
-      appendActivityEntries([entry]);
-    });
-
-    // optional: nếu muốn dùng raw để debug
-    // sock.on('ADMIN_EVENT', (raw) => { ... });
+    sock.on('ADMIN_ACTIVITY', (entry) => appendActivityEntries([entry]));
+    sock.on('ADMIN_EVENT', handleAdminEventForClients);
 
     sock.on('disconnect', () => {
       usingSocketRef.current = false;
-      // fallback sang SSE; nếu SSE fail → polling
       startLogsSSE();
       setTimeout(() => {
         if (!usingSSERef.current) scheduleLogsPolling(2000);
@@ -221,7 +246,6 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     });
 
     sock.on('connect_error', () => {
-      // không kết nối được socket → thử SSE/polling
       usingSocketRef.current = false;
       startLogsSSE();
       setTimeout(() => {
@@ -230,12 +254,12 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     });
   };
 
-  // ===== SSE (ưu tiên số 2) =====
+  // ===== SSE (priority #2) =====
   const stopLogsSSE = () => {
     try {
       sseRef.current?.close();
     } catch {
-      console.log('Error');
+      console.log('Error system');
     }
     sseRef.current = null;
     usingSSERef.current = false;
@@ -267,7 +291,7 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     }
   };
 
-  // ===== Polling (fallback thứ 3) có backoff =====
+  // ===== Polling (priority #3) =====
   const scheduleLogsPolling = (delayMs) => {
     if (usingSocketRef.current || usingSSERef.current) return;
     clearTimeout(logsPollTimerRef.current);
@@ -279,17 +303,12 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     if (usingSocketRef.current || usingSSERef.current) return;
     const ctl = new AbortController();
     pollingAbortRef.current = ctl;
-
     try {
       const url = new URL(`${API_BASE}/logs`, window.location.origin);
       url.searchParams.set('view', 'activity');
       if (logsSinceRef.current) url.searchParams.set('since', String(logsSinceRef.current));
       url.searchParams.set('limit', '200');
-
-      const res = await fetch(url.toString().replace(window.location.origin, ''), {
-        signal: ctl.signal,
-        cache: 'no-store',
-      });
+      const res = await fetch(url.toString().replace(window.location.origin, ''), { signal: ctl.signal, cache: 'no-store' });
       const j = await res.json();
       const entries = j?.entries || [];
       if (entries.length) {
@@ -306,23 +325,38 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   };
 
   // ===== actions =====
+  const startRealtime = () => {
+    startSocket();
+    setTimeout(() => {
+      if (!usingSocketRef.current) {
+        startLogsSSE();
+        if (!usingSSERef.current) scheduleLogsPolling(2000);
+      }
+    }, 1000);
+  };
+
+  const stopRealtime = () => {
+    clearTimeout(logsPollTimerRef.current);
+    pollingAbortRef.current?.abort();
+    stopLogsSSE();
+    stopSocket();
+  };
+
   const handleImport = async () => {
     try {
       setIsImporting(true);
       setLogs([]);
-      addUILog('Bắt đầu import orders...', 'processing');
-
+      logsSinceRef.current = 0;
+      startRealtime();
+      addUILog('Start import orders...', 'processing');
       const res = await fetch(`${API_BASE}/admin/run-now`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reason: 'ui-manual' }),
       });
       const j = await res.json();
-      if (j?.ok) {
-        addUILog(`Đã phát lệnh RUN_NOW (jobId: ${j.jobId})`, 'processing');
-      } else {
-        addUILog('Không phát được lệnh RUN_NOW', 'error');
-      }
+      if (j?.ok) addUILog(`Đã phát lệnh RUN_NOW (jobId: ${j.jobId})`, 'processing');
+      else addUILog('Không phát được lệnh RUN_NOW', 'error');
     } catch (e) {
       addUILog(`Lỗi gửi lệnh: ${e?.message || e}`, 'error');
     } finally {
@@ -330,14 +364,11 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     }
   };
 
-  const handleToggleAuto = async () => {
+  // bật/tắt auto import — LUÔN dùng lịch cố định DEFAULT_ANCHORS
+  const handleToggleAuto = async (nextEnabled) => {
     try {
-      const enabled = !isAutoImportEnabled;
-      setIsAutoImportEnabled(enabled);
-
-      const minutes = Number(autoImportInterval) * 60; // giờ -> phút
-      const payload = enabled ? { enabled: true, intervalMin: minutes } : { enabled: false };
-
+      setIsAutoImportEnabled(nextEnabled);
+      const payload = { enabled: !!nextEnabled, anchors: DEFAULT_ANCHORS };
       const res = await fetch(`${API_BASE}/admin/schedule`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -345,7 +376,10 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
       });
       const j = await res.json();
       if (j?.ok) {
-        addUILog(enabled ? `Đã bật auto import mỗi ${autoImportInterval} giờ` : 'Đã tắt auto import', 'success');
+        addUILog(
+          nextEnabled ? `Auto import enabled (at ${DEFAULT_ANCHORS.map((h) => `${h}:00`).join(', ')})` : 'Auto import disabled',
+          'success'
+        );
       } else {
         addUILog('Không cập nhật được lịch auto', 'error');
       }
@@ -357,44 +391,21 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   // ===== lifecycle =====
   useEffect(() => {
     if (!isModalOpen) {
-      // cleanup
-      clearTimeout(logsPollTimerRef.current);
-      pollingAbortRef.current?.abort();
+      stopRealtime();
       clearInterval(clientsTimerRef.current);
-      stopLogsSSE();
-      stopSocket();
       return;
     }
-
     logsSinceRef.current = 0;
-    setLogs([]);
-
-    // Clients: 5s/lần
+    loadTodayLogsFromDB();
     fetchClients();
     clientsTimerRef.current = setInterval(fetchClients, 5000);
-
-    // Realtime logs: ưu tiên Socket.IO -> SSE -> Polling
-    startSocket();
-    // nếu 1s sau socket vẫn chưa connect, đá sang SSE/polling
-    const kick = setTimeout(() => {
-      if (!usingSocketRef.current) {
-        startLogsSSE();
-        if (!usingSSERef.current) scheduleLogsPolling(2000);
-      }
-    }, 1000);
-
     return () => {
-      clearTimeout(kick);
-      clearTimeout(logsPollTimerRef.current);
-      pollingAbortRef.current?.abort();
+      stopRealtime();
       clearInterval(clientsTimerRef.current);
-      stopLogsSSE();
-      stopSocket();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
-  // Dừng polling khi tab ẩn, resume khi hiện (nếu đang dùng polling)
   useEffect(() => {
     const onVis = () => {
       const visible = document.visibilityState === 'visible';
@@ -402,15 +413,14 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
       if (!visible) {
         clearTimeout(logsPollTimerRef.current);
         pollingAbortRef.current?.abort();
-      } else if (!usingSocketRef.current && !usingSSERef.current) {
-        scheduleLogsPolling(2000);
       }
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [isModalOpen]);
 
-  // ===== render =====
+  const scheduleSummary = `at ${DEFAULT_ANCHORS.map((h) => `${h}:00`).join(', ')}`;
+
   return (
     <Modal
       title={
@@ -421,7 +431,7 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
       }
       open={isModalOpen}
       onCancel={() => setIsModalOpen(false)}
-      width={800}
+      width={820}
       footer={[
         <Button key="close" onClick={() => setIsModalOpen(false)}>
           Cancel
@@ -467,51 +477,25 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
         </Space>
       </div>
 
-      {/* Auto Import Settings */}
-      <Card
-        style={{
-          background: '#e6f7ff',
-          borderColor: '#91d5ff',
-          marginBottom: '24px',
-        }}
-        bodyStyle={{ padding: '16px' }}
-      >
+      {/* Auto Import Settings (fixed schedule only) */}
+      <Card style={{ background: '#e6f7ff', borderColor: '#91d5ff', marginBottom: '24px' }} bodyStyle={{ padding: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Space>
             <ClockCircleFilled style={{ fontSize: '20px', color: '#1890ff' }} />
             <div>
               <div style={{ fontWeight: '600', color: '#262626' }}>Auto Import Orders</div>
               <div style={{ fontSize: '12px', color: '#595959', marginTop: '4px' }}>
-                {isAutoImportEnabled ? `Running every ${autoImportInterval} hours` : 'Deactivate'}
+                {isAutoImportEnabled ? `Running ${scheduleSummary}` : 'Inactive'}
               </div>
             </div>
           </Space>
-          <Space size="middle">
-            <Space size="small" align="center">
-              <span style={{ fontSize: '14px' }}>Every</span>
-              <Input
-                type="number"
-                min={1}
-                max={720}
-                value={autoImportInterval}
-                onChange={(e) => setAutoImportInterval(Number(e.target.value))}
-                style={{ width: '80px' }}
-                disabled={isAutoImportEnabled || isImporting}
-              />
-              <span style={{ fontSize: '14px', color: '#595959' }}>hour</span>
-            </Space>
-            <Button
-              type={isAutoImportEnabled ? 'default' : 'primary'}
-              danger={isAutoImportEnabled}
-              size="small"
-              onClick={async () => {
-                await handleToggleAuto();
-              }}
-              disabled={isImporting}
-            >
-              {isAutoImportEnabled ? 'Deactivate' : 'Activate'}
-            </Button>
-          </Space>
+          <Switch
+            checked={isAutoImportEnabled}
+            onChange={handleToggleAuto}
+            disabled={isImporting}
+            checkedChildren="Active"
+            unCheckedChildren="Inactive"
+          />
         </div>
       </Card>
 
@@ -537,20 +521,20 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
           ) : (
             <Space direction="vertical" style={{ width: '100%' }} size={8}>
               {logs.map((log) => (
-                <div key={log.id} style={{ display: 'flex', gap: '8px' }}>
+                <div key={log.id} style={{ display: 'flex', gap: 8 }}>
                   <div
                     style={{
-                      width: '8px',
-                      height: '8px',
+                      width: 8,
+                      height: 8,
                       borderRadius: '50%',
                       background: '#d9d9d9',
-                      marginTop: '8px',
+                      marginTop: 8,
                       flexShrink: 0,
                     }}
                   />
                   <div style={{ flex: 1 }}>
-                    <span style={{ color: '#8c8c8c', fontSize: '12px' }}>[{log.timestamp}]</span>
-                    <span style={{ marginLeft: '8px', color: getLogColor(log.type) }}>{log.message}</span>
+                    <span style={{ color: '#8c8c8c', fontSize: 12 }}>[{log.timestamp}]</span>
+                    <span style={{ marginLeft: 8, color: getLogColor(log.type) }}>{log.message}</span>
                   </div>
                 </div>
               ))}
