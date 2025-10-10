@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Button, Card, Space, Divider, Tag, Switch } from 'antd';
+import { Modal, Button, Card, Space, Divider, Tag, Switch, Tooltip, message } from 'antd';
 import {
   CloudDownloadOutlined,
   CheckCircleOutlined,
@@ -7,43 +7,23 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ClockCircleFilled,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { dataColors } from '../../utils/dataColors';
-import { io as socketIOClient } from 'socket.io-client';
 
 const API_BASE = 'https://api.lngmerch.co';
-const DEFAULT_ANCHORS = [0, 4, 8, 12, 16, 20]; // giờ cố định mỗi ngày
+const DEFAULT_ANCHORS = [0, 4, 8, 12, 16, 20];
 
 const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
-  // ===== UI state =====
-  const [isImporting, setIsImporting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [logs, setLogs] = useState([]);
   const [clients, setClients] = useState([]);
-  const [isAutoImportEnabled, setIsAutoImportEnabled] = useState(false);
+  const [isAutoImportEnabled] = useState(true);
 
-  // ===== refs =====
   const logsSinceRef = useRef(0);
-  const clientsTimerRef = useRef(null);
+  const logsTimerRef = useRef(null);
 
-  // Socket.IO
-  const sockRef = useRef(null);
-  const usingSocketRef = useRef(false);
-
-  // SSE
-  const sseRef = useRef(null);
-  const usingSSERef = useRef(false);
-
-  // Polling (fallback)
-  const logsPollDelayRef = useRef(2000);
-  const logsPollTimerRef = useRef(null);
-  const pollingAbortRef = useRef(null);
-
-  // ===== helpers UI =====
-  const addUILog = (message, type = 'info') => {
-    const timestamp = new Date().toLocaleTimeString('vi-VN');
-    setLogs((prev) => [...prev, { message, type, timestamp, id: `${Date.now()}-${Math.random()}` }]);
-  };
-
+  // ------- helpers -------
   const appendActivityEntries = (entries = []) => {
     if (!entries.length) return;
     const toAppend = entries.map((it) => ({
@@ -71,7 +51,7 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   };
 
   const getClientStatusIcon = (status) => {
-    const iconStyle = { fontSize: '16px' };
+    const iconStyle = { fontSize: 16 };
     switch (status) {
       case 'success':
         return <CheckCircleOutlined style={{ ...iconStyle, color: '#52c41a' }} />;
@@ -83,95 +63,46 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
         return <ClockCircleOutlined style={{ ...iconStyle, color: '#d9d9d9' }} />;
     }
   };
+  const getClientBorderColor = (s) =>
+    s === 'success' ? '#52c41a' : s === 'processing' ? '#1890ff' : s === 'error' ? '#ff4d4f' : '#d9d9d9';
+  const getLogColor = (t) => (t === 'success' ? '#52c41a' : t === 'error' ? '#ff4d4f' : t === 'processing' ? '#1890ff' : '#8c8c8c');
+  const getStatusText = (s) => (s === 'idle' ? 'Pending' : s === 'processing' ? 'Processing' : s === 'success' ? 'Success' : 'Error');
+  const getStatusColor = (s) =>
+    s === 'success' ? dataColors.success : s === 'processing' ? dataColors.pending : s === 'error' ? dataColors.cancelled : 'default';
 
-  const getClientBorderColor = (status) => {
-    switch (status) {
-      case 'success':
-        return '#52c41a';
-      case 'processing':
-        return '#1890ff';
-      case 'error':
-        return '#ff4d4f';
-      default:
-        return '#d9d9d9';
-    }
-  };
-
-  const getLogColor = (type) => {
-    switch (type) {
-      case 'success':
-        return '#52c41a';
-      case 'error':
-        return '#ff4d4f';
-      case 'processing':
-        return '#1890ff';
-      default:
-        return '#8c8c8c';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'idle':
-        return 'Pending';
-      case 'processing':
-        return 'Processing';
-      case 'success':
-        return 'Success';
-      case 'error':
-        return 'Error';
-      default:
-        return 'Chờ';
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'success':
-        return dataColors.success;
-      case 'processing':
-        return dataColors.pending;
-      case 'error':
-        return dataColors.cancelled;
-      default:
-        return 'default';
-    }
-  };
-
-  // ===== API: Clients =====
-  const fetchClients = async () => {
+  // ------- API one-shot: Clients -------
+  const fetchClientsOnce = async () => {
     try {
-      const res = await fetch(`${API_BASE}/clients`, { cache: 'no-store' });
+      const res = await fetch(`${API_BASE}/api/shop/ext/clients`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const arr = await res.json();
-      const realExts = (arr || []).filter(
-        (c) =>
-          (c.clientId && c.clientId.trim() !== '') ||
-          (c.version && String(c.version).startsWith('ext-')) ||
-          (c.label && String(c.label).startsWith('Machine-'))
-      );
-      const mapped = realExts.map((c, idx) => {
-        const id = c.clientId || c.label || c.socketId || `c-${idx}`;
-        const name = c.label || c.clientId || `Client ${idx + 1}`;
+
+      // KHÔNG lọc theo clientId nữa (backend không còn clientId)
+      const mapped = (arr || []).map((c, idx) => {
+        const id = c.id || c.label || `c-${idx}`; // backend đã trả id ổn định `${shopId}:${index}`
+        const name = c.label || `Client ${idx + 1}`;
         const status = mapOverallToUiStatus(c?.statusSummary?.overall || 'idle');
         const lastSync = c?.statusSummary?.lastTs ? new Date(c.statusSummary.lastTs).toLocaleTimeString('vi-VN') : null;
         return { id, name, status, lastSync };
       });
+
       setClients(mapped);
-    } catch {
-      console.log('Error system');
+    } catch (e) {
+      console.log(e);
     }
   };
 
-  // ===== DB Logs for TODAY on open =====
+  // ------- Logs (DB) -------
   const loadTodayLogsFromDB = async () => {
     try {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const url = new URL(`${API_BASE}/logs`, window.location.origin);
+      const url = new URL(`${API_BASE}/api/logs`, window.location.origin);
       url.searchParams.set('view', 'activity');
       url.searchParams.set('since', String(startOfDay));
       url.searchParams.set('limit', '500');
       const res = await fetch(url.toString().replace(window.location.origin, ''), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       setLogs([]);
       appendActivityEntries(j?.entries || []);
@@ -180,243 +111,47 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     }
   };
 
-  // ======== REALTIME CLIENT STATUS ========
-  const upsertClientStatus = ({ clientId, label, status, ts }) => {
-    const id = clientId || label;
-    if (!id) return;
-    setClients((prev) => {
-      const idx = prev.findIndex((c) => c.id === id);
-      const name = label || clientId || id;
-      const lastSync = ts ? new Date(ts).toLocaleTimeString('vi-VN') : undefined;
-      if (idx === -1) return [...prev, { id, name, status, lastSync }];
-      const next = [...prev];
-      next[idx] = { ...next[idx], status, ...(lastSync ? { lastSync } : {}) };
-      return next;
-    });
-  };
-
-  const handleAdminEventForClients = (raw) => {
-    if (!raw || raw.type !== 'STATUS') return;
-    const d = raw.data || {};
-    const idOrLabel = d.clientId || d.label;
-    if (!idOrLabel) return;
-    let uiStatus = 'idle';
-    if (d.status === 'start') uiStatus = 'processing';
-    else if (d.status === 'success') uiStatus = 'success';
-    else if (d.status === 'fail') uiStatus = 'error';
-    upsertClientStatus({ clientId: d.clientId, label: d.label || idOrLabel, status: uiStatus, ts: raw.ts });
-  };
-
-  // ===== Socket.IO (priority #1) =====
-  const stopSocket = () => {
-    try {
-      sockRef.current?.close();
-    } catch {
-      console.log('Error system');
-    }
-    sockRef.current = null;
-    usingSocketRef.current = false;
-  };
-
-  const startSocket = () => {
-    if (sockRef.current) return;
-    const sock = socketIOClient(API_BASE, {
-      path: '/socket',
-      transports: ['websocket'],
-      withCredentials: false,
-    });
-    sockRef.current = sock;
-
-    sock.on('connect', () => {
-      usingSocketRef.current = true;
-      stopLogsSSE();
-      clearTimeout(logsPollTimerRef.current);
-      pollingAbortRef.current?.abort();
-    });
-
-    sock.on('ADMIN_ACTIVITY', (entry) => appendActivityEntries([entry]));
-    sock.on('ADMIN_EVENT', handleAdminEventForClients);
-
-    sock.on('disconnect', () => {
-      usingSocketRef.current = false;
-      startLogsSSE();
-      setTimeout(() => {
-        if (!usingSSERef.current) scheduleLogsPolling(2000);
-      }, 1000);
-    });
-
-    sock.on('connect_error', () => {
-      usingSocketRef.current = false;
-      startLogsSSE();
-      setTimeout(() => {
-        if (!usingSSERef.current) scheduleLogsPolling(2000);
-      }, 1000);
-    });
-  };
-
-  // ===== SSE (priority #2) =====
-  const stopLogsSSE = () => {
-    try {
-      sseRef.current?.close();
-    } catch {
-      console.log('Error system');
-    }
-    sseRef.current = null;
-    usingSSERef.current = false;
-  };
-
-  const startLogsSSE = () => {
-    if (usingSocketRef.current || sseRef.current) return;
-    try {
-      const src = new EventSource(`${API_BASE}/logs/stream`);
-      usingSSERef.current = true;
-      sseRef.current = src;
-
-      src.onmessage = (evt) => {
-        const data = JSON.parse(evt.data || '{}');
-        if (data.bootstrap) {
-          appendActivityEntries(data.bootstrap);
-        } else if (data.ts && data.type) {
-          appendActivityEntries([{ ts: data.ts, type: 'info', text: data?.data?.text || data.type }]);
-        }
-      };
-
-      src.onerror = () => {
-        stopLogsSSE();
-        if (!usingSocketRef.current) scheduleLogsPolling(2000);
-      };
-    } catch {
-      usingSSERef.current = false;
-      if (!usingSocketRef.current) scheduleLogsPolling(2000);
-    }
-  };
-
-  // ===== Polling (priority #3) =====
-  const scheduleLogsPolling = (delayMs) => {
-    if (usingSocketRef.current || usingSSERef.current) return;
-    clearTimeout(logsPollTimerRef.current);
-    logsPollDelayRef.current = delayMs;
-    logsPollTimerRef.current = setTimeout(pollActivityLogs, delayMs);
-  };
-
   const pollActivityLogs = async () => {
-    if (usingSocketRef.current || usingSSERef.current) return;
-    const ctl = new AbortController();
-    pollingAbortRef.current = ctl;
     try {
-      const url = new URL(`${API_BASE}/logs`, window.location.origin);
+      const url = new URL(`${API_BASE}/api/logs`, window.location.origin);
       url.searchParams.set('view', 'activity');
       if (logsSinceRef.current) url.searchParams.set('since', String(logsSinceRef.current));
       url.searchParams.set('limit', '200');
-      const res = await fetch(url.toString().replace(window.location.origin, ''), { signal: ctl.signal, cache: 'no-store' });
+      const res = await fetch(url.toString().replace(window.location.origin, ''), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       const entries = j?.entries || [];
-      if (entries.length) {
-        appendActivityEntries(entries);
-        scheduleLogsPolling(2000);
-      } else {
-        const d = logsPollDelayRef.current;
-        const next = d < 5000 ? 5000 : d < 15000 ? 15000 : 60000;
-        scheduleLogsPolling(next);
-      }
+      if (entries.length) appendActivityEntries(entries);
     } catch {
-      scheduleLogsPolling(30000);
+      console.log('poll logs error');
     }
   };
 
-  // ===== actions =====
-  const startRealtime = () => {
-    startSocket();
-    setTimeout(() => {
-      if (!usingSocketRef.current) {
-        startLogsSSE();
-        if (!usingSSERef.current) scheduleLogsPolling(2000);
-      }
-    }, 1000);
-  };
-
-  const stopRealtime = () => {
-    clearTimeout(logsPollTimerRef.current);
-    pollingAbortRef.current?.abort();
-    stopLogsSSE();
-    stopSocket();
-  };
-
-  const handleImport = async () => {
+  const handleRefreshLogs = async () => {
     try {
-      setIsImporting(true);
-      setLogs([]);
+      setIsRefreshing(true);
       logsSinceRef.current = 0;
-      startRealtime();
-      addUILog('Start import orders...', 'processing');
-      const res = await fetch(`${API_BASE}/admin/run-now`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ reason: 'ui-manual' }),
-      });
-      const j = await res.json();
-      if (j?.ok) addUILog(`Đã phát lệnh RUN_NOW (jobId: ${j.jobId})`, 'processing');
-      else addUILog('Không phát được lệnh RUN_NOW', 'error');
+      setLogs([]);
+      await loadTodayLogsFromDB();
+      message.success('Đã tải lại log hôm nay');
     } catch (e) {
-      addUILog(`Lỗi gửi lệnh: ${e?.message || e}`, 'error');
+      message.error(e?.message || 'Không tải được logs');
     } finally {
-      setIsImporting(false);
+      setIsRefreshing(false);
     }
   };
 
-  // bật/tắt auto import — LUÔN dùng lịch cố định DEFAULT_ANCHORS
-  const handleToggleAuto = async (nextEnabled) => {
-    try {
-      setIsAutoImportEnabled(nextEnabled);
-      const payload = { enabled: !!nextEnabled, anchors: DEFAULT_ANCHORS };
-      const res = await fetch(`${API_BASE}/admin/schedule`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const j = await res.json();
-      if (j?.ok) {
-        addUILog(
-          nextEnabled ? `Auto import enabled (at ${DEFAULT_ANCHORS.map((h) => `${h}:00`).join(', ')})` : 'Auto import disabled',
-          'success'
-        );
-      } else {
-        addUILog('Không cập nhật được lịch auto', 'error');
-      }
-    } catch (e) {
-      addUILog(`Lỗi cập nhật lịch: ${e?.message || e}`, 'error');
-    }
-  };
-
-  // ===== lifecycle =====
+  // ------- lifecycle -------
   useEffect(() => {
-    if (!isModalOpen) {
-      stopRealtime();
-      clearInterval(clientsTimerRef.current);
-      return;
-    }
+    if (!isModalOpen) return;
+
     logsSinceRef.current = 0;
-    loadTodayLogsFromDB();
-    fetchClients();
-    clientsTimerRef.current = setInterval(fetchClients, 5000);
-    return () => {
-      stopRealtime();
-      clearInterval(clientsTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isModalOpen]);
+    fetchClientsOnce(); // chỉ gọi 1 lần khi mở
+    loadTodayLogsFromDB(); // bootstrap logs hôm nay
 
-  useEffect(() => {
-    const onVis = () => {
-      const visible = document.visibilityState === 'visible';
-      if (!isModalOpen) return;
-      if (!visible) {
-        clearTimeout(logsPollTimerRef.current);
-        pollingAbortRef.current?.abort();
-      }
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    logsTimerRef.current = setInterval(pollActivityLogs, 10000); // chỉ poll logs
+    return () => clearInterval(logsTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
   const scheduleSummary = `at ${DEFAULT_ANCHORS.map((h) => `${h}:00`).join(', ')}`;
@@ -424,8 +159,8 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
   return (
     <Modal
       title={
-        <div style={{ fontSize: '20px', fontWeight: '600' }}>
-          <CloudDownloadOutlined style={{ marginRight: '8px' }} />
+        <div style={{ fontSize: 20, fontWeight: 600 }}>
+          <CloudDownloadOutlined style={{ marginRight: 8 }} />
           Async Orders
         </div>
       }
@@ -434,41 +169,31 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
       width={820}
       footer={[
         <Button key="close" onClick={() => setIsModalOpen(false)}>
-          Cancel
+          Close
         </Button>,
-        <Button
-          key="import"
-          type="primary"
-          loading={isImporting}
-          onClick={handleImport}
-          disabled={isImporting}
-          icon={<CloudDownloadOutlined />}
-        >
-          Start Import
+        <Button key="refresh" type="primary" loading={isRefreshing} onClick={handleRefreshLogs} icon={<ReloadOutlined />}>
+          Refresh Logs
         </Button>,
       ]}
     >
-      {/* Clients Status */}
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>Status Clients ({clients.length})</h3>
+      {/* Clients Status (loaded once) */}
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Status Clients ({clients.length})</h3>
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
           {clients.map((client) => (
             <Card
               key={client.id}
               size="small"
-              style={{
-                borderLeft: `4px solid ${getClientBorderColor(client.status)}`,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              }}
-              bodyStyle={{ padding: '16px' }}
+              style={{ borderLeft: `4px solid ${getClientBorderColor(client.status)}`, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+              bodyStyle={{ padding: 16 }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space>
                   {getClientStatusIcon(client.status)}
-                  <span style={{ fontWeight: '500' }}>{client.name}</span>
+                  <span style={{ fontWeight: 500 }}>{client.name}</span>
                 </Space>
                 <Space>
-                  {client.lastSync && <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{client.lastSync}</span>}
+                  {client.lastSync && <span style={{ fontSize: 12, color: '#8c8c8c' }}>{client.lastSync}</span>}
                   <Tag color={getStatusColor(client.status)}>{getStatusText(client.status)}</Tag>
                 </Space>
               </div>
@@ -477,61 +202,48 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
         </Space>
       </div>
 
-      {/* Auto Import Settings (fixed schedule only) */}
-      <Card style={{ background: '#e6f7ff', borderColor: '#91d5ff', marginBottom: '24px' }} bodyStyle={{ padding: '16px' }}>
+      {/* Auto Import summary (fixed on extension) */}
+      <Card style={{ background: '#e6f7ff', borderColor: '#91d5ff', marginBottom: 24 }} bodyStyle={{ padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Space>
-            <ClockCircleFilled style={{ fontSize: '20px', color: '#1890ff' }} />
+            <ClockCircleFilled style={{ fontSize: 20, color: '#1890ff' }} />
             <div>
-              <div style={{ fontWeight: '600', color: '#262626' }}>Auto Import Orders</div>
-              <div style={{ fontSize: '12px', color: '#595959', marginTop: '4px' }}>
+              <div style={{ fontWeight: 600, color: '#262626' }}>Auto Import Orders</div>
+              <div style={{ fontSize: 12, color: '#595959', marginTop: 4 }}>
                 {isAutoImportEnabled ? `Running ${scheduleSummary}` : 'Inactive'}
               </div>
             </div>
           </Space>
-          <Switch
-            checked={isAutoImportEnabled}
-            onChange={handleToggleAuto}
-            disabled={isImporting}
-            checkedChildren="Active"
-            unCheckedChildren="Inactive"
-          />
+          <Tooltip title="Bật/tắt auto ở trang Options của Extension">
+            <Switch checked={isAutoImportEnabled} disabled />
+          </Tooltip>
         </div>
       </Card>
 
       <Divider style={{ margin: '16px 0' }} />
 
-      {/* Logs Section */}
+      {/* Logs */}
       <div>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>Activity Logs</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Activity Logs</h3>
         <div
           style={{
             background: '#fafafa',
-            borderRadius: '8px',
-            padding: '16px',
-            maxHeight: '384px',
+            borderRadius: 8,
+            padding: 16,
+            maxHeight: 384,
             overflowY: 'auto',
             border: '1px solid #d9d9d9',
             fontFamily: 'monospace',
-            fontSize: '14px',
+            fontSize: 14,
           }}
         >
           {logs.length === 0 ? (
-            <div style={{ color: '#bfbfbf', textAlign: 'center', padding: '32px 0' }}>No logs yet. Click “Start Import” to begin.</div>
+            <div style={{ color: '#bfbfbf', textAlign: 'center', padding: '32px 0' }}>No logs yet. Click “Refresh Logs”.</div>
           ) : (
             <Space direction="vertical" style={{ width: '100%' }} size={8}>
               {logs.map((log) => (
                 <div key={log.id} style={{ display: 'flex', gap: 8 }}>
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: '#d9d9d9',
-                      marginTop: 8,
-                      flexShrink: 0,
-                    }}
-                  />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#d9d9d9', marginTop: 8, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <span style={{ color: '#8c8c8c', fontSize: 12 }}>[{log.timestamp}]</span>
                     <span style={{ marginLeft: 8, color: getLogColor(log.type) }}>{log.message}</span>
