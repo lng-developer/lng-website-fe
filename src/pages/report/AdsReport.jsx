@@ -281,7 +281,6 @@ const AdsReport = () => {
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              marginBottom: '10px',
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -316,7 +315,7 @@ const AdsReport = () => {
                           </div>
 
                           {/* Shops Grid */}
-                          <div
+                          {/* <div
                             style={{
                               display: 'grid',
                               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -361,7 +360,7 @@ const AdsReport = () => {
                                 </div>
                               </div>
                             ))}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>
