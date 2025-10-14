@@ -84,7 +84,7 @@ const AsyncOrderModal = ({ isModalOpen, setIsModalOpen }) => {
     const d = new Date(ts);
     const timeText = d.toLocaleTimeString('vi-VN');
     const dateText = d.toLocaleDateString('vi-VN'); // <- NGÀY
-    const phases = doc.phases;
+    const phases = doc.phase;
     const shopName = `${doc?.label} (${doc?.shopId?.name})`;
     return {
       id: `${ts}-${Math.random()}`,
