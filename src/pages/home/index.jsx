@@ -1,39 +1,42 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
+import { useOutletContext } from 'react-router-dom';
+import { toast } from 'sonner';
+import { debounce } from 'lodash';
+import { formatDistanceToNow } from 'date-fns';
+import { IoSettingsOutline } from 'react-icons/io5';
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import { LuImport } from 'react-icons/lu';
+import { MdOutlineRefresh } from 'react-icons/md';
+import { TbHistory, TbReplace } from 'react-icons/tb';
+import { BiRefresh } from 'react-icons/bi';
+import { CloudDownloadOutlined } from '@ant-design/icons';
+
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
+import DateRangePicker from '../../components/DateRangePicker';
+
+import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
+import { getALlVendorProduct } from '../../apis/vendor';
+
 import { dataColors } from '../../utils/dataColors';
+import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { dataFilterStatus } from '../../utils/dataFilter';
+
 import SubItemImage from './table/SubItemImage';
 import SubItemSku from './table/SubItemSku';
 import SubItemCustom from './table/SubItemCustom';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
-import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import ItemCustomer from './table/ItemCustomer';
-import { dataFilterStatus } from '../../utils/dataFilter';
-import { formatDistanceToNow } from 'date-fns';
-import { IoSettingsOutline } from 'react-icons/io5';
-import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { LuImport } from 'react-icons/lu';
-import ModalImportOrder from './ModalImportOrder';
 import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
-import { useOutletContext } from 'react-router-dom';
-import { MdOutlineRefresh } from 'react-icons/md';
-import { BiRefresh } from 'react-icons/bi';
 import ItemCase from './table/ItemCase';
-import DateRangePicker from '../../components/DateRangePicker';
-import { toast } from 'sonner';
-import { getALlVendorProduct } from '../../apis/vendor';
-import { TbHistory } from 'react-icons/tb';
-import { debounce } from 'lodash';
-import { TbReplace } from 'react-icons/tb';
-import { LiaSyncAltSolid } from 'react-icons/lia';
-import { CloudDownloadOutlined } from '@ant-design/icons';
+import ModalImportOrder from './ModalImportOrder';
 import AsyncOrderModal from './ModalAsyncOrder';
+
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -56,6 +59,7 @@ const Home = () => {
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [orderInfo, setOrderInfo] = useState({});
   const [isShowModalAsync, setIsShowModalAsync] = useState(false);
+
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -68,49 +72,62 @@ const Home = () => {
     shopName: '',
   });
 
-  const updateFilter = (newValues) => {
+  // ---- Callbacks & Memos ----
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      page:
+        (Object.prototype.hasOwnProperty.call(newValues, 'page') && newValues.page) ||
+        (Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1),
     }));
-  };
+  }, []);
 
-  const handleExpand = (expanded, record) => {
-    if (expanded) {
-      setExpandedRowKeys([...expandedRowKeys, record.key]);
-    } else {
-      setExpandedRowKeys(expandedRowKeys.filter((key) => key !== record.key));
-    }
-  };
+  const handleExpand = useCallback((expanded, record) => {
+    setExpandedRowKeys((prev) => (expanded ? [...prev, record.key] : prev.filter((key) => key !== record.key)));
+  }, []);
 
-  const handleShowRowKeys = () => {
-    if (isShowRowkeys) {
-      setExpandedRowKeys([]);
-    } else {
-      setExpandedRowKeys(orders.map((item) => item.orderId));
-    }
+  const handleShowRowKeys = useCallback(() => {
+    setExpandedRowKeys(() => (isShowRowkeys ? [] : orders.map((item) => item.orderId)));
     setIsShowRowKeys((prev) => !prev);
-  };
+  }, [isShowRowkeys, orders]);
 
-  const rowSelection = {
-    type: 'checkbox',
-    selectedRowKeys,
-    onChange: (newKeys) => {
-      setSelectedRowKeys(newKeys);
+  const rowSelection = useMemo(
+    () => ({
+      type: 'checkbox',
+      selectedRowKeys,
+      onChange: setSelectedRowKeys,
+    }),
+    [selectedRowKeys]
+  );
+
+  const handlePageChange = useCallback(
+    (page, pageSize) => {
+      updateFilter({ page, perPage: pageSize });
+      setCurrentPage(page);
     },
-  };
+    [updateFilter]
+  );
 
-  const handlePageChange = (page, pageSize) => {
-    updateFilter({ page: page, perPage: pageSize });
-    setCurrentPage(page);
-  };
-
-  const handleOnclick = () => {
+  const handleOnclick = useCallback(() => {
     setIsShowModal((prev) => !prev);
-  };
+  }, []);
 
-  // fetch count order by status
+  const handleColorStatus = useCallback((stt) => {
+    switch (stt) {
+      case 'New':
+        return dataColors.success;
+      case 'Fulfilled':
+        return dataColors.process;
+      case 'Shipped':
+        return dataColors.pending;
+      case 'Cancelled':
+        return dataColors.cancelled;
+      default:
+        return dataColors.default;
+    }
+  }, []);
+
   const fetchCountStatus = useCallback(async () => {
     try {
       const response = await getAllCountStatus({ ...filters, openCase: false });
@@ -124,11 +141,11 @@ const Home = () => {
         setTabFilter(resultTabFilter);
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   }, [filters]);
 
-  const fetchAllOrder = async (params) => {
+  const fetchAllOrder = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getALlOrder(params);
@@ -143,67 +160,151 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleColorStatus = (stt) => {
-    switch (stt) {
-      case 'New':
-        return dataColors.success;
-      case 'Fulfilled':
-        return dataColors.process;
-      case 'Shipped':
-        return dataColors.pending;
-      case 'Cancelled':
-        return dataColors.cancelled;
-      default:
-        return dataColors.default;
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
     }
-  };
+  }, []);
 
-  const columns = [
-    { title: <span style={{ color: dataColors.title }}>Order</span>, dataIndex: 'order', key: 'ord', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'created', key: 'date', align: 'center' },
-    { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'order_date', key: 'order_date', align: 'center' },
-    {
-      title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
-      dataIndex: 'shipping_type',
-      key: 'shipping_type',
-      align: 'center',
-    },
-    { title: <span style={{ color: dataColors.title }}>Customer</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
-    {
-      title: <span style={{ color: dataColors.title }}>Config Cost</span>,
-      dataIndex: 'config_cost_center',
-      key: 'config_cost_center',
-      width: 100,
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title, marginLeft: !collapsed ? 0 : -5 }}>Basecost</span>,
-      dataIndex: 'base_cost',
-      key: 'basecost',
-      width: 80,
-      align: 'center',
-    },
-    { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
-    {
-      title: <span style={{ color: dataColors.title }}>Replace</span>,
-      dataIndex: 'replace',
-      key: 'replace',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Handling</span>,
-      dataIndex: 'handling_time',
-      key: 'handling_time',
-      align: 'center',
-    },
-    { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
-  ];
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((keyword) => {
+        updateFilter({ search: keyword || '' });
+      }, 300),
+    [updateFilter]
+  );
+  useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
 
-  // Cột con trong bảng mở rộng
-  const expandedRowRender = (record) => {
+  const handleSearch = useCallback(
+    (e) => {
+      debouncedSearch(e.target.value);
+    },
+    [debouncedSearch]
+  );
+
+  const handleFilterForStatus = useCallback(
+    (status) => {
+      if (status === 'All') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false });
+      if (status === 'NoCostCenter') return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false });
+      if (status === 'openCase') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true });
+      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false });
+    },
+    [updateFilter]
+  );
+
+  const handleRetest = useCallback(
+    async (id) => {
+      try {
+        const response = await retestBasecode({ orderId: id });
+        if (response.status === 200) {
+          toast.success('Retest success!');
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Retest error!');
+      } finally {
+        fetchAllOrder(filters);
+        fetchCountStatus();
+      }
+    },
+    [fetchAllOrder, fetchCountStatus, filters]
+  );
+
+  const handleReplace = useCallback(async () => {
+    try {
+      const response = await replaceOrder(orderInfo?.orderId);
+      if (response.status === 200) {
+        toast.success('Retest success!');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Retest error!');
+    } finally {
+      fetchAllOrder(filters);
+      fetchCountStatus();
+      setIsShowModalReplace(false);
+    }
+  }, [orderInfo?.orderId, fetchAllOrder, fetchCountStatus, filters]);
+
+  // fetch shop/vendor
+  const fetchAllShop = useCallback(async () => {
+    try {
+      const result = await getALlShop();
+      if (result.status === 200) {
+        setShops(result.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  const fetchAllVendorProduct = useCallback(async () => {
+    try {
+      const response = await getALlVendorProduct({ all: true });
+      if (response.status === 200) {
+        const result = response.data?.data?.map((item) => ({
+          value: item?._id,
+          label: `${item?.vendor?.name} - ${item?.product_name}`,
+        }));
+        setVendorProduct(result);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  // columns
+  const columns = useMemo(
+    () => [
+      { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'order', key: 'ord', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Created At</span>, dataIndex: 'created', key: 'date', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'order_date', key: 'order_date', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
+        dataIndex: 'shipping_type',
+        key: 'shipping_type',
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Customer</span>, dataIndex: 'customer', key: 'customer', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Config Cost</span>,
+        dataIndex: 'config_cost_center',
+        key: 'config_cost_center',
+        width: 100,
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title, marginLeft: !collapsed ? 0 : -5 }}>Basecost</span>,
+        dataIndex: 'base_cost',
+        key: 'basecost',
+        width: 80,
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Store</span>, dataIndex: 'store', key: 'store', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Replace</span>, dataIndex: 'replace', key: 'replace', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Handling</span>,
+        dataIndex: 'handling_time',
+        key: 'handling_time',
+        align: 'center',
+      },
+      { title: <div style={{ color: dataColors.title, textAlign: 'center' }}>Case</div>, dataIndex: 'case', key: 'case' },
+    ],
+    [collapsed]
+  );
+
+  // sub table
+  const expandedRowRender = useCallback((record) => {
     const subColumns = [
       { title: <span style={{ color: dataColors.title }}>Image & Print Side</span>, dataIndex: 'product', key: 'product' },
       { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
@@ -217,7 +318,6 @@ const Home = () => {
         width: 300,
       },
     ];
-
     return (
       <Table
         columns={subColumns}
@@ -228,293 +328,169 @@ const Home = () => {
         style={{ padding: 10 }}
       />
     );
-  };
+  }, []);
 
-  const debouncedSearch = useMemo(
-    () =>
-      debounce(async (keyword) => {
-        if (!keyword) {
-          updateFilter({ search: '' });
-          return;
-        }
-        updateFilter({ search: keyword });
-      }, 300),
-    []
-  );
-
-  // Xử lý search
-  const handleSearch = (e) => {
-    debouncedSearch(e.target.value);
-  };
-
-  const handleFilterForStatus = (status) => {
-    if (status === 'All') {
-      updateFilter({ statuses: '', isNoCostCenter: false, openCase: false });
-      return;
-    }
-    if (status === 'NoCostCenter') {
-      updateFilter({ statuses: '', isNoCostCenter: true, openCase: false });
-      return;
-    }
-    if (status === 'openCase') {
-      updateFilter({ statuses: '', isNoCostCenter: false, openCase: true });
-      return;
-    }
-    updateFilter({ statuses: status, isNoCostCenter: false, openCase: false });
-  };
-
-  const handleRetest = async (id) => {
-    try {
-      const response = await retestBasecode({
-        orderId: id,
-      });
-      if (response.status === 200) {
-        toast.success('Retest success!');
-        console.log(response.data);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error('Retest error!');
-    } finally {
-      fetchAllOrder(filters);
-      fetchCountStatus();
-    }
-  };
-
-  const handleReplace = async () => {
-    try {
-      const response = await replaceOrder(orderInfo?.orderId);
-      if (response.status === 200) {
-        toast.success('Retest success!');
-        console.log(response.data);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error('Retest error!');
-    } finally {
-      fetchAllOrder(filters);
-      fetchCountStatus();
-      setIsShowModalReplace(false);
-    }
-  };
-
-  // render Orders
-  const renderOrderInTable = (data = []) => {
-    const results = data.map((item, index) => {
-      return {
-        key: item?.orderId,
-        order: (
-          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
-            <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
-          </button>
-        ),
-        customer: (
-          <ItemCustomer
-            customerInfor={item?.customer_infor}
-            orderId={item?.orderId}
-            fetchAllOrder={fetchAllOrder}
-            filters={filters}
-            address_validation={item?.address_validation}
+  // table data (renderOrderInTable => tableData)
+  const tableData = useMemo(() => {
+    const results = (orders || []).map((item, index) => ({
+      key: item?.orderId,
+      order: (
+        <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+          <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
+        </button>
+      ),
+      customer: (
+        <ItemCustomer
+          customerInfor={item?.customer_infor}
+          orderId={item?.orderId}
+          fetchAllOrder={fetchAllOrder}
+          filters={filters}
+          address_validation={item?.address_validation}
+        />
+      ),
+      status: (
+        <div className="flex items-center justify-center gap-1">
+          <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />
+          <TbHistory size={16} className="cursor-pointer" />
+        </div>
+      ),
+      created: (
+        <Flex vertical={true}>
+          <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(item?.createdAt, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </Flex>
+      ),
+      order_date: (
+        <Flex vertical={true}>
+          <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </Flex>
+      ),
+      shipping_type: (
+        <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
+      ),
+      config_cost_center: (
+        <div
+          className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+          style={{ borderColor: dataColors.pending }}
+          onClick={() => handleRetest(item?.orderId)}
+        >
+          <div>
+            <BiRefresh size={16} color={dataColors.pending} />
+          </div>
+          <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+            Re-Test
+          </span>
+        </div>
+      ),
+      base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
+      replace: (
+        <div
+          className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+          style={{ borderColor: dataColors.pending }}
+          onClick={() => {
+            setOrderInfo(item);
+            setIsShowModalReplace(true);
+          }}
+        >
+          <div>
+            <TbReplace color={dataColors.pending} />
+          </div>
+          <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+            Replace
+          </span>
+        </div>
+      ),
+      store: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
+      handling_time: <span className="font-medium whitespace-nowrap">6 Days</span>,
+      case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
+      subItems: (item?.items || []).map((itemSub, indexItem) => ({
+        key: `${index}-${indexItem}`,
+        product: (
+          <SubItemImage
+            linkImage={itemSub?.baseImageUrl}
+            linkFulfill={itemSub?.fulfillment_file}
+            seller={item?.seller}
+            listing={itemSub?.listing}
+            scale_status={itemSub?.scale_status}
+            asin={itemSub?.asin}
+            scale_by={item?.scale_by}
           />
         ),
-        status: (
-          <div className="flex items-center justify-center gap-1">
-            <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />
-            <TbHistory size={16} className="cursor-pointer" />
-          </div>
+        sku: (
+          <SubItemSku
+            sku={itemSub?.sku}
+            mapped_sku={itemSub?.mapped_sku}
+            asin={itemSub?.asin}
+            seller={item?.seller}
+            listing={itemSub?.listing}
+          />
         ),
-        created: (
-          <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
-            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(item?.createdAt, { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
-            </span>
-          </Flex>
+        customer: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
+        quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
+        cost_center: (
+          <SubItemCost data={itemSub?.cost_center} vendorProduct={vendorProduct} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />
         ),
-        order_date: (
-          <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
-            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
-            </span>
-          </Flex>
+        tracking_note: (
+          <SubItemTracking
+            tracking_info={itemSub?.tracking_info}
+            orderItemId={itemSub?.orderItemId}
+            orderId={item?.orderId}
+            status={item?.status}
+            fetchAllOrder={fetchAllOrder}
+            filters={filters}
+            fetchCountStatus={fetchCountStatus}
+          />
         ),
-        shipping_type: (
-          <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
-        ),
-        config_cost_center: (
-          <div
-            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
-            style={{ borderColor: dataColors.pending }}
-            onClick={() => handleRetest(item?.orderId)}
-          >
-            <div>
-              <BiRefresh size={16} color={dataColors.pending} />
-            </div>
-            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-              Re-Test
-            </span>
-          </div>
-        ),
-        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
-        replace: (
-          <div
-            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
-            style={{ borderColor: dataColors.pending }}
-            onClick={() => {
-              setOrderInfo(item);
-              setIsShowModalReplace(true);
-            }}
-          >
-            <div>
-              <TbReplace color={dataColors.pending} />
-            </div>
-            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-              Replace
-            </span>
-          </div>
-        ),
-        store: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
-        // delivery_date: <span className="font-medium">July 25, 2025</span>,
-        handling_time: <span className="font-medium whitespace-nowrap">6 Days</span>,
-        case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
-        subItems: item?.items?.map((itemSub, indexItem) => {
-          return {
-            key: `${index}-${indexItem}`,
-            product: (
-              <SubItemImage
-                linkImage={itemSub?.baseImageUrl}
-                linkFulfill={itemSub?.fulfillment_file}
-                seller={item?.seller}
-                listing={itemSub?.listing}
-                scale_status={itemSub?.scale_status}
-                asin={itemSub?.asin}
-                scale_by={item?.scale_by}
-              />
-            ),
-            sku: (
-              <SubItemSku
-                sku={itemSub?.sku}
-                mapped_sku={itemSub?.mapped_sku}
-                asin={itemSub?.asin}
-                seller={item?.seller}
-                listing={itemSub?.listing}
-              />
-            ),
-            customer: (
-              <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
-            ),
-            quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-            cost_center: (
-              <SubItemCost
-                data={itemSub?.cost_center}
-                vendorProduct={vendorProduct}
-                fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
-              />
-            ),
-            tracking_note: (
-              <SubItemTracking
-                tracking_info={itemSub?.tracking_info}
-                orderItemId={itemSub?.orderItemId}
-                orderId={item?.orderId}
-                status={item?.status}
-                fetchAllOrder={fetchAllOrder}
-                filters={filters}
-                fetchCountStatus={fetchCountStatus}
-              />
-            ),
-          };
-        }),
-      };
-    });
+      })),
+    }));
     return results;
-  };
+  }, [orders, vendorProduct, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
 
-  const fetchAllShop = async () => {
-    try {
-      const result = await getALlShop();
-      if (result.status === 200) {
-        setShops(result.data);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const handleCopy = async (textToCopy) => {
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-      toast.info('Copied to clipboard');
-    } catch (err) {
-      console.log(err);
-      toast.error('Failed to copy!');
-    }
-  };
-
-  const fetchAllVendorProduct = async () => {
-    try {
-      const response = await getALlVendorProduct({
-        all: true,
-      });
-      if (response.status === 200) {
-        const result = response.data?.data?.map((item) => {
-          return {
-            value: item?._id,
-            label: `${item?.vendor?.name} - ${item?.product_name}`,
-          };
-        });
-        setVendorProduct(result);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
+  // ---- Effects ----
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240; // Chiều cao header nếu có
-      const marginBottom = 20;
-
-      const availableHeight = window.innerHeight - headerHeight - marginBottom;
+      const headerHeight = 240;
+      const availableHeight = window.innerHeight - headerHeight - 20;
       setTableHeight(availableHeight);
     };
-
-    handleResize(); // Gọi lần đầu
-    window.addEventListener('resize', handleResize); // Lắng nghe resize
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     fetchAllVendorProduct();
-  }, []);
+  }, [fetchAllVendorProduct]);
 
   useEffect(() => {
     fetchAllShop();
-  }, []);
+  }, [fetchAllShop]);
 
   useEffect(() => {
     fetchCountStatus();
     fetchAllOrder(filters);
-  }, [filters]);
+  }, [filters, fetchAllOrder, fetchCountStatus]);
 
   useEffect(() => {
     if (isShowRowkeys) {
-      // Tự động mở tất cả dòng khi component mount
       setExpandedRowKeys(orders.map((item) => item.orderId));
     }
   }, [orders, isShowRowkeys]);
 
+  // ---- JSX ----
   return (
     <div className="overflow-hidden">
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -554,8 +530,8 @@ const Home = () => {
               }}
               modifiersStyles={{
                 range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
+                  backgroundColor: '#f3f4f6',
+                  fontWeight: 'normal',
                 },
               }}
               updateFilter={updateFilter}
@@ -569,6 +545,7 @@ const Home = () => {
           </div>
         </div>
       </div>
+
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex gap-3 items-center">
           {tabFilter.map((item, index) => (
@@ -582,6 +559,7 @@ const Home = () => {
             />
           ))}
         </div>
+
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <Input
@@ -636,11 +614,12 @@ const Home = () => {
             />
           </div>
         </div>
+
         <div className="mt-4">
           <Table
             className="no-indent-table no-backgroud-title"
             columns={columns}
-            dataSource={renderOrderInTable(orders)}
+            dataSource={tableData}
             expandable={{
               indentSize: 0,
               expandedRowRender,
@@ -668,7 +647,9 @@ const Home = () => {
           />
         </div>
       </div>
+
       <ModalImportOrder isModalOpen={isShowModal} setIsModalOpen={setIsShowModal} />
+
       <Modal
         title="Replace order"
         width={500}
@@ -687,4 +668,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default React.memo(Home);

@@ -158,7 +158,7 @@ const ReportOrderCost = () => {
       render: (text) => <span className="font-medium">{text}</span>,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Name & Order ID</span>,
+      title: <span style={{ color: dataColors.title }}>Order ID</span>,
       dataIndex: 'orderId',
       key: 'orderId',
       align: 'center',

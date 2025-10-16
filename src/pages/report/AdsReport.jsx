@@ -315,7 +315,7 @@ const AdsReport = () => {
                           </div>
 
                           {/* Shops Grid */}
-                          {/* <div
+                          <div
                             style={{
                               display: 'grid',
                               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -360,7 +360,7 @@ const AdsReport = () => {
                                 </div>
                               </div>
                             ))}
-                          </div> */}
+                          </div>
                         </div>
                       ))}
                     </div>

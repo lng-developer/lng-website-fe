@@ -182,7 +182,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
           </Tooltip>
         )}
 
-        {(user?.role === 'Admin' || user?.role === 'Seller') && statusTask === 'Uploaded' && (
+        {(user?.role === 'Admin' || user?.role === 'Seller' || user?.role === 'Design Leader') && statusTask === 'Uploaded' && (
           <>
             <Tooltip title="Passed">
               <Button icon={<FcApproval />} onClick={handlePassed} />
