@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Typography, Input, Tooltip, Flex, Pagination } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import StatusComponent from '../../components/StatusComponent';
@@ -12,10 +12,39 @@ import { toast } from 'sonner';
 import { TfiControlBackward } from 'react-icons/tfi';
 
 const { Title } = Typography;
-const DPI = 300; // dùng để đổi px -> inch
 
-/* ===================== EditableImage (updated) ===================== */
-function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected, visible = true, opacity = 1, onSelect, onChange }) {
+/* ===================== Utilities ===================== */
+const num = (v, d) => (Number.isFinite(+v) ? +v : d);
+
+const normalizeLayer = (x, i) => ({
+  id: x.id ?? `layer_${i}`,
+  label: x.label ?? `Layer ${i + 1}`,
+  url: x.url ?? null,
+  htmlImg: null,
+  x: 0,
+  y: 0,
+  rotation: num(x.rotation, 0),
+  visible: x.visible ?? true,
+  opacity: num(x.opacity, 1),
+  isSelected: false,
+  originalWidth: null,
+  originalHeight: null,
+});
+
+/* ===================== EditableImage (pure) ===================== */
+const EditableImage = React.memo(function EditableImage({
+  htmlImg,
+  x,
+  y,
+  width,
+  height,
+  rotation = 0,
+  isSelected,
+  visible = true,
+  opacity = 1,
+  onSelect,
+  onChange,
+}) {
   const shapeRef = useRef(null);
   const trRef = useRef(null);
 
@@ -27,6 +56,34 @@ function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected,
   }, [isSelected]);
 
   if (!htmlImg) return null;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const handleDragEnd = useCallback((e) => onChange({ x: e.target.x(), y: e.target.y() }), [onChange]);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const handleTransformEnd = useCallback(() => {
+    const node = shapeRef.current;
+    if (!node) return;
+
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    const prevW = width || htmlImg.width;
+    const prevH = height || htmlImg.height;
+
+    const nextW = Math.max(20, prevW * scaleX);
+    const nextH = Math.max(20, prevH * scaleY);
+
+    node.scaleX(1);
+    node.scaleY(1);
+
+    onChange({
+      x: node.x(),
+      y: node.y(),
+      width: nextW,
+      height: nextH,
+    });
+  }, [onChange, width, height, htmlImg?.width, htmlImg?.height]);
 
   return (
     <Group>
@@ -44,54 +101,26 @@ function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected,
         onClick={onSelect}
         onTap={onSelect}
         perfectDrawEnabled={false}
-        onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
-        /* === BAKING SIZE khi kéo góc ===
-           Konva Transformer chỉ thay đổi scaleX/scaleY, nên cần "bake" về width/height
-           để tránh tình trạng nhảy/giật và giữ state sạch. */
-        onTransformEnd={() => {
-          const node = shapeRef.current;
-          if (!node) return;
-
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
-
-          const prevW = width || htmlImg.width;
-          const prevH = height || htmlImg.height;
-
-          const nextW = Math.max(20, prevW * scaleX);
-          const nextH = Math.max(20, prevH * scaleY);
-
-          // Reset scale về 1 sau khi đã bake sang width/height
-          node.scaleX(1);
-          node.scaleY(1);
-
-          onChange({
-            x: node.x(),
-            y: node.y(),
-            width: nextW,
-            height: nextH,
-          });
-        }}
+        onDragEnd={handleDragEnd}
+        onTransformEnd={handleTransformEnd}
       />
-
       {isSelected && (
         <Transformer
           ref={trRef}
-          rotateEnabled={false} // không cho rotate
-          resizeEnabled={true} // bật resize
-          keepRatio={true} // giữ tỉ lệ ảnh khi kéo góc
-          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']} // chỉ dùng 4 góc
+          rotateEnabled={false}
+          resizeEnabled
+          keepRatio
+          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
           padding={6}
-          borderEnabled={true}
+          borderEnabled
           borderStroke="#1677ff"
           borderStrokeWidth={2}
           anchorSize={8}
           anchorFill="#ffffff"
           anchorStroke="#1677ff"
           anchorStrokeWidth={1}
-          /* Chặn resize quá nhỏ (tránh nhảy) */
           boundBoxFunc={(oldBox, newBox) => {
-            const MIN = 20; // px hiển thị
+            const MIN = 20;
             if (newBox.width < MIN || newBox.height < MIN) return oldBox;
             return newBox;
           }}
@@ -99,30 +128,9 @@ function EditableImage({ htmlImg, x, y, width, height, rotation = 0, isSelected,
       )}
     </Group>
   );
-}
+});
 
-/* ===================== Helpers ===================== */
-function normalizeLayer(x, i) {
-  return {
-    id: x.id ?? `layer_${i}`,
-    label: x.label ?? `Layer ${i + 1}`,
-    url: x.url ?? null,
-    htmlImg: null,
-    x: 0,
-    y: 0,
-    rotation: num(x.rotation, 0),
-    visible: x.visible ?? true,
-    opacity: num(x.opacity, 1),
-    isSelected: false,
-    // Lưu kích thước gốc
-    originalWidth: null,
-    originalHeight: null,
-  };
-}
-function num(v, d) {
-  return Number.isFinite(+v) ? +v : d;
-}
-/* ===================== Main ===================== */
+/* ===================== Modal ===================== */
 export default function QcCanvasModal({
   open,
   onClose,
@@ -145,46 +153,126 @@ export default function QcCanvasModal({
   const [activeLayer, setActiveLayer] = useState(null);
   const [decisionByItem, setDecisionByItem] = useState({});
 
-  const currentItem = orderInfo?.items?.[currentIndex];
+  /* -------- Derived values (memo) -------- */
+  const totalItems = orderInfo?.items?.length || 0;
+
+  const currentItem = useMemo(() => (totalItems ? orderInfo.items[currentIndex] : undefined), [orderInfo, totalItems, currentIndex]);
 
   const layersData = useMemo(() => {
-    if (!orderInfo?.items || !orderInfo.items[currentIndex]?.fulfillment_file) return [];
-    return Object.entries(orderInfo.items[currentIndex].fulfillment_file).map(([key, url]) => ({
+    const ff = currentItem?.fulfillment_file;
+    if (!ff) return [];
+    return Object.entries(ff).map(([key, url]) => ({
       id: key.replace(/_/g, ''),
       label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       url,
     }));
-  }, [orderInfo, currentIndex]);
+  }, [currentItem]);
 
-  const displayScale = useMemo(() => {
-    return Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight);
-  }, [viewportWidth, viewportHeight, logicalWidth, logicalHeight]);
+  const displayScale = useMemo(
+    () => Math.min(viewportWidth / logicalWidth, viewportHeight / logicalHeight),
+    [viewportWidth, viewportHeight, logicalWidth, logicalHeight]
+  );
 
-  // Helper: kiểm tra còn đúng 1 item trong QC
-  const isSingleItem = (orderInfo?.items?.length ?? 0) <= 1;
+  const isSingleItem = totalItems <= 1;
 
-  // Sau khi pass/reject: nếu còn nhiều item thì chuyển trang, nếu chỉ 1 item thì đóng modal
-  const goNextOrClose = () => {
+  const sizeInfo = useMemo(() => {
+    const active = activeLayer ? items.find((x) => x.id === activeLayer) : items.length === 1 ? items[0] : null;
+
+    if (!active?.originalWidth || !active?.originalHeight) return null;
+    return { wPx: active.originalWidth, hPx: active.originalHeight };
+  }, [items, activeLayer]);
+
+  /* -------- Handlers (callback) -------- */
+  const handlePageChange = useCallback((page) => setCurrentIndex(page - 1), []);
+
+  const selectId = useCallback((id) => {
+    setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
+    setActiveLayer(id);
+  }, []);
+
+  const makeSelectHandler = useCallback((id) => () => selectId(id), [selectId]);
+
+  const updateItem = useCallback((id, patch) => {
+    setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  }, []);
+
+  const makeUpdateHandler = useCallback((id) => (patch) => updateItem(id, patch), [updateItem]);
+
+  const goNextOrClose = useCallback(() => {
     if (isSingleItem) {
       onClose?.();
     } else {
-      const total = orderInfo?.items?.length ?? 0;
-      if (currentIndex < total - 1) setCurrentIndex((i) => i + 1);
-      else setCurrentIndex((i) => Math.max(0, i - 1));
+      setCurrentIndex((i) => {
+        const next = i + 1;
+        return next < totalItems ? next : Math.max(0, i - 1);
+      });
     }
     setQcNote('');
-  };
+  }, [isSingleItem, onClose, totalItems]);
 
+  const handlePass = useCallback(async () => {
+    try {
+      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
+        decision: 'approve',
+        note: qcNote,
+      });
+      if (res.status === 200) toast.success(res.data?.message);
+      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
+    } catch (e) {
+      console.log(e);
+
+      toast.error('Error');
+    } finally {
+      fetchAllQC?.(filters);
+      fetchCountStatus?.();
+      goNextOrClose();
+    }
+  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextOrClose]);
+
+  const handleReject = useCallback(async () => {
+    if (!qcNote) {
+      setErrorNote(true);
+      return;
+    }
+    try {
+      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
+        decision: 'reject',
+        note: qcNote,
+      });
+      if (res.status === 200) toast.success(res.data?.message);
+      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'rejected' }));
+    } catch (e) {
+      console.log(e);
+      toast.error('Error');
+    } finally {
+      fetchAllQC?.(filters);
+      fetchCountStatus?.();
+      goNextOrClose();
+    }
+  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextOrClose]);
+
+  /* -------- Side effects -------- */
   useEffect(() => {
     setCurrentIndex(indexQC);
   }, [indexQC]);
 
-  const handlePageChange = (page) => setCurrentIndex(page - 1);
+  // Pre-mark decisions from server
+  useEffect(() => {
+    const map = {};
+    (orderInfo?.items || []).forEach((it) => {
+      const st = String(it?.scale_status || '').toLowerCase();
+      if (st === 'ready' || st === 'approved' || st === 'complete') map[it.orderItemId] = 'approved';
+      if (st === 'qc rejected' || st === 'rejected') map[it.orderItemId] = 'rejected';
+    });
+    setDecisionByItem((prev) => ({ ...map, ...prev }));
+  }, [orderInfo]);
 
-  /* ===== Load image elements ===== */
+  // Load images when modal opens or current item changes
   useEffect(() => {
     if (!open) return;
-    if (!Array.isArray(layersData)) return setItems([]);
+    if (!layersData.length) return setItems([]);
+
+    let cancelled = false;
 
     Promise.all(
       layersData.map(
@@ -196,128 +284,72 @@ export default function QcCanvasModal({
             const img = new window.Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
-              // Lưu kích thước gốc
+              if (cancelled) return resolve(null);
               const originalWidth = img.width;
               const originalHeight = img.height;
-
-              // Tính kích thước hiển thị (không làm tròn để tránh lệch)
-              const displayWidth = originalWidth * displayScale;
-              const displayHeight = originalHeight * displayScale;
-
               resolve({
                 ...it,
-                htmlImg: img, // Sử dụng ảnh gốc thay vì bitmap để tránh mất chất lượng
+                htmlImg: img,
                 originalWidth,
                 originalHeight,
-                // Toạ độ & size theo viewport (không làm tròn)
                 x: (it.x || 0) * displayScale,
                 y: (it.y || 0) * displayScale,
-                width: displayWidth,
-                height: displayHeight,
+                width: originalWidth * displayScale,
+                height: originalHeight * displayScale,
               });
             };
             img.onerror = () => resolve(it);
             img.src = it.url;
           })
       )
-    ).then((arr) => setItems(arr));
-  }, [open, JSON.stringify(layersData), displayScale]);
-
-  /* ===== Items ops ===== */
-  const selectId = (id) => {
-    setItems((arr) => arr.map((it) => ({ ...it, isSelected: it.id === id })));
-    setActiveLayer(id);
-  };
-
-  const updateItem = (id, patch) => setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-
-  /* ===== Size info for header box ===== */
-  const activeItem = useMemo(() => {
-    if (!items?.length) return null;
-    return activeLayer ? items.find((x) => x.id === activeLayer) : items.length === 1 ? items[0] : null;
-  }, [items, activeLayer]);
-
-  const sizeInfo = useMemo(() => {
-    if (!activeItem || !activeItem.originalWidth || !activeItem.originalHeight) return null;
-
-    // Sử dụng kích thước gốc thay vì tính ngược từ displayScale
-    return {
-      wPx: activeItem.originalWidth,
-      hPx: activeItem.originalHeight,
-    };
-  }, [activeItem]);
-
-  /* ===== Approve / Reject ===== */
-  const handlePass = async () => {
-    try {
-      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'approve',
-        note: qcNote,
-      });
-      if (response.status === 200) toast.success(response.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
-    } catch (error) {
-      console.log(error);
-      toast.error('Error');
-    } finally {
-      fetchAllQC?.(filters);
-      fetchCountStatus?.();
-      goNextOrClose();
-    }
-  };
-
-  const handleReject = async () => {
-    if (!qcNote) {
-      setErrorNote(true);
-      return;
-    }
-    try {
-      const response = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'reject',
-        note: qcNote,
-      });
-      if (response.status === 200) toast.success(response.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'rejected' }));
-    } catch (error) {
-      console.log(error);
-      toast.error('Error');
-    } finally {
-      fetchAllQC?.(filters);
-      fetchCountStatus?.();
-      goNextOrClose();
-    }
-  };
-
-  useEffect(() => {
-    const map = {};
-    (orderInfo?.items || []).forEach((it) => {
-      const st = String(it?.scale_status || '').toLowerCase();
-      if (st === 'ready' || st === 'approved' || st === 'complete') map[it.orderItemId] = 'approved';
-      if (st === 'qc rejected' || st === 'rejected') map[it.orderItemId] = 'rejected';
+    ).then((arr) => {
+      if (!cancelled) setItems(arr.filter(Boolean));
     });
-    setDecisionByItem((prev) => ({ ...map, ...prev })); // không ghi đè những gì user vừa thao tác
-  }, [orderInfo]);
 
-  /* ===================== Render ===================== */
+    return () => {
+      cancelled = true;
+    };
+  }, [open, layersData, displayScale]);
+
+  /* -------- Derived UI bits (memo) -------- */
+  const decidedStatus = useMemo(() => (currentItem ? decisionByItem[currentItem.orderItemId] : undefined), [decisionByItem, currentItem]);
+
+  const showActionButtons = useMemo(
+    () => String(currentItem?.scale_status).toLowerCase() === 'pending' && !decidedStatus,
+    [currentItem?.scale_status, decidedStatus]
+  );
+
+  const serverStatusIcon = useMemo(() => {
+    const serverSt = String(currentItem?.scale_status || '').toLowerCase();
+    if (serverSt === 'ready' || serverSt === 'approved' || serverSt === 'complete') {
+      return (
+        <div className="flex items-center gap-2">
+          <FcApproval size={20} />
+          <span className="font-medium text-[#39a00d]">Passed</span>
+        </div>
+      );
+    }
+    if (serverSt === 'qc rejected' || serverSt === 'rejected') {
+      return (
+        <div className="flex items-center gap-2">
+          <IoArrowUndo size={18} color="#cd1323" />
+          <span className="font-medium text-[#cd1323]">Rejected</span>
+        </div>
+      );
+    }
+    return null;
+  }, [currentItem?.scale_status]);
+
   return (
     <Modal width={1350} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
       {/* ======= HEADER ======= */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
         <h1 style={{ margin: 0, width: 220 }}>QC Preview</h1>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 16,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: 700,
-            marginLeft: 16,
-          }}
-        >
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', width: 700, marginLeft: 16 }}>
           <div className="flex items-center">
             <Pagination
-              total={currentItem ? orderInfo?.items.length : 1}
+              total={currentItem ? totalItems : 1}
               showTotal={(total) => (
                 <span className="font-medium whitespace-nowrap">
                   Item {currentIndex + 1}/{total}
@@ -330,7 +362,7 @@ export default function QcCanvasModal({
             />
           </div>
 
-          {/* ======= KÍCH THƯỚC ẢNH (ô giữa) ======= */}
+          {/* Size box */}
           <div
             style={{
               minWidth: 150,
@@ -357,18 +389,12 @@ export default function QcCanvasModal({
             )}
           </div>
 
-          {/* ======= Chọn màu nền ======= */}
+          {/* Background color + Back */}
           <div className="flex items-center">
             {showBack && (
               <div
                 className="mr-5"
-                style={{
-                  cursor: 'pointer',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  padding: 6,
-                  background: '#fff',
-                }}
+                style={{ cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: 8, padding: 6, background: '#fff' }}
                 onClick={() => setShowBack(false)}
               >
                 <TfiControlBackward size={18} />
@@ -381,85 +407,51 @@ export default function QcCanvasModal({
           </div>
         </div>
 
-        {/* Buttons */}
-        {/* Buttons / Status Icon */}
+        {/* Status / Actions */}
         <div className="flex mr-10 w-[300px] ml-[15px]">
-          {(() => {
-            const decided = decisionByItem[currentItem?.orderItemId]; // 'approved' | 'rejected' | undefined
-
-            // Nếu đã quyết định (local) => hiển thị icon
-            if (decided === 'approved') {
-              return (
-                <div className="flex items-center gap-2">
-                  <FcApproval size={20} />
-                  <span className="font-medium text-[#39a00d]">Passed</span>
-                </div>
-              );
-            }
-            if (decided === 'rejected') {
-              return (
-                <div className="flex items-center gap-2">
-                  <IoArrowUndo size={18} color="#cd1323" />
-                  <span className="font-medium text-[#cd1323]">Rejected</span>
-                </div>
-              );
-            }
-
-            // Nếu chưa quyết định: chỉ hiển thị nút khi item đang ở trạng thái cần QC (Pending)
-            if (String(currentItem?.scale_status).toLowerCase() === 'pending') {
-              return (
-                <div className="flex gap-2">
-                  <Button
-                    type="dashed"
-                    iconPosition="end"
-                    icon={<FcApproval />}
-                    onClick={handlePass}
-                    style={{ fontWeight: 500 }}
-                    className="hover:!text-[#39a00d] hover:!border-[#39a00d]"
-                  >
-                    Passed
-                  </Button>
-                  <Button
-                    type="dashed"
-                    iconPosition="end"
-                    icon={<IoArrowUndo color="red" />}
-                    onClick={handleReject}
-                    style={{ fontWeight: 500 }}
-                    className="hover:!text-[#cd1323] hover:!border-[#cd1323]"
-                  >
-                    Reject
-                  </Button>
-                </div>
-              );
-            }
-
-            // Trường hợp item không phải Pending mà Ready/Rejected từ server => hiện icon theo server
-            const serverSt = String(currentItem?.scale_status || '').toLowerCase();
-            if (serverSt === 'ready' || serverSt === 'approved' || serverSt === 'complete') {
-              return (
-                <div className="flex items-center gap-2">
-                  <FcApproval size={20} />
-                  <span className="font-medium text-[#39a00d]">Passed</span>
-                </div>
-              );
-            }
-            if (serverSt === 'qc rejected' || serverSt === 'rejected') {
-              return (
-                <div className="flex items-center gap-2">
-                  <IoArrowUndo size={18} color="#cd1323" />
-                  <span className="font-medium text-[#cd1323]">Rejected</span>
-                </div>
-              );
-            }
-
-            return null;
-          })()}
+          {decidedStatus === 'approved' && (
+            <div className="flex items-center gap-2">
+              <FcApproval size={20} />
+              <span className="font-medium text-[#39a00d]">Passed</span>
+            </div>
+          )}
+          {decidedStatus === 'rejected' && (
+            <div className="flex items-center gap-2">
+              <IoArrowUndo size={18} color="#cd1323" />
+              <span className="font-medium text-[#cd1323]">Rejected</span>
+            </div>
+          )}
+          {!decidedStatus && showActionButtons && (
+            <div className="flex gap-2">
+              <Button
+                type="dashed"
+                iconPosition="end"
+                icon={<FcApproval />}
+                onClick={handlePass}
+                style={{ fontWeight: 500 }}
+                className="hover:!text-[#39a00d] hover:!border-[#39a00d]"
+              >
+                Passed
+              </Button>
+              <Button
+                type="dashed"
+                iconPosition="end"
+                icon={<IoArrowUndo color="red" />}
+                onClick={handleReject}
+                style={{ fontWeight: 500 }}
+                className="hover:!text-[#cd1323] hover:!border-[#cd1323]"
+              >
+                Reject
+              </Button>
+            </div>
+          )}
+          {!decidedStatus && !showActionButtons && serverStatusIcon}
         </div>
       </div>
 
       {/* ======= BODY ======= */}
       <div style={{ display: 'flex', gap: 16 }}>
-        {/* LEFT: Layers thumbnails */}
+        {/* LEFT: thumbnails */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
           {currentItem?.snapshotImage && (
             <img
@@ -468,14 +460,10 @@ export default function QcCanvasModal({
               alt="mockup"
             />
           )}
-
           {layersData.map((l) => (
             <div key={l.id}>
               <div
-                onClick={() => {
-                  setActiveLayer(l.id);
-                  selectId(l.id);
-                }}
+                onClick={makeSelectHandler(l.id)}
                 style={{
                   cursor: 'pointer',
                   border: activeLayer === l.id ? '2px solid #1677ff' : '1px solid #e5e7eb',
@@ -492,46 +480,31 @@ export default function QcCanvasModal({
           ))}
         </div>
 
-        {/* MIDDLE: Preview canvas */}
+        {/* MIDDLE: canvas */}
         <div
           className="relative rounded-xl"
-          style={{
-            width: viewportWidth,
-            height: viewportHeight,
-            overflow: 'hidden',
-            background: bgColor,
-          }}
+          style={{ width: viewportWidth, height: viewportHeight, overflow: 'hidden', background: bgColor }}
         >
           <Stage width={viewportWidth} height={viewportHeight}>
-            <Layer listening={false} imageSmoothingEnabled={true}>
+            <Layer listening={false} imageSmoothingEnabled>
               <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
             </Layer>
-
-            <Layer imageSmoothingEnabled={true}>
-              {items
-                .filter((it) => (activeLayer ? it.id === activeLayer : true)) // chỉ hiện layer được chọn; nếu chưa chọn và có 1 layer -> hiển thị
-                .map((it) => (
-                  <EditableImage key={it.id} {...it} onSelect={() => selectId(it.id)} onChange={(patch) => updateItem(it.id, patch)} />
-                ))}
+            <Layer imageSmoothingEnabled>
+              {(activeLayer ? items.filter((it) => it.id === activeLayer) : items).map((it) => (
+                <EditableImage key={it.id} {...it} onSelect={makeSelectHandler(it.id)} onChange={makeUpdateHandler(it.id)} />
+              ))}
             </Layer>
           </Stage>
         </div>
 
         {/* RIGHT: Info + QC Note */}
         <Flex vertical gap={10}>
-          <div
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              padding: 12,
-              maxWidth: 350,
-            }}
-          >
+          <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, maxWidth: 350 }}>
             <Title level={5} style={{ marginTop: 0 }}>
               Item Info
             </Title>
             {currentItem && (
-              <Flex vertical={true} gap={6}>
+              <Flex vertical gap={6}>
                 <div className="flex justify-between items-center">
                   <span className="font-medium">OrderId:</span>
                   <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
@@ -566,7 +539,7 @@ export default function QcCanvasModal({
                     <StatusComponent
                       title={currentItem?.cost_center?.vendorProductDisplayName?.replace(/^\s*.*?\s*[-–—]\s+/, '')}
                       color={dataColors.default}
-                      isDefault={true}
+                      isDefault
                     />
                   </div>
                 )}
@@ -574,15 +547,10 @@ export default function QcCanvasModal({
                   <span className="font-medium">Fulfill Name:</span>
                   <div
                     style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10`, maxWidth: 245 }}
-                    className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
+                    className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
                   >
                     <span
-                      style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'inline-block',
-                      }}
+                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}
                       className="whitespace-nowrap"
                     >
                       {`${orderInfo?.orderId}-${currentItem?.orderItemId}`}
@@ -592,7 +560,7 @@ export default function QcCanvasModal({
                 {currentItem?.cost_center?.vendorProductSKU && (
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Vendor Product Sku:</span>
-                    <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault={true} />
+                    <StatusComponent title={currentItem?.cost_center?.vendorProductSKU} color={dataColors.default} isDefault />
                   </div>
                 )}
               </Flex>
@@ -611,13 +579,12 @@ export default function QcCanvasModal({
             }}
           >
             <div className="flex-col justify-between">
-              {currentItem &&
-                currentItem?.version3Data?.map((item, idx) => (
-                  <div key={idx} className="mb-1 whitespace-normal break-words">
-                    <span className="font-medium">{item?.label}:</span>
-                    <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
-                  </div>
-                ))}
+              {currentItem?.version3Data?.map((item, idx) => (
+                <div key={idx} className="mb-1 whitespace-normal break-words">
+                  <span className="font-medium">{item?.label}:</span>
+                  <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
+                </div>
+              ))}
             </div>
           </div>
 

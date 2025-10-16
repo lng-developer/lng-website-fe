@@ -1,8 +1,8 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import StatusComponent from '../../components/StatusComponent';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,6 +21,7 @@ import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
 import SelectSeller from '../../components/SelectSeller';
+
 const PAGE_SIZE = 10;
 
 const QC = () => {
@@ -52,95 +53,58 @@ const QC = () => {
     shopName: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
     }));
-  };
+  }, []);
 
-  const handlePageChange = (page, pageSize) => {
-    updateFilter({ page: page, perPage: pageSize });
-    setCurrentPage(page);
-  };
+  const handlePageChange = useCallback(
+    (page, pageSize) => {
+      updateFilter({ page, perPage: pageSize });
+      setCurrentPage(page);
+    },
+    [updateFilter]
+  );
 
-  const handleExpand = (expanded, record) => {
-    if (expanded) {
-      setExpandedRowKeys([...expandedRowKeys, record.key]);
-    } else {
-      setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
-    }
-  };
+  const handleExpand = useCallback((expanded, record) => {
+    setExpandedRowKeys((prev) => (expanded ? [...prev, record.key] : prev.filter((key) => key !== record.key)));
+  }, []);
 
-  const handleShowRowKeys = () => {
-    if (isShowRowkeys) {
-      setExpandedRowKeys([]);
-    } else {
-      setExpandedRowKeys(dataSource.map((item) => item.orderId));
-    }
+  const handleShowRowKeys = useCallback(() => {
+    setExpandedRowKeys(isShowRowkeys ? [] : dataSource.map((item) => item.orderId));
     setIsShowRowKeys((prev) => !prev);
-  };
+  }, [isShowRowkeys, dataSource]);
 
-  const columns = [
-    {
-      title: <span style={{ color: dataColors.title }}>Order ID</span>,
-      dataIndex: 'orderId',
-      key: 'orderId',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Status QC</span>,
-      dataIndex: 'scale_overall_status',
-      key: 'scale_overall_status',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Created</span>,
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Order Date</span>,
-      dataIndex: 'purchase_date',
-      key: 'purchase_date',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Shop</span>,
-      dataIndex: 'shopName',
-      key: 'shopName',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Status Order</span>,
-      dataIndex: 'status',
-      key: 'status',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Scale By</span>,
-      dataIndex: 'scale_by',
-      key: 'scale_by',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>QC By</span>,
-      dataIndex: 'qc_by',
-      key: 'qc_by',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Basecost</span>,
-      dataIndex: 'base_cost',
-      key: 'base_cost',
-      align: 'center',
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'orderId', key: 'orderId', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Status QC</span>,
+        dataIndex: 'scale_overall_status',
+        key: 'scale_overall_status',
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'createdAt', key: 'createdAt', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Order Date</span>,
+        dataIndex: 'purchase_date',
+        key: 'purchase_date',
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'base_cost', align: 'center' },
+    ],
+    []
+  );
 
-  const expandedRowRender = (record) => {
-    const subColumns = [
+  const subColumns = useMemo(
+    () => [
       {
         title: <span style={{ color: dataColors.title }}>Product Info</span>,
         dataIndex: 'product_info',
@@ -159,12 +123,7 @@ const QC = () => {
         key: 'fulfill_name',
         align: 'center',
       },
-      {
-        title: <span style={{ color: dataColors.title }}>PNG Status</span>,
-        dataIndex: 'png_status',
-        key: 'png_status',
-        align: 'center',
-      },
+      { title: <span style={{ color: dataColors.title }}>PNG Status</span>, dataIndex: 'png_status', key: 'png_status', align: 'center' },
       {
         title: <span style={{ color: dataColors.title }}>Vendor Product</span>,
         dataIndex: 'cost_center',
@@ -172,9 +131,12 @@ const QC = () => {
         align: 'center',
       },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action', align: 'center' },
-    ];
+    ],
+    []
+  );
 
-    return (
+  const expandedRowRender = useCallback(
+    (record) => (
       <Table
         columns={subColumns}
         dataSource={record.subItems}
@@ -183,137 +145,18 @@ const QC = () => {
         rowClassName={() => 'table-row-center'}
         style={{ padding: 10 }}
       />
-    );
-  };
-
-  // render Orders
-  const renderOrderInTable = (data = []) => {
-    const results = data.map((item, index) => {
-      return {
-        key: item?.orderId,
-        orderId: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />,
-        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        scale_overall_status: (
-          <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
-        ),
-        createdAt: (
-          <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
-            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(item?.createdAt, { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
-            </span>
-          </Flex>
-        ),
-        purchase_date: (
-          <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
-            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
-            </span>
-          </Flex>
-        ),
-        scale_by: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
-        base_cost: <span className="font-medium">${item?.base_cost}</span>,
-        shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
-        qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
-        subItems: item?.items?.map((itemSub, indexItem) => {
-          return {
-            key: `${index}-${indexItem}`,
-            // orderItemId: <StatusComponent title={itemSub?.orderItemId} color={dataColors.default} isDefault={true} />,
-            product_info: (
-              <ItemProductInfoQC
-                link={itemSub?.baseImageUrl}
-                listing={itemSub?.listing}
-                sku={itemSub?.sku}
-                asin={itemSub?.asin}
-                quantity={itemSub?.quantity}
-              />
-            ),
-            scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-            png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
-            fulfill_name: (
-              <div
-                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
-                className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
-              >
-                <span style={{}}>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
-              </div>
-            ),
-            cost_center: (
-              <div
-                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
-                className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
-              >
-                <span>{itemSub?.cost_center?.vendorProductDisplayName}</span>
-              </div>
-            ),
-            action: (
-              <>
-                {itemSub?.scale_status === 'Pending' ? (
-                  <Tooltip title="QC">
-                    <button
-                      className="cursor-pointer border rounded"
-                      style={{ padding: 6, borderColor: dataColors.default }}
-                      onClick={() => {
-                        // setDataView({ orderId: item?.orderId, data: itemSub });
-                        setDataView(item);
-                        setIndexQC(indexItem);
-                        setOpenMOdalQC(true);
-                      }}
-                    >
-                      <MdOutlineImageSearch size={20} />
-                    </button>
-                  </Tooltip>
-                ) : itemSub?.scale_status === 'Complete' ? (
-                  <div className="flex justify-center items-center">
-                    <FcApproval size={25} />
-                  </div>
-                ) : (
-                  <div className="flex justify-center items-center">
-                    <IoArrowUndo size={25} color={dataColors.cancelled} />
-                  </div>
-                )}
-              </>
-            ),
-          };
-        }),
-      };
-    });
-    return results;
-  };
-
-  const debouncedSearch = useMemo(
-    () =>
-      debounce(async (keyword) => {
-        if (!keyword) {
-          updateFilter({ search: '' });
-          return;
-        }
-        updateFilter({ search: keyword });
-      }, 300),
-    []
+    ),
+    [subColumns]
   );
 
-  const handleSearch = (e) => {
-    debouncedSearch(e.target.value);
-  };
-
-  const fetchAllQC = async (params) => {
+  // fetchers
+  const fetchAllQC = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getAllQC(params);
       if (response.status === 200) {
-        const result = response.data?.data;
-        setDataSource(result);
-        setTotalCount(response.data?.totalCount);
+        setDataSource(response.data?.data || []);
+        setTotalCount(response.data?.totalCount || 0);
       } else {
         toast.error(response.data?.message);
       }
@@ -322,9 +165,8 @@ const QC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
       const response = await getAllCountStatusQC(filters);
@@ -342,24 +184,21 @@ const QC = () => {
     }
   }, [filters]);
 
-  const handleFilterForStatus = (status) => {
-    if (status === 'All') {
-      updateFilter({ scale_status: '' });
-      return;
-    }
-    updateFilter({ scale_status: status });
-  };
+  const handleFilterForStatus = useCallback(
+    (status) => {
+      updateFilter({ scale_status: status === 'All' ? '' : status });
+    },
+    [updateFilter]
+  );
 
-  const fetchAllSellers = async () => {
+  const fetchAllSellersMemo = useCallback(async () => {
     try {
       const res = await getAllSellers();
       if (res.status === 200) {
-        const result = res.data?.map((item) => {
-          return {
-            label: item?.full_name,
-            value: item?._id,
-          };
-        });
+        const result = (res.data || []).map((item) => ({
+          label: item?.full_name,
+          value: item?._id,
+        }));
         setSellers(result);
       } else {
         toast.error(res.data?.message || 'Fetch error');
@@ -367,54 +206,148 @@ const QC = () => {
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Unexpected error');
     }
-  };
+  }, []);
 
-  const fetchAllShop = async () => {
+  const fetchAllShop = useCallback(async () => {
     try {
       const result = await getALlShop();
-      if (result.status === 200) {
-        setShops(result.data);
-      }
+      if (result.status === 200) setShops(result.data);
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
+  // debounce search
+  const debouncedSearch = useMemo(() => debounce((keyword) => updateFilter({ search: keyword || '' }), 300), [updateFilter]);
+
+  const handleSearch = useCallback((e) => debouncedSearch(e.target.value), [debouncedSearch]);
+
+  useEffect(() => {
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  // ======= FIX QUAN TRỌNG: tableData phụ thuộc dataSource =======
+  const tableData = useMemo(() => {
+    return (dataSource || []).map((item, index) => ({
+      key: item?.orderId,
+      orderId: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault />,
+      status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+      scale_overall_status: (
+        <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
+      ),
+      createdAt: (
+        <Flex vertical>
+          <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(item?.createdAt, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </Flex>
+      ),
+      purchase_date: (
+        <Flex vertical>
+          <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </Flex>
+      ),
+      scale_by: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
+      base_cost: <span className="font-medium">${item?.base_cost}</span>,
+      shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
+      qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
+      subItems: (item?.items || []).map((itemSub, indexItem) => ({
+        key: `${index}-${indexItem}`,
+        product_info: (
+          <ItemProductInfoQC
+            link={itemSub?.baseImageUrl}
+            listing={itemSub?.listing}
+            sku={itemSub?.sku}
+            asin={itemSub?.asin}
+            quantity={itemSub?.quantity}
+          />
+        ),
+        scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
+        png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
+        fulfill_name: (
+          <div
+            style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
+            className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
+          >
+            <span>{`${item?.orderId}-${itemSub?.orderItemId}`}</span>
+          </div>
+        ),
+        cost_center: (
+          <div
+            style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
+            className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
+          >
+            <span>{itemSub?.cost_center?.vendorProductDisplayName}</span>
+          </div>
+        ),
+        action: (
+          <>
+            {itemSub?.scale_status === 'Pending' ? (
+              <Tooltip title="QC">
+                <button
+                  className="cursor-pointer border rounded"
+                  style={{ padding: 6, borderColor: dataColors.default }}
+                  onClick={() => {
+                    setDataView(item);
+                    setIndexQC(indexItem);
+                    setOpenMOdalQC(true);
+                  }}
+                >
+                  <MdOutlineImageSearch size={20} />
+                </button>
+              </Tooltip>
+            ) : itemSub?.scale_status === 'Complete' ? (
+              <div className="flex justify-center items-center">
+                <FcApproval size={25} />
+              </div>
+            ) : (
+              <div className="flex justify-center items-center">
+                <IoArrowUndo size={25} color={dataColors.cancelled} />
+              </div>
+            )}
+          </>
+        ),
+      })),
+    }));
+  }, [dataSource]); // <-- đây là chỗ gây “No data” trước đó
+
+  // effects
   useEffect(() => {
     fetchAllShop();
-  }, []);
-
+  }, [fetchAllShop]);
   useEffect(() => {
-    fetchAllSellers();
-  }, []);
-
+    fetchAllSellersMemo();
+  }, [fetchAllSellersMemo]);
   useEffect(() => {
     fetchAllQC(filters);
     fetchCountStatus();
-  }, [filters]);
+  }, [filters, fetchAllQC, fetchCountStatus]);
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240; // Chiều cao header nếu có
-      const marginBottom = 20;
-
-      const availableHeight = window.innerHeight - headerHeight - marginBottom;
-      setTableHeight(availableHeight);
+      const headerHeight = 240,
+        marginBottom = 20;
+      setTableHeight(window.innerHeight - headerHeight - marginBottom);
     };
-
-    handleResize(); // Gọi lần đầu
-    window.addEventListener('resize', handleResize); // Lắng nghe resize
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    if (isShowRowkeys) {
-      // Tự động mở tất cả dòng khi component mount
-      setExpandedRowKeys(dataSource.map((item) => item.orderId));
-    }
+    if (isShowRowkeys) setExpandedRowKeys(dataSource.map((item) => item.orderId));
   }, [dataSource, isShowRowkeys]);
 
   return (
@@ -428,21 +361,14 @@ const QC = () => {
             <DateRangePicker
               mode="range"
               showOutsideDays
-              modifiersClassNames={{
-                selected: 'my-selected',
-                range_middle: 'my-range-middle',
-              }}
-              modifiersStyles={{
-                range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
-                },
-              }}
+              modifiersClassNames={{ selected: 'my-selected', range_middle: 'my-range-middle' }}
+              modifiersStyles={{ range_middle: { backgroundColor: '#f3f4f6', fontWeight: 'normal' } }}
               updateFilter={updateFilter}
             />
           </div>
         </div>
       </div>
+
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex gap-3 items-center">
           {tabFilter.map((item, index) => (
@@ -456,12 +382,13 @@ const QC = () => {
             />
           ))}
         </div>
+
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <Input
               onChange={handleSearch}
               placeholder="Search..."
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center">
               <SelectSeller
@@ -488,36 +415,37 @@ const QC = () => {
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
-              defaultCurrent={1}
+              defaultPageSize={PAGE_SIZE}
+              defaultCurrent={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
           </div>
         </div>
+
         <div className="mt-4">
           <Table
             className="no-indent-table table-qc"
             columns={columns}
-            dataSource={renderOrderInTable(dataSource)}
+            dataSource={tableData}
             expandable={{
               indentSize: 0,
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (
-                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
+                <div className="flex justify-center items-center h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
                   {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                 </div>
               ),
-              expandedRowKeys: expandedRowKeys,
+              expandedRowKeys,
               onExpand: handleExpand,
               columnTitle: (
-                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                <div className="flex justify-center items-center h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
                   {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                 </div>
               ),
             }}
             rowKey="key"
-            bordered={true}
+            bordered
             pagination={false}
             loading={loading}
             sticky={{ offsetHeader: 0 }}
@@ -526,6 +454,7 @@ const QC = () => {
           />
         </div>
       </div>
+
       <QcCanvasModal
         open={openModalQC}
         onClose={() => setOpenMOdalQC(false)}
@@ -545,4 +474,4 @@ const QC = () => {
   );
 };
 
-export default QC;
+export default React.memo(QC);

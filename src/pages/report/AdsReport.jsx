@@ -11,7 +11,7 @@ import { getAds } from '../../apis/report';
 import SelectSeller from '../../components/SelectSeller';
 import { getAllSellers } from '../../apis/user';
 import { toast } from 'sonner';
-import { Empty } from 'antd';
+import { Empty, Popover } from 'antd';
 import { HiMiniUserGroup } from 'react-icons/hi2';
 import { GiShop } from 'react-icons/gi';
 
@@ -67,6 +67,19 @@ const AdsReport = () => {
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Unexpected error');
     }
+  };
+
+  const content = (data = []) => {
+    return data.map((item, index) => {
+      return (
+        <div key={index} className="flex">
+          <div className="font-medium">{item?.shop?.name}:</div>
+          <div className="ml-2 font-medium" style={{ color: dataColors.success }}>
+            ${item?.spend}
+          </div>
+        </div>
+      );
+    });
   };
 
   useEffect(() => {
@@ -308,14 +321,16 @@ const AdsReport = () => {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Daily ads spend</div>
-                              <div className="text-xl font-bold" style={{ color: dataColors.success }}>
-                                {$(sellerData?.spend)}
-                              </div>
+                              <Popover trigger={'click'} placement="rightTop" content={content(sellerData.by_shop)}>
+                                <div className="text-xl font-bold cursor-pointer hover:underline" style={{ color: dataColors.success }}>
+                                  {$(sellerData?.spend)}
+                                </div>
+                              </Popover>
                             </div>
                           </div>
 
                           {/* Shops Grid */}
-                          <div
+                          {/* <div
                             style={{
                               display: 'grid',
                               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -360,7 +375,7 @@ const AdsReport = () => {
                                 </div>
                               </div>
                             ))}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>

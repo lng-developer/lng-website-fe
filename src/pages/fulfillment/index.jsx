@@ -1,6 +1,6 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Flex, Input, Pagination, Table } from 'antd';
@@ -21,6 +21,7 @@ import { handleColorStatus, handleColorStatusScale } from '../../utils/handleCol
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
+
 const PAGE_SIZE = 10;
 
 const FulfillmentScale = () => {
@@ -46,205 +47,63 @@ const FulfillmentScale = () => {
     shopName: '',
   });
 
-  const updateFilter = (newValues) => {
+  // ====== Callbacks & Memos ======
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // nếu có truyền page thì dùng, nếu không có thì reset về 1
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
     }));
-  };
+  }, []);
 
-  const handlePageChange = (page, pageSize) => {
-    updateFilter({ page: page, perPage: pageSize });
-    setCurrentPage(page);
-  };
+  const handlePageChange = useCallback(
+    (page, pageSize) => {
+      updateFilter({ page, perPage: pageSize });
+      setCurrentPage(page);
+    },
+    [updateFilter]
+  );
 
-  const handleExpand = (expanded, record) => {
-    if (expanded) {
-      setExpandedRowKeys([...expandedRowKeys, record.key]);
-    } else {
-      setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
-    }
-  };
+  const handleExpand = useCallback((expanded, record) => {
+    setExpandedRowKeys((prev) => (expanded ? [...prev, record.key] : prev.filter((key) => key !== record.key)));
+  }, []);
 
-  const handleShowRowKeys = () => {
-    if (isShowRowkeys) {
-      setExpandedRowKeys([]);
-    } else {
-      setExpandedRowKeys(dataSource.map((item) => item.orderId));
-    }
+  const handleShowRowKeys = useCallback(() => {
+    setExpandedRowKeys(() => (isShowRowkeys ? [] : dataSource.map((item) => item.orderId)));
     setIsShowRowKeys((prev) => !prev);
-  };
+  }, [isShowRowkeys, dataSource]);
 
-  const columns = [
-    {
-      title: <span style={{ color: dataColors.title }}>Order Date</span>,
-      dataIndex: 'orderDate',
-      key: 'orderDate',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Scale Status</span>,
-      dataIndex: 'scaleStatus',
-      key: 'scaleStatus',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Group ID</span>,
-      dataIndex: 'groupId',
-      key: 'groupId',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Group Type</span>,
-      dataIndex: 'groupType',
-      key: 'groupType',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Shop</span>,
-      dataIndex: 'shopName',
-      key: 'shopName',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Order Status</span>,
-      dataIndex: 'status',
-      key: 'status',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Order Owner</span>,
-      dataIndex: 'orderOwner',
-      key: 'orderOwner',
-      align: 'center',
-    },
-    { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
-    {
-      title: <span style={{ color: dataColors.title }}>Express</span>,
-      dataIndex: 'express',
-      key: 'express',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Action</span>,
-      dataIndex: 'actions',
-      key: 'actions',
-      align: 'center',
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'orderDate', key: 'orderDate', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+        dataIndex: 'scaleStatus',
+        key: 'scaleStatus',
+        align: 'center',
+      },
+      { title: <span style={{ color: dataColors.title }}>Group ID</span>, dataIndex: 'groupId', key: 'groupId', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Group Type</span>, dataIndex: 'groupType', key: 'groupType', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Order Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'orderOwner', key: 'orderOwner', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Express</span>, dataIndex: 'express', key: 'express', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
+    ],
+    []
+  );
 
-  const convertToArr = (object) => {
+  const convertToArr = useCallback((object) => {
     return Object?.entries(typeof object === 'object' ? object : {}).map(([key, url]) => ({
       position: key,
       url,
     }));
-  };
+  }, []);
 
-  // render Orders
-  const renderOrderInTable = (data = []) => {
-    const results = data.map((item, index) => {
-      return {
-        key: item?.orderId,
-        orderDate: (
-          <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
-            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
-            </span>
-          </Flex>
-        ),
-        groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault={true} />,
-        groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
-        shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
-        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-        orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
-        scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
-        express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
-        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
-        actions: <ItemAction />,
-        subItems: item?.items?.map((itemSub, indexItem) => {
-          return {
-            key: `${index}-${indexItem}`,
-            product_info: (
-              <ItemProductInfo
-                listing={itemSub?.listing}
-                imageUrl={itemSub?.baseImageUrl}
-                asin={itemSub?.asin}
-                sku={itemSub?.sku}
-                status={item?.status}
-              />
-            ),
-            customization: (
-              <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
-            ),
-            task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-            cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
-            cs_note: (
-              <div className="mb-1 w-45">
-                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
-                <TextArea
-                  value={itemSub?.qc_note}
-                  placeholder="CS note"
-                  spellCheck={false}
-                  style={{ color: dataColors.cancelled, fontWeight: 500 }}
-                />
-              </div>
-            ),
-            action: (
-              <DynamicImageUpload
-                initialKinds={['front']}
-                serverItems={convertToArr(itemSub?.fulfillment_file)}
-                orderId={item?.orderId}
-                orderItemId={itemSub?.orderItemId}
-                fetchAllFulfill={fetchAllFulfill}
-                filters={filters}
-              />
-            ),
-            order_info: (
-              <ItemOrderInfo
-                orderId={item?.orderId}
-                seller={item?.seller?.full_name}
-                fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
-                quantity={itemSub?.quantity}
-              />
-            ),
-          };
-        }),
-      };
-    });
-    return results;
-  };
-
-  // Cột con trong bảng mở rộng
-  const expandedRowRender = (record) => {
-    const subColumns = [
-      { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info', width: 220 },
-      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
-      { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
-      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 220 },
-      { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
-      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
-      { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
-    ];
-
-    return (
-      <Table
-        columns={subColumns}
-        dataSource={record.subItems}
-        pagination={false}
-        rowKey="key"
-        rowClassName={() => 'table-row-center'}
-        style={{ padding: 10 }}
-      />
-    );
-  };
-
-  const fetchAllFulfill = async (params) => {
+  // --- fetchers ---
+  const fetchAllFulfill = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getAllFulfillScale(params);
@@ -259,25 +118,8 @@ const FulfillmentScale = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const debouncedSearch = useMemo(
-    () =>
-      debounce(async (keyword) => {
-        if (!keyword) {
-          updateFilter({ search: '' });
-          return;
-        }
-        updateFilter({ search: keyword });
-      }, 300),
-    []
-  );
-
-  const handleSearch = (e) => {
-    debouncedSearch(e.target.value);
-  };
-
-  // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
       const response = await getAllCountStatusScale(filters);
@@ -295,15 +137,18 @@ const FulfillmentScale = () => {
     }
   }, [filters]);
 
-  const handleFilterForStatus = (status) => {
-    if (status === 'All') {
-      updateFilter({ scale_status: '' });
-      return;
-    }
-    updateFilter({ scale_status: status });
-  };
+  const handleFilterForStatus = useCallback(
+    (status) => {
+      if (status === 'All') {
+        updateFilter({ scale_status: '' });
+        return;
+      }
+      updateFilter({ scale_status: status });
+    },
+    [updateFilter]
+  );
 
-  const fetchAllShop = async () => {
+  const fetchAllShop = useCallback(async () => {
     try {
       const result = await getALlShop();
       if (result.status === 200) {
@@ -312,41 +157,159 @@ const FulfillmentScale = () => {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
+
+  // --- debounce search ---
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((keyword) => {
+        updateFilter({ search: keyword || '' });
+      }, 300),
+    [updateFilter]
+  );
+
+  const handleSearch = useCallback(
+    (e) => {
+      debouncedSearch(e.target.value);
+    },
+    [debouncedSearch]
+  );
 
   useEffect(() => {
+    // cleanup tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  // --- sub table columns (memo để không khởi tạo lại) ---
+  const subColumns = useMemo(
+    () => [
+      { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info', width: 220 },
+      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
+      { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
+      { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 220 },
+      { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
+      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action' },
+      { title: <span style={{ color: dataColors.title }}>Order Info</span>, dataIndex: 'order_info', key: 'order_info' },
+    ],
+    []
+  );
+
+  const expandedRowRender = useCallback(
+    (record) => (
+      <Table
+        columns={subColumns}
+        dataSource={record.subItems}
+        pagination={false}
+        rowKey="key"
+        rowClassName={() => 'table-row-center'}
+        style={{ padding: 10 }}
+      />
+    ),
+    [subColumns]
+  );
+
+  // --- table data (memo hóa nặng nhất) ---
+  const tableData = useMemo(() => {
+    const results = (dataSource || []).map((item, index) => ({
+      key: item?.orderId,
+      orderDate: (
+        <Flex vertical>
+          <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
+          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </Flex>
+      ),
+      groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault />,
+      groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
+      shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
+      status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+      orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
+      scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
+      express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
+      scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
+      actions: <ItemAction />,
+      subItems: (item?.items || []).map((itemSub, indexItem) => ({
+        key: `${index}-${indexItem}`,
+        product_info: (
+          <ItemProductInfo
+            listing={itemSub?.listing}
+            imageUrl={itemSub?.baseImageUrl}
+            asin={itemSub?.asin}
+            sku={itemSub?.sku}
+            status={item?.status}
+          />
+        ),
+        customization: <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
+        task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
+        cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
+        cs_note: (
+          <div className="mb-1 w-45">
+            <div className="font-semibold text-gray-800 mb-1">CS note: </div>
+            <TextArea
+              value={itemSub?.qc_note}
+              placeholder="CS note"
+              spellCheck={false}
+              style={{ color: dataColors.cancelled, fontWeight: 500 }}
+            />
+          </div>
+        ),
+        action: (
+          <DynamicImageUpload
+            initialKinds={['front']}
+            serverItems={convertToArr(itemSub?.fulfillment_file)}
+            orderId={item?.orderId}
+            orderItemId={itemSub?.orderItemId}
+            fetchAllFulfill={fetchAllFulfill}
+            filters={filters}
+          />
+        ),
+        order_info: (
+          <ItemOrderInfo
+            orderId={item?.orderId}
+            seller={item?.seller?.full_name}
+            fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+            quantity={itemSub?.quantity}
+          />
+        ),
+      })),
+    }));
+    return results;
+  }, [dataSource, fetchAllFulfill, filters, convertToArr]);
+
+  // ====== Effects ======
+  useEffect(() => {
     fetchAllShop();
-  }, []);
+  }, [fetchAllShop]);
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240; // Chiều cao header nếu có
+      const headerHeight = 240;
       const marginBottom = 20;
-
       const availableHeight = window.innerHeight - headerHeight - marginBottom;
       setTableHeight(availableHeight);
     };
-
-    handleResize(); // Gọi lần đầu
-    window.addEventListener('resize', handleResize); // Lắng nghe resize
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     fetchAllFulfill(filters);
     fetchCountStatus();
-  }, [filters]);
+  }, [filters, fetchAllFulfill, fetchCountStatus]);
 
   useEffect(() => {
     if (isShowRowkeys) {
-      // Tự động mở tất cả dòng khi component mount
       setExpandedRowKeys(dataSource.map((item) => item.orderId));
     }
   }, [dataSource, isShowRowkeys]);
 
+  // ====== JSX ======
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -358,21 +321,14 @@ const FulfillmentScale = () => {
             <DateRangePicker
               mode="range"
               showOutsideDays
-              modifiersClassNames={{
-                selected: 'my-selected',
-                range_middle: 'my-range-middle',
-              }}
-              modifiersStyles={{
-                range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
-                },
-              }}
+              modifiersClassNames={{ selected: 'my-selected', range_middle: 'my-range-middle' }}
+              modifiersStyles={{ range_middle: { backgroundColor: '#f3f4f6', fontWeight: 'normal' } }}
               updateFilter={updateFilter}
             />
           </div>
         </div>
       </div>
+
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex gap-3 items-center">
           {tabFilter.map((item, index) => (
@@ -386,6 +342,7 @@ const FulfillmentScale = () => {
             />
           ))}
         </div>
+
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <Input
@@ -409,36 +366,37 @@ const FulfillmentScale = () => {
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
-              defaultCurrent={1}
+              defaultPageSize={PAGE_SIZE}
+              defaultCurrent={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
           </div>
         </div>
+
         <div className="mt-4">
           <Table
             className="no-indent-table no-backgroud-title scale"
             columns={columns}
-            dataSource={renderOrderInTable(dataSource)}
+            dataSource={tableData}
             expandable={{
               indentSize: 0,
               expandedRowRender,
               expandIcon: ({ expanded, onExpand, record }) => (
-                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
+                <div className="flex justify-center items-center h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
                   {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                 </div>
               ),
               expandedRowKeys: expandedRowKeys,
               onExpand: handleExpand,
               columnTitle: (
-                <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
+                <div className="flex justify-center items-center h-full w-full cursor-pointer" onClick={handleShowRowKeys}>
                   {isShowRowkeys ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
                 </div>
               ),
             }}
             rowKey="key"
-            bordered={true}
+            bordered
             pagination={false}
             loading={loading}
             sticky={{ offsetHeader: 0 }}
@@ -451,4 +409,4 @@ const FulfillmentScale = () => {
   );
 };
 
-export default FulfillmentScale;
+export default React.memo(FulfillmentScale);

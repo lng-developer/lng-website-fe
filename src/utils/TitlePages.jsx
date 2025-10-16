@@ -12,6 +12,10 @@ const TITLES = {
   '/cost-center/mapping': 'Mapping Cost Center',
   '/report/sale': 'Sale Report',
   '/report/orders-cost': 'Report Orders Cost',
+  '/report/ads': 'Amazon Ads Report',
+  '/design/idea': 'Idea Tasks',
+  '/design/psd': 'PSD Tasks',
+  '/design/png': 'PNG Tasks',
 };
 
 const TitlePages = () => {
