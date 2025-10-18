@@ -58,25 +58,34 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
 
   return (
     <div>
-      <div className={arrFulfill?.length > 0 ? `inline-grid grid-cols-2 gap-4` : ''}>
+      <div className={arrFulfill?.length > 0 ? 'inline-grid grid-cols-2 gap-4' : ''}>
         <div
-          className="w-[130px] h-[130px] rounded-lg overflow-hidden"
-          style={{
-            boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-          }}
+          className="w-[130px] h-[130px] rounded-lg overflow-hidden bg-white"
+          style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
         >
-          <Image height={130} width={130} src={listing?.product_image || linkImage || NoImage} className="rounded-lg" />
+          <Image
+            src={listing?.product_image || linkImage || NoImage}
+            className="rounded-lg"
+            width="100%"
+            height="100%"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff' }}
+          />
         </div>
-        {arrFulfill.length > 0 &&
-          arrFulfill?.map((f, i) => (
+
+        {arrFulfill?.length > 0 &&
+          arrFulfill.map((f, i) => (
             <div
               key={i}
-              className="w-[130px] h-[130px] rounded-lg overflow-hidden"
-              style={{
-                boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-              }}
+              className="w-[130px] h-[130px] rounded-lg overflow-hidden bg-white"
+              style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
             >
-              <Image height={130} width={130} src={f?.url || NoImage} className="rounded-lg" />
+              <Image
+                src={f?.url || NoImage}
+                className="rounded-lg"
+                width="100%"
+                height="100%"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff' }}
+              />
             </div>
           ))}
       </div>
