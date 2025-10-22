@@ -3,9 +3,10 @@ import { useOutletContext } from 'react-router-dom';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Input, Pagination, Table } from 'antd';
+import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
+import { MdOutlineRefresh } from 'react-icons/md';
 import StatusComponent from '../../components/StatusComponent';
 import ItemProductInfo from './table/ItemProductInfo';
 import ItemCustom from './table/ItemCustom';
@@ -361,6 +362,18 @@ const FulfillmentScale = () => {
                 }}
               />
             </div>
+            <Tooltip title="Refresh">
+              <button
+                className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                onClick={() => {
+                  fetchAllFulfill(filters);
+                  fetchCountStatus();
+                  toast.success('Refresh success!');
+                }}
+              >
+                <MdOutlineRefresh size={20} />
+              </button>
+            </Tooltip>
           </div>
           <div>
             <Pagination

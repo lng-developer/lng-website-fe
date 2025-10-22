@@ -358,7 +358,10 @@ export default function QcCanvasModal({
               pageSize={1}
               current={currentIndex + 1}
               onChange={handlePageChange}
+              simple
+              size="large"
               onShowSizeChange={handlePageChange}
+              style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
             />
           </div>
 

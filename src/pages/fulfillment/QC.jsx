@@ -20,6 +20,7 @@ import { debounce } from 'lodash';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
+import { MdOutlineRefresh } from 'react-icons/md';
 import SelectSeller from '../../components/SelectSeller';
 
 const PAGE_SIZE = 10;
@@ -409,6 +410,18 @@ const QC = () => {
                   updateFilter({ shopName: val });
                 }}
               />
+              <Tooltip title="Refresh">
+                <button
+                  className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => {
+                    fetchAllQC(filters);
+                    fetchCountStatus();
+                    toast.success('Refresh success!');
+                  }}
+                >
+                  <MdOutlineRefresh size={20} />
+                </button>
+              </Tooltip>
             </div>
           </div>
           <div>

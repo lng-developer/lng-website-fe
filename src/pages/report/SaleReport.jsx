@@ -1,13 +1,11 @@
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
-import { Table } from 'antd';
+import { Table, Tooltip } from 'antd';
 import { LuBoxes, LuImport } from 'react-icons/lu';
-import { FaSackDollar, FaMoneyBillWave, FaCircleDollarToSlot } from 'react-icons/fa6';
+import { FaMoneyBillWave } from 'react-icons/fa6';
 import { BiSolidFileExport } from 'react-icons/bi';
-import { TbDiscountFilled } from 'react-icons/tb';
 import { FaDolly } from 'react-icons/fa6';
-import { AiFillDollarCircle } from 'react-icons/ai';
 import { useEffect, useMemo, useState } from 'react';
 import { getAllReport } from '../../apis/report';
 import { toast } from 'sonner';
@@ -18,6 +16,8 @@ import { getAllSellers } from '../../apis/user';
 import { useAuth } from '../../context/AuthContext';
 import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
+import { MdOutlineRefresh } from 'react-icons/md';
+import { FaDollarSign, FaUser, FaPercentage, FaBuysellads } from 'react-icons/fa';
 import { saveAs } from 'file-saver';
 
 // ---------- helpers ----------
@@ -85,14 +85,15 @@ const SaleReport = () => {
       out[seller] = {
         ...r,
         fee: fitToLen(r.fee, len),
-        itemTax: fitToLen(r.itemTax, len), // <— thêm
-        shippingTax: fitToLen(r.shippingTax, len), // <— thêm
-        opCost: fitToLen(r.opCost, len), // lấy từ import
+        itemTax: fitToLen(r.itemTax, len),
+        shippingTax: fitToLen(r.shippingTax, len),
+        itemPromotionDiscount: fitToLen(r.itemPromotionDiscount, len),
+        opCost: fitToLen(r.opCost, len),
         refund: fitToLen(r.refund, len),
         items: fitToLen(r.items, len),
         revenue: fitToLen(r.revenue, len),
         baseCost: fitToLen(r.baseCost, len),
-        ads: fitToLen(r.ads, len), // lấy từ import
+        ads: fitToLen(r.ads, len),
         profit1: r.profit1 ? fitToLen(r.profit1, len) : undefined,
         profit2: r.profit2 ? fitToLen(r.profit2, len) : undefined,
       };
@@ -105,10 +106,10 @@ const SaleReport = () => {
     const rows = [];
 
     Object.entries(normalized).forEach(([seller, r]) => {
-      // Profit1 = revenue - baseCost - fee
+      // Profit1 = revenue - baseCost - fee (giữ logic cũ nếu backend chưa trả)
       const profit1 = r.profit1 ?? r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.fee[i])).toFixed(2));
 
-      // Profit2 = Profit1 - ads - opCost - refund
+      // Profit2 = Profit1 - ads - opCost - refund (giữ logic cũ nếu backend chưa trả)
       const profit2 =
         r.profit2 ??
         r.revenue.map(
@@ -135,18 +136,26 @@ const SaleReport = () => {
         refund: r.totals?.refund ?? sum(r.refund),
         profit1: r.totals?.profit1 ?? sum(profit1),
         profit2: r.totals?.profit2 ?? sum(profit2),
+        itemPromotionDiscount: r.totals?.itemPromotionDiscount ?? sum(r.itemPromotionDiscount || []), // <-- tổng Discount nếu có
       };
 
-      // 2) ROI tổng: dùng totals.profit2 / totals.ads
+      // ROI tổng: dùng totals.profit2 / totals.ads
       const totalROI = totals.ads > 0 ? +(((totals.profit2 || 0) / totals.ads) * 100).toFixed(2) : null;
 
-      // 👉 ROI chuyển xuống cuối nhóm
+      // Nhóm dòng hiển thị theo seller
       const group = [
-        { type: 'Total Orders', values: r.items, totalVal: totals.items },
+        { type: 'Total Orders', values: r.items, money: false, totalVal: totals.items },
         { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
         { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
+        // --- Discount (chỉ hiển thị, KHÔNG ảnh hưởng công thức profit hiện tại) ---
+        {
+          type: 'Discount',
+          values: r.itemPromotionDiscount || [],
+          money: true,
+          totalVal: totals.itemPromotionDiscount,
+        },
         // hai hàng Profit có bật signAware để tô màu theo âm/dương
         { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
@@ -288,11 +297,88 @@ const SaleReport = () => {
     const totalProfit2 = get('profit2');
     const baseCost = get('baseCost');
     const totalFee = get('fee');
-
     const totalTax = entries.reduce((acc, r) => acc + sum(r.itemTax || []) + sum(r.shippingTax || []), 0);
 
-    return { totalItems, totalRevenue, totalAds, totalProfit2, baseCost, totalTax, totalFee };
+    const totalDiscount = entries.reduce((acc, r) => acc + sum(r.itemPromotionDiscount || []), 0);
+
+    return [
+      { key: 'orders', label: 'Orders', value: totalItems, icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
+      {
+        key: 'revenue',
+        label: 'Revenue',
+        value: totalRevenue,
+        prefix: '$',
+        icon: <FaMoneyBillWave className="text-white" />,
+        iconBg: 'bg-emerald-500',
+      },
+      {
+        key: 'ads',
+        label: 'Ads Spend',
+        value: totalAds,
+        prefix: '$',
+        icon: <FaBuysellads className="text-white" />,
+        iconBg: 'bg-blue-500',
+      },
+      {
+        key: 'vendor',
+        label: 'Base Cost',
+        value: baseCost,
+        prefix: '$',
+        icon: <FaDollarSign className="text-white" />,
+        iconBg: 'bg-amber-500',
+      },
+      // Diff = tổng item_promotion_discount (theo backend bạn yêu cầu)
+      {
+        key: 'diff',
+        label: 'Discount',
+        value: totalDiscount,
+        prefix: '$',
+        icon: <FaPercentage className="text-white" />,
+        iconBg: 'bg-violet-500',
+      },
+      {
+        key: 'fee',
+        label: 'Amz Fee',
+        value: totalFee,
+        prefix: '$',
+        icon: <FaDolly className="text-white" />,
+        iconBg: 'bg-fuchsia-500',
+      },
+      { key: 'tax', label: 'Tax', value: totalTax, prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-orange-500' },
+      {
+        key: 'profit',
+        label: 'Profit',
+        value: totalProfit2,
+        prefix: '$',
+        icon: <FaUser className="text-white" />,
+        iconBg: 'bg-emerald-500',
+      },
+    ];
   }, [normalized]);
+
+  const formatNumber = (n) =>
+    typeof n === 'number' ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : n;
+
+  const IconWrap = ({ bg, children }) => <div className={`flex h-9 w-9 items-center justify-center rounded-full ${bg}`}>{children}</div>;
+
+  const Card = ({ item }) => (
+    <div className="group flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md">
+      <div className="flex items-center gap-3">
+        <IconWrap bg={item.iconBg}>{item.icon}</IconWrap>
+        <div className="text-slate-600 text-[13px] leading-4 font-medium">{item.label}</div>
+      </div>
+      <div className="text-right tabular-nums font-semibold text-slate-800">
+        {typeof item.value === 'number' ? (
+          <span style={{ color: item.key === 'profit' || item.key === 'revenue' ? dataColors.success : '' }}>
+            {item.prefix || ''}
+            {item.label === 'Orders' ? item.value : formatNumber(item.value)}
+          </span>
+        ) : (
+          <span>{item.value}</span>
+        )}
+      </div>
+    </div>
+  );
 
   const fetchAllSellers = async () => {
     if (user?.role === 'Admin') {
@@ -313,33 +399,31 @@ const SaleReport = () => {
     }
   };
 
+  // ====== EXPORT EXCEL (giữ nguyên logic hiện tại) ======
   const handleExportWeeklyExcel = async () => {
     try {
-      // ====== DỮ LIỆU TỪ BACKEND (KHÔNG TÍNH LẠI) ======
       const entries = Object.values(normalized);
       const sumArr = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
       const getTotal = (k) => entries.reduce((acc, r) => acc + numberSafe(r.totals?.[k]), 0);
 
       const totalOrders = getTotal('items');
       const revenue = getTotal('revenue');
-      const baseCost = getTotal('baseCost'); // chi phí Vendor
-      const adsSpend = getTotal('ads'); // chi phí quảng cáo
-      const feeTotal = getTotal('fee'); // chi phí sàn (dùng fee backend)
+      const baseCost = getTotal('baseCost');
+      const adsSpend = getTotal('ads');
+      const feeTotal = getTotal('fee');
       const taxTotal = entries.reduce((acc, r) => acc + sumArr(r.itemTax || []) + sumArr(r.shippingTax || []), 0);
-      const profitTotal = getTotal('profit2'); // Lợi nhuận tổng (backend đã tính)
+      const profitTotal = getTotal('profit2');
 
-      // ====== Workbook / Sheet ======
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Báo cáo tuần', {
         properties: { defaultRowHeight: 18 },
         views: [{ state: 'frozen', xSplit: 0, ySplit: 14 }],
       });
 
-      // ====== Style helpers ======
       const borderThin = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       const fillYellow = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } };
       const fillBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9EEF8' } };
-      const moneyFmt = '$#,##0.00;[Red]-$#,##0.00'; // âm có dấu trừ
+      const moneyFmt = '$#,##0.00;[Red]-$#,##0.00';
       const percentFmt = '0.00%';
 
       const set = (addr, v, opts = {}) => {
@@ -356,7 +440,6 @@ const SaleReport = () => {
         return c;
       };
 
-      // ====== Header ======
       set('B1', 'CÔNG TY TNHH LAN NHI GROUP', { bold: true });
       ws.mergeCells('B2', 'I2');
       set('B2', 'BÁO CÁO DOANH THU TUẦN', { bold: true, size: 18, align: { horizontal: 'center' }, fill: fillYellow, border: borderThin });
@@ -368,21 +451,19 @@ const SaleReport = () => {
 
       set('J3', `Tổng đơn: ${totalOrders}`, { bold: true, align: { horizontal: 'right' } });
 
-      // ====== Chi phí tuần (dùng số backend) ======
       ws.mergeCells('B5', 'I5');
       set('B5', 'Chi phí tuần', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
 
       [
         ['B6', 'Chi phí Vender', baseCost],
         ['B7', 'Chi phí quảng cáo', adsSpend],
-        ['B8', 'Chi phí sàn (17%)', feeTotal], // dùng fee backend, không tính 17%
+        ['B8', 'Chi phí sàn (17%)', feeTotal],
         ['B9', 'Thuế', taxTotal],
       ].forEach(([addr, label, value]) => {
         set(addr, label, { border: borderThin });
         set(`I${addr.slice(1)}`, value, { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
       });
 
-      // kẻ khung vùng trống giữa label và value
       ws.mergeCells('C6', 'H9');
       [
         'C6',
@@ -411,7 +492,6 @@ const SaleReport = () => {
         'H9',
       ].forEach((a) => set(a, '', { border: borderThin }));
 
-      // ====== Thu nhập tuần (Doanh thu & Lợi nhuận) ======
       ws.mergeCells('B11', 'I11');
       set('B11', 'Thu nhập tuần', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
 
@@ -426,9 +506,8 @@ const SaleReport = () => {
         set(a, '', { border: borderThin })
       );
 
-      // ====== Bảng chi tiết ======
       const startRow = 15;
-      const col = { seller: 2, type: 3, total: 4, firstDay: 5 }; // B,C,D,E...
+      const col = { seller: 2, type: 3, total: 4, firstDay: 5 };
       const headerRow = ws.getRow(startRow);
       ['Seller', 'Type', 'Total', ...days].forEach((h, i) => {
         const cell = headerRow.getCell(col.seller + i);
@@ -445,13 +524,13 @@ const SaleReport = () => {
       let rIdx = startRow + 1;
 
       Object.entries(normalized).forEach(([seller, r], sIdx) => {
-        // lấy đúng MẢNG & TOTAL từ backend, không tự tính
         const group = [
           { label: 'Total Orders', values: r.items || [], total: r.totals?.items, money: false },
           { label: 'Revenue', values: r.revenue || [], total: r.totals?.revenue, money: true },
           { label: 'Base cost', values: r.baseCost || [], total: r.totals?.baseCost, money: true },
           { label: 'Ads spend', values: r.ads || [], total: r.totals?.ads, money: true },
           { label: 'Fee', values: r.fee || [], total: r.totals?.fee, money: true },
+          { label: 'Discount', values: r.itemPromotionDiscount || [], total: r.totals?.itemPromotionDiscount ?? 0, money: true },
           { label: 'Profit 1', values: r.profit1 || [], total: r.totals?.profit1, money: true, signAware: true },
           { label: 'Operation Cost', values: r.opCost || [], total: r.totals?.opCost, money: true },
           { label: 'Refund', values: r.refund || [], total: r.totals?.refund, money: true },
@@ -476,12 +555,10 @@ const SaleReport = () => {
             cSeller.border = borderThin;
           }
 
-          // Type
           const cType = row.getCell(col.type);
           cType.value = rowObj.label;
           cType.border = borderThin;
 
-          // Total
           const cTotal = row.getCell(col.total);
           cTotal.value = rowObj.total ?? (rowObj.percent ? null : 0);
           cTotal.alignment = { horizontal: 'right' };
@@ -492,7 +569,6 @@ const SaleReport = () => {
             cTotal.font = { color: { argb: cTotal.value >= 0 ? '008000' : 'FF0000' }, bold: true };
           }
 
-          // Values by day (giữ nguyên số backend)
           days.forEach((_, i) => {
             const c = row.getCell(col.firstDay + i);
             const v = rowObj.values?.[i];
@@ -509,14 +585,12 @@ const SaleReport = () => {
           rIdx++;
         });
 
-        // khoảng cách nhóm
         if (sIdx < Object.keys(normalized).length - 1) {
           ws.getRow(rIdx).height = 6;
           rIdx++;
         }
       });
 
-      // ====== Xuất file ======
       const buf = await wb.xlsx.writeBuffer();
       const filename = `Bao_cao_doanh_thu_tuan_${filters.from?.slice(0, 10)}_to_${filters.to?.slice(0, 10)}.xlsx`;
       saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
@@ -590,95 +664,12 @@ const SaleReport = () => {
 
       <div className="mt-[60px] px-8 py-4 h-full">
         {/* KPI Cards */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          {/* Total orders */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Total orders</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.process }}>
-                  {kpis.totalItems}
-                </span>
-              </div>
-              <LuBoxes size={25} color={dataColors.process} />
-            </div>
-          </div>
-
-          {/* Revenue */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Revenue</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.success }}>
-                  {$(+kpis.totalRevenue)}
-                </span>
-              </div>
-              <FaSackDollar size={25} color={dataColors.success} />
-            </div>
-          </div>
-
-          {/* Base cost */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Base cost</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.process }}>
-                  {$(+kpis.baseCost)}
-                </span>
-              </div>
-              <FaCircleDollarToSlot size={25} color={dataColors.process} />
-            </div>
-          </div>
-
-          {/* Tax = itemTax + shippingTax */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Tax</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.purple }}>
-                  {$(+kpis.totalTax)}
-                </span>
-              </div>
-              <TbDiscountFilled size={30} color={dataColors.purple} />
-            </div>
-          </div>
-
-          {/* Fee */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Fee</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.asin }}>
-                  {$(+kpis.totalFee)}
-                </span>
-              </div>
-              <FaDolly size={25} color={dataColors.asin} />
-            </div>
-          </div>
-
-          {/* Ads spend */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Ads spend</div>
-                <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
-                  {$(+kpis.totalAds)}
-                </span>
-              </div>
-              <AiFillDollarCircle size={25} color={dataColors.pending} />
-            </div>
-          </div>
-
-          {/* Profit */}
-          <div className="border border-[#e2e8f0] p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-[#64748b]">Profit</div>
-                <span className="text-xl font-bold" style={{ color: kpis.totalProfit2 > 0 ? dataColors.success : dataColors.cancelled }}>
-                  {$(+kpis.totalProfit2)}
-                </span>
-              </div>
-              <FaMoneyBillWave size={25} color={dataColors.success} />
+        <div className="flex items-center gap-4 w-full">
+          <div className="w-full">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {kpis.map((it) => (
+                <Card key={it.key || it.label} item={it} />
+              ))}
             </div>
           </div>
         </div>
@@ -696,6 +687,17 @@ const SaleReport = () => {
                   updateFilter({ seller: val });
                 }}
               />
+              <Tooltip title="Refresh">
+                <button
+                  className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => {
+                    fetchAllReport(filters);
+                    toast.success('Refresh success!');
+                  }}
+                >
+                  <MdOutlineRefresh size={20} />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
