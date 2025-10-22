@@ -18,7 +18,6 @@ import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
 
 import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
-import { getALlVendorProduct } from '../../apis/vendor';
 
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
@@ -54,7 +53,6 @@ const Home = () => {
   const [selectShop, setSelectShop] = useState('');
   const [loading, setLoading] = useState(false);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
-  const [vendorProduct, setVendorProduct] = useState([]);
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [orderInfo, setOrderInfo] = useState({});
@@ -247,21 +245,6 @@ const Home = () => {
     }
   }, []);
 
-  const fetchAllVendorProduct = useCallback(async () => {
-    try {
-      const response = await getALlVendorProduct({ all: true });
-      if (response.status === 200) {
-        const result = response.data?.data?.map((item) => ({
-          value: item?._id,
-          label: `${item?.vendor?.name} - ${item?.product_name}`,
-        }));
-        setVendorProduct(result);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, []);
-
   // columns
   const columns = useMemo(
     () => [
@@ -440,9 +423,7 @@ const Home = () => {
         ),
         customer: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
         quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-        cost_center: (
-          <SubItemCost data={itemSub?.cost_center} vendorProduct={vendorProduct} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />
-        ),
+        cost_center: <SubItemCost data={itemSub?.cost_center} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />,
         tracking_note: (
           <SubItemTracking
             tracking_info={itemSub?.tracking_info}
@@ -457,7 +438,7 @@ const Home = () => {
       })),
     }));
     return results;
-  }, [orders, vendorProduct, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
+  }, [orders, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
 
   // ---- Effects ----
   useEffect(() => {
@@ -470,10 +451,6 @@ const Home = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    fetchAllVendorProduct();
-  }, [fetchAllVendorProduct]);
 
   useEffect(() => {
     fetchAllShop();
