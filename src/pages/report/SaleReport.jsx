@@ -2,9 +2,12 @@ import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
 import { Table } from 'antd';
-import { LuBoxes } from 'react-icons/lu';
-import { FaSackDollar, FaMoneyBillWave } from 'react-icons/fa6';
-import { LuImport } from 'react-icons/lu';
+import { LuBoxes, LuImport } from 'react-icons/lu';
+import { FaSackDollar, FaMoneyBillWave, FaCircleDollarToSlot } from 'react-icons/fa6';
+import { BiSolidFileExport } from 'react-icons/bi';
+import { TbDiscountFilled } from 'react-icons/tb';
+import { FaDolly } from 'react-icons/fa6';
+import { AiFillDollarCircle } from 'react-icons/ai';
 import { useEffect, useMemo, useState } from 'react';
 import { getAllReport } from '../../apis/report';
 import { toast } from 'sonner';
@@ -14,8 +17,8 @@ import ModalAds from './ModalAds';
 import { getAllSellers } from '../../apis/user';
 import { useAuth } from '../../context/AuthContext';
 import SelectSeller from '../../components/SelectSeller';
-import { AiFillDollarCircle } from 'react-icons/ai';
-import { FaCircleDollarToSlot } from 'react-icons/fa6';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -24,8 +27,9 @@ const $ = (n) => (n >= 0 ? `$${Number(n).toFixed(2)}` : `-$${Math.abs(Number(n))
 // ROI threshold 60%
 const roiColor = (percent) => (percent >= 60 ? dataColors.success : dataColors.cancelled);
 const fitToLen = (arr = [], len) => {
-  if (arr.length === len) return arr;
-  const clipped = arr.slice(0, len);
+  const safe = Array.isArray(arr) ? arr : [];
+  if (safe.length === len) return safe;
+  const clipped = safe.slice(0, len);
   if (clipped.length < len) return [...clipped, ...Array(len - clipped.length).fill(0)];
   return clipped;
 };
@@ -45,6 +49,7 @@ const SaleReport = () => {
     to: defaultTo,
     seller: '', // '' = all
   });
+
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
       ...prev,
@@ -80,6 +85,8 @@ const SaleReport = () => {
       out[seller] = {
         ...r,
         fee: fitToLen(r.fee, len),
+        itemTax: fitToLen(r.itemTax, len), // <— thêm
+        shippingTax: fitToLen(r.shippingTax, len), // <— thêm
         opCost: fitToLen(r.opCost, len), // lấy từ import
         refund: fitToLen(r.refund, len),
         items: fitToLen(r.items, len),
@@ -215,7 +222,6 @@ const SaleReport = () => {
       onHeaderCell: () => ({ style: { borderRight: '2px solid #e5e9eeff' } }),
       onCell: (row) => ({ style: { borderRight: '2px solid #e5e9eeff', ...sepStyle(row) } }),
       render: (val, row) => {
-        // ROI total có thể null nếu Ads tổng = 0
         if (row._percent) {
           if (val === null || typeof val === 'undefined') return <span>-</span>;
           return (
@@ -247,7 +253,6 @@ const SaleReport = () => {
       width: 120,
       onCell: (row) => ({ style: sepStyle(row) }),
       render: (val, row) => {
-        // ROI theo ngày
         if (row._percent) {
           if (val === null || typeof val === 'undefined') return '-';
           const p = Number(val) || 0;
@@ -273,9 +278,8 @@ const SaleReport = () => {
 
   // ----- KPIs tổng trên đầu -----
   const kpis = useMemo(() => {
-    const totals = Object.values(normalized)
-      .map((r) => r.totals)
-      .filter(Boolean);
+    const entries = Object.values(normalized);
+    const totals = entries.map((r) => r.totals).filter(Boolean);
     const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
 
     const totalItems = get('items');
@@ -283,8 +287,11 @@ const SaleReport = () => {
     const totalAds = get('ads');
     const totalProfit2 = get('profit2');
     const baseCost = get('baseCost');
+    const totalFee = get('fee');
 
-    return { totalItems, totalRevenue, totalAds, totalProfit2, baseCost };
+    const totalTax = entries.reduce((acc, r) => acc + sum(r.itemTax || []) + sum(r.shippingTax || []), 0);
+
+    return { totalItems, totalRevenue, totalAds, totalProfit2, baseCost, totalTax, totalFee };
   }, [normalized]);
 
   const fetchAllSellers = async () => {
@@ -292,12 +299,10 @@ const SaleReport = () => {
       try {
         const res = await getAllSellers();
         if (res.status === 200) {
-          const result = res.data?.map((item) => {
-            return {
-              label: item?.full_name,
-              value: item?._id,
-            };
-          });
+          const result = res.data?.map((item) => ({
+            label: item?.full_name,
+            value: item?._id,
+          }));
           setSellers(result);
         } else {
           toast.error(res.data?.message || 'Fetch error');
@@ -305,6 +310,219 @@ const SaleReport = () => {
       } catch (err) {
         toast.error(err?.response?.data?.message || 'Unexpected error');
       }
+    }
+  };
+
+  const handleExportWeeklyExcel = async () => {
+    try {
+      // ====== DỮ LIỆU TỪ BACKEND (KHÔNG TÍNH LẠI) ======
+      const entries = Object.values(normalized);
+      const sumArr = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
+      const getTotal = (k) => entries.reduce((acc, r) => acc + numberSafe(r.totals?.[k]), 0);
+
+      const totalOrders = getTotal('items');
+      const revenue = getTotal('revenue');
+      const baseCost = getTotal('baseCost'); // chi phí Vendor
+      const adsSpend = getTotal('ads'); // chi phí quảng cáo
+      const feeTotal = getTotal('fee'); // chi phí sàn (dùng fee backend)
+      const taxTotal = entries.reduce((acc, r) => acc + sumArr(r.itemTax || []) + sumArr(r.shippingTax || []), 0);
+      const profitTotal = getTotal('profit2'); // Lợi nhuận tổng (backend đã tính)
+
+      // ====== Workbook / Sheet ======
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Báo cáo tuần', {
+        properties: { defaultRowHeight: 18 },
+        views: [{ state: 'frozen', xSplit: 0, ySplit: 14 }],
+      });
+
+      // ====== Style helpers ======
+      const borderThin = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      const fillYellow = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } };
+      const fillBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9EEF8' } };
+      const moneyFmt = '$#,##0.00;[Red]-$#,##0.00'; // âm có dấu trừ
+      const percentFmt = '0.00%';
+
+      const set = (addr, v, opts = {}) => {
+        const c = ws.getCell(addr);
+        c.value = v;
+        if (opts.bold) c.font = { ...(c.font || {}), bold: true };
+        if (opts.italic) c.font = { ...(c.font || {}), italic: true };
+        if (opts.size) c.font = { ...(c.font || {}), size: opts.size };
+        if (opts.color) c.font = { ...(c.font || {}), color: { argb: opts.color } };
+        if (opts.align) c.alignment = { ...(c.alignment || {}), ...opts.align };
+        if (opts.fill) c.fill = opts.fill;
+        if (opts.border) c.border = opts.border;
+        if (opts.numFmt) c.numFmt = opts.numFmt;
+        return c;
+      };
+
+      // ====== Header ======
+      set('B1', 'CÔNG TY TNHH LAN NHI GROUP', { bold: true });
+      ws.mergeCells('B2', 'I2');
+      set('B2', 'BÁO CÁO DOANH THU TUẦN', { bold: true, size: 18, align: { horizontal: 'center' }, fill: fillYellow, border: borderThin });
+
+      ws.mergeCells('B3', 'I3');
+      const fromStr = (filters.from || '').slice(0, 10).split('-').reverse().join('/');
+      const toStr = (filters.to || '').slice(0, 10).split('-').reverse().join('/');
+      set('B3', `Từ ngày ${fromStr} đến ngày ${toStr}`, { italic: true, color: '0033CC', align: { horizontal: 'center' } });
+
+      set('J3', `Tổng đơn: ${totalOrders}`, { bold: true, align: { horizontal: 'right' } });
+
+      // ====== Chi phí tuần (dùng số backend) ======
+      ws.mergeCells('B5', 'I5');
+      set('B5', 'Chi phí tuần', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
+
+      [
+        ['B6', 'Chi phí Vender', baseCost],
+        ['B7', 'Chi phí quảng cáo', adsSpend],
+        ['B8', 'Chi phí sàn (17%)', feeTotal], // dùng fee backend, không tính 17%
+        ['B9', 'Thuế', taxTotal],
+      ].forEach(([addr, label, value]) => {
+        set(addr, label, { border: borderThin });
+        set(`I${addr.slice(1)}`, value, { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
+      });
+
+      // kẻ khung vùng trống giữa label và value
+      ws.mergeCells('C6', 'H9');
+      [
+        'C6',
+        'D6',
+        'E6',
+        'F6',
+        'G6',
+        'H6',
+        'C7',
+        'D7',
+        'E7',
+        'F7',
+        'G7',
+        'H7',
+        'C8',
+        'D8',
+        'E8',
+        'F8',
+        'G8',
+        'H8',
+        'C9',
+        'D9',
+        'E9',
+        'F9',
+        'G9',
+        'H9',
+      ].forEach((a) => set(a, '', { border: borderThin }));
+
+      // ====== Thu nhập tuần (Doanh thu & Lợi nhuận) ======
+      ws.mergeCells('B11', 'I11');
+      set('B11', 'Thu nhập tuần', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
+
+      set('B12', 'Doanh thu', { border: borderThin });
+      set('I12', revenue, { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
+
+      set('B13', 'Lợi nhuận', { border: borderThin });
+      set('I13', profitTotal, { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
+
+      ws.mergeCells('C12', 'H13');
+      ['C12', 'D12', 'E12', 'F12', 'G12', 'H12', 'C13', 'D13', 'E13', 'F13', 'G13', 'H13'].forEach((a) =>
+        set(a, '', { border: borderThin })
+      );
+
+      // ====== Bảng chi tiết ======
+      const startRow = 15;
+      const col = { seller: 2, type: 3, total: 4, firstDay: 5 }; // B,C,D,E...
+      const headerRow = ws.getRow(startRow);
+      ['Seller', 'Type', 'Total', ...days].forEach((h, i) => {
+        const cell = headerRow.getCell(col.seller + i);
+        cell.value = h;
+        cell.font = { bold: true };
+        cell.alignment = { horizontal: 'center' };
+        cell.border = borderThin;
+      });
+      ws.getColumn(col.seller).width = 18;
+      ws.getColumn(col.type).width = 16;
+      ws.getColumn(col.total).width = 14;
+      days.forEach((_, i) => (ws.getColumn(col.firstDay + i).width = 12));
+
+      let rIdx = startRow + 1;
+
+      Object.entries(normalized).forEach(([seller, r], sIdx) => {
+        // lấy đúng MẢNG & TOTAL từ backend, không tự tính
+        const group = [
+          { label: 'Total Orders', values: r.items || [], total: r.totals?.items, money: false },
+          { label: 'Revenue', values: r.revenue || [], total: r.totals?.revenue, money: true },
+          { label: 'Base cost', values: r.baseCost || [], total: r.totals?.baseCost, money: true },
+          { label: 'Ads spend', values: r.ads || [], total: r.totals?.ads, money: true },
+          { label: 'Fee', values: r.fee || [], total: r.totals?.fee, money: true },
+          { label: 'Profit 1', values: r.profit1 || [], total: r.totals?.profit1, money: true, signAware: true },
+          { label: 'Operation Cost', values: r.opCost || [], total: r.totals?.opCost, money: true },
+          { label: 'Refund', values: r.refund || [], total: r.totals?.refund, money: true },
+          { label: 'Profit 2', values: r.profit2 || [], total: r.totals?.profit2, money: true, signAware: true },
+          {
+            label: 'ROI',
+            values: r.roi || [],
+            total: r.totals?.roi ?? (r.totals?.ads > 0 ? r.totals?.profit2 / r.totals?.ads : null),
+            percent: true,
+          },
+        ];
+
+        const groupLen = group.length;
+        if (groupLen > 1) ws.mergeCells(rIdx, col.seller, rIdx + groupLen - 1, col.seller);
+        group.forEach((rowObj, idx) => {
+          const row = ws.getRow(rIdx);
+
+          if (idx === 0) {
+            const cSeller = row.getCell(col.seller);
+            cSeller.value = seller;
+            cSeller.font = { bold: true };
+            cSeller.border = borderThin;
+          }
+
+          // Type
+          const cType = row.getCell(col.type);
+          cType.value = rowObj.label;
+          cType.border = borderThin;
+
+          // Total
+          const cTotal = row.getCell(col.total);
+          cTotal.value = rowObj.total ?? (rowObj.percent ? null : 0);
+          cTotal.alignment = { horizontal: 'right' };
+          cTotal.border = borderThin;
+          if (rowObj.money) cTotal.numFmt = moneyFmt;
+          if (rowObj.percent) cTotal.numFmt = percentFmt;
+          if (rowObj.signAware && typeof cTotal.value === 'number') {
+            cTotal.font = { color: { argb: cTotal.value >= 0 ? '008000' : 'FF0000' }, bold: true };
+          }
+
+          // Values by day (giữ nguyên số backend)
+          days.forEach((_, i) => {
+            const c = row.getCell(col.firstDay + i);
+            const v = rowObj.values?.[i];
+            c.value = rowObj.percent ? (v == null ? null : Number(v)) : Number(v || 0);
+            c.alignment = { horizontal: 'right' };
+            c.border = borderThin;
+            if (rowObj.money) c.numFmt = moneyFmt;
+            if (rowObj.percent) c.numFmt = percentFmt;
+            if (rowObj.signAware && typeof c.value === 'number') {
+              c.font = { color: { argb: c.value >= 0 ? '008000' : 'FF0000' }, bold: true };
+            }
+          });
+
+          rIdx++;
+        });
+
+        // khoảng cách nhóm
+        if (sIdx < Object.keys(normalized).length - 1) {
+          ws.getRow(rIdx).height = 6;
+          rIdx++;
+        }
+      });
+
+      // ====== Xuất file ======
+      const buf = await wb.xlsx.writeBuffer();
+      const filename = `Bao_cao_doanh_thu_tuan_${filters.from?.slice(0, 10)}_to_${filters.to?.slice(0, 10)}.xlsx`;
+      saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+    } catch (err) {
+      console.error(err);
+      toast.error('Export Excel failed');
     }
   };
 
@@ -326,6 +544,17 @@ const SaleReport = () => {
             Sale Report
           </h1>
           <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={handleExportWeeklyExcel}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Export Report
+              </span>
+              <div style={{ color: 'black' }}>
+                <BiSolidFileExport size={15} />
+              </div>
+            </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setOpenModalImportReport(true)}
@@ -360,8 +589,10 @@ const SaleReport = () => {
       </div>
 
       <div className="mt-[60px] px-8 py-4 h-full">
-        <div className="flex justify-between items-center">
-          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+        {/* KPI Cards */}
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          {/* Total orders */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Total orders</div>
@@ -373,7 +604,8 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+          {/* Revenue */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Revenue</div>
@@ -385,7 +617,8 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+          {/* Base cost */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Base cost</div>
@@ -397,7 +630,34 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+          {/* Tax = itemTax + shippingTax */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-[#64748b]">Tax</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.purple }}>
+                  {$(+kpis.totalTax)}
+                </span>
+              </div>
+              <TbDiscountFilled size={30} color={dataColors.purple} />
+            </div>
+          </div>
+
+          {/* Fee */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-[#64748b]">Fee</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.asin }}>
+                  {$(+kpis.totalFee)}
+                </span>
+              </div>
+              <FaDolly size={25} color={dataColors.asin} />
+            </div>
+          </div>
+
+          {/* Ads spend */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Ads spend</div>
@@ -409,7 +669,8 @@ const SaleReport = () => {
             </div>
           </div>
 
-          <div className="w-[19%] border border-[#e2e8f0] p-4 rounded-lg">
+          {/* Profit */}
+          <div className="border border-[#e2e8f0] p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-[#64748b]">Profit</div>
@@ -422,6 +683,7 @@ const SaleReport = () => {
           </div>
         </div>
 
+        {/* Filter row */}
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <div className="flex gap-2 items-center">
@@ -438,6 +700,7 @@ const SaleReport = () => {
           </div>
         </div>
 
+        {/* Table */}
         <div className="mt-4">
           <Table
             columns={columns}

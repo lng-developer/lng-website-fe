@@ -29,7 +29,7 @@ const CostCenterConfig = () => {
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    search: '',
+    code: '',
     product_for_seller: '',
   });
 
@@ -273,10 +273,10 @@ const CostCenterConfig = () => {
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ code: '' });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ code: keyword });
       }, 300),
     []
   );

@@ -3,7 +3,7 @@ import { LuChevronsUpDown } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { CopyOutlined } from '@ant-design/icons';
 
-const SubItemCost = ({ data = {}, vendorProduct, fulfillName }) => {
+const SubItemCost = ({ data = {}, fulfillName }) => {
   const handleCopy = async (textToCopy) => {
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -24,7 +24,6 @@ const SubItemCost = ({ data = {}, vendorProduct, fulfillName }) => {
           optionFilterProp="label"
           style={{ width: 250 }}
           value={data?.vendorProductDisplayName}
-          options={vendorProduct}
           placeholder="Select Vendor"
           className="truncate"
           suffixIcon={<LuChevronsUpDown />}

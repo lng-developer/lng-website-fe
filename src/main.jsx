@@ -21,8 +21,21 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
-// Tạo một instance QueryClient
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 phút coi là FRESH => remount không refetch
+      gcTime: 15 * 60 * 1000, // cache sống 15' sau khi unmount
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      retry: 1,
+      keepPreviousData: true,
+      // chỉ rerender khi 'data' hoặc 'isFetching' đổi:
+      notifyOnChangeProps: ['data', 'isFetching'],
+    },
+  },
+});
 
 createRoot(document.getElementById('root')).render(
   <QueryClientProvider client={queryClient}>

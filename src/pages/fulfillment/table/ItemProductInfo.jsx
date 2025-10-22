@@ -8,6 +8,7 @@ import { dowloadPSD } from '../../../apis/listing';
 import { toast } from 'sonner';
 import { MdOutlineCloudDownload } from 'react-icons/md';
 import { ImSpinner10 } from 'react-icons/im';
+import LazyImage from '../../../components/LazyImage';
 
 const ItemProductInfo = ({ imageUrl, asin, sku, listing }) => {
   const downloadPSD = async () => {
@@ -46,16 +47,7 @@ const ItemProductInfo = ({ imageUrl, asin, sku, listing }) => {
             boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
           }}
         >
-          <Image
-            width={130}
-            height={130}
-            src={listing?.product_image || imageUrl || NoImage}
-            className="rounded-lg object-cover"
-            alt="Product"
-            preview={{
-              mask: <div className="">Preview</div>,
-            }}
-          />
+          <LazyImage width={130} height={130} src={listing?.product_image || imageUrl || NoImage} alt="Product" preview={true} />
         </div>
       </div>
 

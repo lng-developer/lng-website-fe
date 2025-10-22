@@ -3,6 +3,7 @@ import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { Link } from 'react-router-dom';
 import { RiLinkM } from 'react-icons/ri';
+import LazyImage from '../../components/LazyImage';
 
 const ItemProductInfoQC = ({ link, sku, asin, quantity, listing }) => {
   return (
@@ -13,7 +14,7 @@ const ItemProductInfoQC = ({ link, sku, asin, quantity, listing }) => {
           boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
         }}
       >
-        <Image src={listing?.product_image || link} width={100} height={100} className="rounded-lg" />
+        <LazyImage src={listing?.product_image || link} width={100} height={100} preview={true} />
       </div>
       <div className="">
         <div className="flex-col">

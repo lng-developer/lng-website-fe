@@ -7,6 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { toast } from 'sonner';
 import { uploadScale } from '../apis/order';
 import { MdAdd } from 'react-icons/md';
+import LazyImage from './LazyImage';
 const { Dragger } = Upload;
 
 const IMAGE_TYPES = [
@@ -165,18 +166,11 @@ export default function DynamicImageUploadBatch({
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                paddingTop: 5,
               }}
             >
               {slot.preview ? (
                 <div className="rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                  <Image
-                    width={slots.length > 1 ? 120 : 170}
-                    height={100}
-                    src={slot.preview}
-                    style={{ objectFit: 'contain' }}
-                    className="rounded-lg overflow-hidden"
-                  />
+                  <LazyImage width={slots.length > 1 ? 126 : 176} height={100} src={slot.preview} preview={true} />
                 </div>
               ) : (
                 <div
