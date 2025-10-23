@@ -359,26 +359,49 @@ const SaleReport = () => {
   const formatNumber = (n) =>
     typeof n === 'number' ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : n;
 
+  // $79.10 hoặc -$79.10 (dấu trừ đứng TRƯỚC $)
+  const formatMoneySigned = (n) => (Number(n) >= 0 ? `$${formatNumber(Number(n))}` : `-$${formatNumber(Math.abs(Number(n)))}`);
+
   const IconWrap = ({ bg, children }) => <div className={`flex h-9 w-9 items-center justify-center rounded-full ${bg}`}>{children}</div>;
 
-  const Card = ({ item }) => (
-    <div className="group flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <IconWrap bg={item.iconBg}>{item.icon}</IconWrap>
-        <div className="text-slate-600 text-[13px] leading-4 font-medium">{item.label}</div>
+  const Card = ({ item }) => {
+    const isProfit = item.key === 'profit';
+    const isMoney = item.prefix === '$';
+    const valNum = typeof item.value === 'number' ? item.value : Number(item.value) || 0;
+
+    // Giá trị hiển thị
+    let display;
+    if (isMoney) {
+      display = isProfit
+        ? formatMoneySigned(valNum) // Profit: -$xx.xx hoặc $xx.xx
+        : `$${formatNumber(valNum)}`; // các KPI tiền khác giữ nguyên $xx.xx
+    } else {
+      display = item.label === 'Orders' ? valNum : formatNumber(valNum);
+    }
+
+    // Màu chữ
+    const color = isProfit
+      ? valNum > 0
+        ? dataColors.success
+        : valNum < 0
+        ? dataColors.cancelled
+        : '#64748b'
+      : item.key === 'revenue'
+      ? dataColors.success
+      : undefined;
+
+    return (
+      <div className="group flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md">
+        <div className="flex items-center gap-3">
+          <IconWrap bg={item.iconBg}>{item.icon}</IconWrap>
+          <div className="text-slate-600 text-[13px] leading-4 font-medium">{item.label}</div>
+        </div>
+        <div className="text-right tabular-nums font-semibold" style={{ color }}>
+          {display}
+        </div>
       </div>
-      <div className="text-right tabular-nums font-semibold text-slate-800">
-        {typeof item.value === 'number' ? (
-          <span style={{ color: item.key === 'profit' || item.key === 'revenue' ? dataColors.success : '' }}>
-            {item.prefix || ''}
-            {item.label === 'Orders' ? item.value : formatNumber(item.value)}
-          </span>
-        ) : (
-          <span>{item.value}</span>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const fetchAllSellers = async () => {
     if (user?.role === 'Admin') {
