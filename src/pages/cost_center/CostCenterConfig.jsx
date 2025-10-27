@@ -367,6 +367,8 @@ const CostCenterConfig = () => {
       fetchAllConfig();
     }
   };
+  console.log('oke');
+  
 
   const handleUpdateStatus = async (id, params) => {
     try {

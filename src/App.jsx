@@ -24,6 +24,7 @@ import PSDTasks from './pages/design/PSDTasks';
 import PNGTasks from './pages/design/PNGTasks';
 import IdeaTask from './pages/design/IdeaTask';
 import AdsReport from './pages/report/AdsReport';
+import CostCenterTeams from './pages/cost_center/CostCenterTeams';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.cost_center_mapping} element={<Mapping />} />
+          <Route path={routes.cost_center_group_standards} element={<CostCenterTeams />} />
 
           {/* Report */}
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />

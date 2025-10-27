@@ -51,6 +51,9 @@ const updateMapping = (id, payload) => {
 const deleteMapping = (id) => {
   return instance.delete(`/mapping/${id}`);
 };
+const getAllTeam = (params) => {
+  return instance.get('/teams', {params})
+}
 
 export {
   getAllConfig,
@@ -66,4 +69,5 @@ export {
   createMapping,
   updateMapping,
   deleteMapping,
+  getAllTeam
 };
