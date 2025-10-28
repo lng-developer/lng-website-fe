@@ -55,6 +55,7 @@ const getAllTeam = (params) => {
   return instance.get('/teams', {params})
 }
 
+
 export {
   getAllConfig,
   createProductType,
