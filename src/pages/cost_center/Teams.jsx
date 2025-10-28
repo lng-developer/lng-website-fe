@@ -25,6 +25,8 @@ import {
 // Xóa import không dùng: DownOutlined, UpOutlined, DeleteOutlined, EditOutlined
 import { MdDeleteOutline, MdOutlineEdit } from 'react-icons/md';
 import { toast } from 'sonner';
+import UpdateTeamModal from './UpdateTeamModal'; 
+import { addTeamMembers } from '../../apis/config'; 
 
 const Teams = () => {
   const { collapsed } = useOutletContext();
@@ -32,7 +34,7 @@ const Teams = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [updateForm] = Form.useForm();
+  // const [updateForm] = Form.useForm();
 
   // --- State quản lý các Modal ---
   const [isDeleteMemberModal, setIsDeleteMemberModal] = useState(false);
@@ -55,9 +57,9 @@ const Teams = () => {
     try {
       const res = await getAllTeam();
       if (res.status === 200) {
-        const teamsData = res.data?.data || [];
+        const teamsData = res.data?.data || []; 
         setDataTeams(teamsData);
-        console.log("teamsData",teamsData)
+        console.log("teamsData", teamsData);
         
         const allKeys = teamsData.map(item => item._id?.toString());
         setExpandedKeys(allKeys);
@@ -118,10 +120,13 @@ const Teams = () => {
     try {
       const payload = {
         name: values.name,
+        leaderId: "68b93ed3f02eed8dec002ee4",
         userIds: values.members ? values.members.map(m => m.userId) : [],
       };
+      console.log('Payload đang gửi lên server:', payload); 
+      // -----------------------------
 
-      await createTeam(payload);
+      await createTeam(payload); 
       toast.success('Team created successfully'); 
       getDataTeams(); 
       cancelAllModals(); 
@@ -134,8 +139,8 @@ const Teams = () => {
   };
 
   const showUpdateTeamModal = (team) => {
+    // 'team' là record từ formattedTeamData, nó có 'members'
     setSelectedTeam(team);
-    updateForm.setFieldsValue({ name: team.name });
     setIsUpdateTeamModal(true);
   };
 
@@ -144,21 +149,51 @@ const Teams = () => {
     setIsDeleteTeamModal(true);
   };
 
-  const handleUpdateTeam = async () => {
+  const handleUpdateTeam = async (modalValues) => {
+    setIsUpdatingTeam(true);
+    
+    // Lấy dữ liệu gốc và dữ liệu mới
+    const teamId = selectedTeam._id;
+    const originalName = selectedTeam.name;
+    const originalMemberIds = new Set(selectedTeam.members.map(m => m._id));
+    
+    const newName = modalValues.name;
+    const newMemberIds = new Set(modalValues.members ? modalValues.members.map(m => m.userId) : []);
+
     try {
-      const values = await updateForm.validateFields();
-      setIsUpdatingTeam(true);
-      const payload = {
-        name: values.name,
-        active: selectedTeam.active,
-      };
-      await updateTeam(selectedTeam._id, payload); 
-      toast.success('Team updated successfully');
-      getDataTeams();
+      let tasks = []; // Mảng chứa các API call
+
+      // Task 1: Cập nhật tên (nếu tên thay đổi)
+      if (newName !== originalName) {
+        tasks.push(updateTeam(teamId, { name: newName, active: selectedTeam.active }));
+      }
+
+      // Task 2: Tìm members mới để thêm
+      const membersToAdd = [...newMemberIds].filter(id => !originalMemberIds.has(id));
+      if (membersToAdd.length > 0) {
+        tasks.push(addTeamMembers(teamId, { userIds: membersToAdd }));
+      }
+
+      // Task 3: Tìm members cũ để xóa
+      const membersToRemove = [...originalMemberIds].filter(id => !newMemberIds.has(id));
+      if (membersToRemove.length > 0) {
+        tasks.push(removeTeamMembers(teamId, { userIds: membersToRemove }));
+      }
+
+      // Chạy tất cả các API call cùng lúc
+      if (tasks.length > 0) {
+        await Promise.all(tasks);
+        toast.success('Team updated successfully');
+      } else {
+        toast.info('No changes detected.'); // Không có gì thay đổi
+      }
+
+      getDataTeams(); // Tải lại dữ liệu
       cancelAllModals();
+
     } catch (error) {
       console.error('Error updating team:', error);
-      toast.error('Failed to update team');
+      toast.error('Failed to update team. One or more operations failed.');
     } finally {
       setIsUpdatingTeam(false);
     }
@@ -186,7 +221,7 @@ const Teams = () => {
     setIsAddTeamModal(false);
     setSelectedTeam(null);
     setSelectedMember(null);
-    updateForm.resetFields();
+    // updateForm.resetFields();
   };
 
   // --- Member actions ---
@@ -284,17 +319,18 @@ const Teams = () => {
       title: "Member Name",
       dataIndex: 'full_name',
       key: 'memberName',
-      // Thêm fallback an toàn
       render: (text) => <span className="font-medium">{text?.toString() || ''}</span>,
     },
     {
       title: 'Role',
-      dataIndex: 'role_id', 
+      dataIndex: 'role', // SỬA 1: Đổi từ 'role_id' sang 'role'
       key: 'role',
       
+      // SỬA 2: Render tên của role
       render: (roleObject) => (
         <span className="font-medium">
-          {roleObject ? "có role":"ko role" } 
+          {/* Lấy roleObject.name, nếu không có thì hiển thị 'N/A' */}
+          {roleObject?.name || 'N/A'} 
         </span>
       ),
     },
@@ -310,7 +346,6 @@ const Teams = () => {
               style={{
                 padding: 6,
                 borderColor: dataColors.default,
-           
               }}
               onClick={() => showDeleteMemberModal(memberRecord, teamRecord)}
             >
@@ -350,6 +385,13 @@ const Teams = () => {
       </div>
 
       <div className="mt-[60px] px-8 py-4">
+        <div className="flex justify-between items-center">
+          <Input
+            // onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search..."
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+          />
+        </div>
         {loading ? (
           <div className="flex justify-center items-center h-screen">
             <Spin size="large" />
@@ -369,7 +411,7 @@ const Teams = () => {
                   dataSource={teamRecord.members}
                   pagination={false}
                   rowKey={(record, index) =>
-                    record._id ? record._id.toString() : `member-${index}` // SỬA: Dùng _id
+                    record._id ? record._id.toString() : `member-${index}` 
                   }
                   style={{ padding: 10 }}
                 />
@@ -411,25 +453,14 @@ const Teams = () => {
         </p>
       </Modal>
 
-      <Modal
-        title="Update Team"
+      <UpdateTeamModal
         open={isUpdateTeamModal}
-        onOk={handleUpdateTeam}
         onCancel={cancelAllModals}
-        confirmLoading={isUpdatingTeam}
-        okText="Update"
-        cancelText="Cancel"
-      >
-        <Form form={updateForm} layout="vertical" name="update_team_form">
-          <Form.Item
-            name="name"
-            label="Team Name"
-            rules={[{ required: true, message: 'Please enter team name!' }]} // SỬA: Lỗi typo `toast:`
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onOk={handleUpdateTeam}
+        loading={isUpdatingTeam}
+        allUsers={allUsers}
+        teamData={selectedTeam} // Truyền team data vào modal
+      />
 
       <Modal
         title="Confirm Delete Team"
