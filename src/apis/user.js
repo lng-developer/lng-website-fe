@@ -7,5 +7,7 @@ const getAllSellers = (params) => {
 const getAllDesigner = (params) => {
   return instance.get('/user/designer', { params });
 };
-
-export { getAllSellers, getAllDesigner };
+const getAllUsers = (params) => {
+  return instance.get('/user', { params });
+};
+export { getAllSellers, getAllDesigner, getAllUsers };
