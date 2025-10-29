@@ -10,7 +10,7 @@ import {
   updateTeam,
   deleteTeam,
   createTeam,
-} from '../../apis/config';
+} from '../../apis/teams';
 import { getAllUsers } from '../../apis/user';
 import {
   Tooltip,
@@ -22,7 +22,7 @@ import {
   Form,
   Input,
 } from 'antd';
-// Xóa import không dùng: DownOutlined, UpOutlined, DeleteOutlined, EditOutlined
+
 import { MdDeleteOutline, MdOutlineEdit } from 'react-icons/md';
 import { toast } from 'sonner';
 import UpdateTeamModal from './UpdateTeamModal'; 
@@ -52,6 +52,8 @@ const Teams = () => {
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   
   const [expandedKeys, setExpandedKeys] = useState([]);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getDataTeams = async () => {
     try {
@@ -86,19 +88,22 @@ const Teams = () => {
 
  const formattedTeamData = useMemo(() => {
   if (!dataTeams) return [];
-  return dataTeams.map((item) => ({
+
+  const filteredTeams = dataTeams.filter(team => 
+    (team.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  console.log("filterData",filteredTeams)
+  return filteredTeams.map((item) => ({
     key: item._id?.toString(),
     id: item._id?.toString(), 
     _id: item._id, 
-    
-    // SỬA DÒNG NÀY:
-    name: item.name || 'No name', // <-- Đổi từ item.full_name sang item.name
-
-    // Các dòng này đã đúng:
+    leader: item.leader?.full_name,
+    leader_id: item.leader?._id,
+    name: item.name || 'No name',
     totalMembers: item.members.length || 0,
     members: Array.isArray(item.members) ? item.members : [],
   }));
-}, [dataTeams]);
+}, [dataTeams, searchQuery]);
 
   const areAllExpanded =
     dataTeams.length > 0 && expandedKeys.length === dataTeams.length;
@@ -116,15 +121,25 @@ const Teams = () => {
   const showAddTeamModal = () => setIsAddTeamModal(true);
 
   const handleCreateTeam = async (values) => {
+    // 'values' từ modal sẽ là: { name: "...", members: [{userId: "leader_id"}, {userId: "member_id"}] }
+    
+    // 1. Kiểm tra an toàn (dù form đã validate)
+    if (!values.members || values.members.length === 0 || !values.members[0].userId) {
+      toast.error("Leader is required. Failed to create team.");
+      return;
+    }
+
     setIsAddingTeam(true);
     try {
       const payload = {
         name: values.name,
-        leaderId: "68b93ed3f02eed8dec002ee4",
-        userIds: values.members ? values.members.map(m => m.userId) : [],
+        // 2. Lấy leaderId từ item đầu tiên
+        leaderId: values.members[0].userId,
+        // 3. Lấy userIds từ TẤT CẢ item (backend của bạn yêu cầu cả leader trong userIds)
+        userIds: values.members.map(m => m.userId),
       };
+
       console.log('Payload đang gửi lên server:', payload); 
-      // -----------------------------
 
       await createTeam(payload); 
       toast.success('Team created successfully'); 
@@ -139,7 +154,6 @@ const Teams = () => {
   };
 
   const showUpdateTeamModal = (team) => {
-    // 'team' là record từ formattedTeamData, nó có 'members'
     setSelectedTeam(team);
     setIsUpdateTeamModal(true);
   };
@@ -151,7 +165,7 @@ const Teams = () => {
 
   const handleUpdateTeam = async (modalValues) => {
     setIsUpdatingTeam(true);
-    
+   
     // Lấy dữ liệu gốc và dữ liệu mới
     const teamId = selectedTeam._id;
     const originalName = selectedTeam.name;
@@ -161,34 +175,30 @@ const Teams = () => {
     const newMemberIds = new Set(modalValues.members ? modalValues.members.map(m => m.userId) : []);
 
     try {
-      let tasks = []; // Mảng chứa các API call
+      let tasks = []; 
 
-      // Task 1: Cập nhật tên (nếu tên thay đổi)
       if (newName !== originalName) {
         tasks.push(updateTeam(teamId, { name: newName, active: selectedTeam.active }));
       }
 
-      // Task 2: Tìm members mới để thêm
       const membersToAdd = [...newMemberIds].filter(id => !originalMemberIds.has(id));
       if (membersToAdd.length > 0) {
         tasks.push(addTeamMembers(teamId, { userIds: membersToAdd }));
       }
 
-      // Task 3: Tìm members cũ để xóa
       const membersToRemove = [...originalMemberIds].filter(id => !newMemberIds.has(id));
       if (membersToRemove.length > 0) {
         tasks.push(removeTeamMembers(teamId, { userIds: membersToRemove }));
       }
 
-      // Chạy tất cả các API call cùng lúc
       if (tasks.length > 0) {
         await Promise.all(tasks);
         toast.success('Team updated successfully');
       } else {
-        toast.info('No changes detected.'); // Không có gì thay đổi
+        toast.info('No changes detected.'); 
       }
 
-      getDataTeams(); // Tải lại dữ liệu
+      getDataTeams(); 
       cancelAllModals();
 
     } catch (error) {
@@ -202,7 +212,7 @@ const Teams = () => {
   const handleDeleteTeam = async () => {
     try {
       setIsDeletingTeam(true);
-      await deleteTeam(selectedTeam._id); // SỬA: Dùng _id
+      await deleteTeam(selectedTeam._id); 
       toast.success('Team deleted successfully');
       getDataTeams();
       cancelAllModals();
@@ -223,6 +233,9 @@ const Teams = () => {
     setSelectedMember(null);
     // updateForm.resetFields();
   };
+  const handleSearch = (value) => {
+  setSearchQuery(value);
+};
 
   // --- Member actions ---
   const showDeleteMemberModal = (member, team) => {
@@ -233,12 +246,40 @@ const Teams = () => {
 
   const handleDeleteMember = async () => {
     if (!selectedMember || !selectedTeam) return;
+
     setIsDeletingMember(true);
+    
+    //Kiểm tra xem thành viên bị xóa có phải là leader không
+    const isLeader = selectedMember._id === selectedTeam.leader?._id;
+
     try {
-      const payload = { userIds: [selectedMember._id] }; // Đảm bảo dùng _id
-      await removeTeamMembers(selectedTeam._id, payload); // SỬA: Dùng _id
+      const tasks = [];
+      const teamId = selectedTeam._id;
+
+      // Luôn xóa thành viên khỏi team
+      const removePayload = { userIds: [selectedMember._id] };
+      tasks.push(removeTeamMembers(teamId, removePayload));
+
+      //  Nếu là leader, cập nhật team để set leaderId = null
+      if (isLeader) {
+        const updatePayload = {
+          name: selectedTeam.name,
+          leaderId: null, // <-- Set leader về null
+          active: selectedTeam.active,
+        };
+        tasks.push(updateTeam(teamId, updatePayload));
+      }
+
+      // 4. Chạy tất cả các API call
+      await Promise.all(tasks);
+      
       toast.success('Member removed successfully');
-      getDataTeams();
+      if (isLeader) {
+        toast.info('Team leader has been set to null.');
+      }
+
+      getDataTeams(); // Tải lại dữ liệu
+
     } catch (error) {
       console.error('Error removing member:', error);
       toast.error('Failed to remove member');
@@ -270,6 +311,19 @@ const Teams = () => {
       key: 'name',
       render: (text) => <span className="font-medium">{text?.toString()}</span>,
     },
+    // --- THÊM CỘT MỚI ---
+    {
+      title: 'Leader',
+      dataIndex: 'leader',
+      key: 'leader',
+      render: (leader) => (
+        <span className="font-medium">
+         
+          {leader || 'null'}
+        </span>
+      ),
+    },
+    // --- KẾT THÚC CỘT MỚI ---
     {
       title: 'Member',
       dataIndex: 'totalMembers',
@@ -288,7 +342,6 @@ const Teams = () => {
               style={{
                 padding: 6,
                 borderColor: dataColors.default,
-         
               }}
               onClick={() => showUpdateTeamModal(record)}
             >
@@ -302,7 +355,7 @@ const Teams = () => {
               style={{
                 padding: 6,
                 borderColor: dataColors.default,
-     
+                color: dataColors.cancelled, // Thêm màu
               }}
               onClick={() => showDeleteTeamModal(record)}
             >
@@ -323,13 +376,11 @@ const Teams = () => {
     },
     {
       title: 'Role',
-      dataIndex: 'role', // SỬA 1: Đổi từ 'role_id' sang 'role'
+      dataIndex: 'role',
       key: 'role',
       
-      // SỬA 2: Render tên của role
       render: (roleObject) => (
         <span className="font-medium">
-          {/* Lấy roleObject.name, nếu không có thì hiển thị 'N/A' */}
           {roleObject?.name || 'N/A'} 
         </span>
       ),
@@ -387,9 +438,10 @@ const Teams = () => {
       <div className="mt-[60px] px-8 py-4">
         <div className="flex justify-between items-center">
           <Input
-            // onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search..."
             className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+            allowClear
           />
         </div>
         {loading ? (
@@ -397,35 +449,49 @@ const Teams = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <Table
-            className="no-indent-table product-type"
-            columns={teamColumns}
-            dataSource={formattedTeamData}
-            pagination={false}
-            rowKey="_id" 
-            expandable={{
-              expandedRowRender: (teamRecord) => (
-                <Table
-                  className="no-indent-table product-type"
-                  columns={getMemColumns(teamRecord)}
-                  dataSource={teamRecord.members}
-                  pagination={false}
-                  rowKey={(record, index) =>
-                    record._id ? record._id.toString() : `member-${index}` 
-                  }
-                  style={{ padding: 10 }}
-                />
-              ),
-              expandedRowKeys: expandedKeys,
-              onExpandedRowsChange: (keys) => setExpandedKeys(keys),
-              expandIcon: ({ expanded, onExpand, record }) =>
-                expanded ? (
-                  <IoIosArrowUp style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
-                ) : (
-                  <IoIosArrowDown style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
+          <div className='mt-4'>
+            <Table
+              className="no-indent-table product-type "
+              columns={teamColumns}
+              dataSource={formattedTeamData}
+              pagination={false}
+              rowKey="_id" 
+              expandable={{
+                expandedRowRender: (teamRecord) => (
+                  <Table
+                    className="no-indent-table product-type"
+                    columns={getMemColumns(teamRecord)}
+                    dataSource={teamRecord.members}
+                    pagination={false}
+                    rowKey={(record, index) =>
+                      record._id ? record._id.toString() : `member-${index}` 
+                    }
+                    style={{ padding: 10 }}
+                  />
                 ),
-            }}
-          />
+                expandedRowKeys: expandedKeys,
+                onExpandedRowsChange: (keys) => setExpandedKeys(keys),
+                expandIcon: ({ expanded, onExpand, record }) =>
+                  expanded ? (
+                    <IoIosArrowUp style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
+                  ) : (
+                    <IoIosArrowDown style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
+                  ),
+                  columnTitle: (
+                                <div style={{ cursor: 'pointer'}}
+                                onClick={handleToggleAll}
+                              >
+                                {areAllExpanded ? (
+                                  <IoIosArrowUp style={{ fontSize: 15 }} />
+                                ) : (
+                                  <IoIosArrowDown style={{ fontSize: 15 }} />
+                                )}
+                              </div>
+                                ),
+              }}
+              
+            />
+          </div>
         )}
       </div>
 
@@ -459,7 +525,7 @@ const Teams = () => {
         onOk={handleUpdateTeam}
         loading={isUpdatingTeam}
         allUsers={allUsers}
-        teamData={selectedTeam} // Truyền team data vào modal
+        teamData={selectedTeam} 
       />
 
       <Modal
