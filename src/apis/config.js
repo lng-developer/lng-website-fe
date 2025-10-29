@@ -51,29 +51,6 @@ const updateMapping = (id, payload) => {
 const deleteMapping = (id) => {
   return instance.delete(`/mapping/${id}`);
 };
-const getAllTeam = (params) => {
-  return instance.get('/teams', {params})
-}
-const createTeam = (payload) => {
-  return instance.post('/teams', payload);
-};
-
-const updateTeam = (teamId, payload) => {
-  return instance.put(`/teams/${teamId}`, payload);
-};
-
-const deleteTeam = (teamId) => {
-  return instance.delete(`/teams/${teamId}`);
-};
-
-const addTeamMembers = (teamId, payload) => {
-  return instance.post(`/teams/${teamId}/members`, payload);
-};
-
-const removeTeamMembers = (teamId, payload) => {
-  // Dùng .post() theo như tài liệu API
-  return instance.post(`/teams/${teamId}/members/remove`, payload);
-};
 
 export {
   getAllConfig,
@@ -89,10 +66,5 @@ export {
   createMapping,
   updateMapping,
   deleteMapping,
-  getAllTeam,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-  addTeamMembers,
-  removeTeamMembers
+
 };

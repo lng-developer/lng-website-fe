@@ -61,7 +61,7 @@ const Teams = () => {
       if (res.status === 200) {
         const teamsData = res.data?.data || []; 
         setDataTeams(teamsData);
-        console.log("teamsData", teamsData);
+        
         
         const allKeys = teamsData.map(item => item._id?.toString());
         setExpandedKeys(allKeys);
@@ -79,7 +79,7 @@ const Teams = () => {
         const res = await getAllUsers({ all: true, perPage: 1000 }); 
         if (res.status === 200) {
           setAllUsers(res.data || []); 
-          console.log("user data fetched:", res.data);
+        
         }
       } catch (error) {
         console.log('Failed to fetch users', error);
@@ -92,7 +92,7 @@ const Teams = () => {
   const filteredTeams = dataTeams.filter(team => 
     (team.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
-  console.log("filterData",filteredTeams)
+
   return filteredTeams.map((item) => ({
     key: item._id?.toString(),
     id: item._id?.toString(), 
@@ -139,7 +139,6 @@ const Teams = () => {
         userIds: values.members.map(m => m.userId),
       };
 
-      console.log('Payload đang gửi lên server:', payload); 
 
       await createTeam(payload); 
       toast.success('Team created successfully'); 
