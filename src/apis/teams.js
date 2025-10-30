@@ -28,5 +28,5 @@ export{
     updateTeam,
     deleteTeam,
     addTeamMembers,
-    removeTeamMembers
+    removeTeamMembers,
 }

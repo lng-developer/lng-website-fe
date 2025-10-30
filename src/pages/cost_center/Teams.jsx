@@ -10,6 +10,7 @@ import {
   updateTeam,
   deleteTeam,
   createTeam,
+  addTeamMembers,
 } from '../../apis/teams';
 import { getAllUsers } from '../../apis/user';
 import {
@@ -26,8 +27,6 @@ import {
 import { MdDeleteOutline, MdOutlineEdit } from 'react-icons/md';
 import { toast } from 'sonner';
 import UpdateTeamModal from './UpdateTeamModal'; 
-import { addTeamMembers } from '../../apis/config'; 
-
 const Teams = () => {
   const { collapsed } = useOutletContext();
   const [dataTeams, setDataTeams] = useState([]);
