@@ -31,7 +31,7 @@ import { IoImageOutline, IoStorefrontOutline } from 'react-icons/io5';
 import { AiOutlineFileSync, AiOutlineCopy } from 'react-icons/ai';
 import { GrDocumentConfig } from 'react-icons/gr';
 import { BiCubeAlt } from 'react-icons/bi';
-import { TbBrandEtsy } from 'react-icons/tb';
+import { BiExtension } from 'react-icons/bi';
 import { routes } from '../routes/routes';
 
 export const topMenus = [
@@ -91,6 +91,11 @@ export const detailMenus = {
       ],
     },
     {
+      key: routes.extension,
+      label: 'Extension',
+      icon: <BiExtension size={20} />,
+    },
+    {
       key: 'a',
       label: 'Monitoring',
       icon: <AiOutlineFileSync size={20} />,
@@ -98,7 +103,7 @@ export const detailMenus = {
     },
     {
       key: 's',
-      label: 'Amz Confirm Ship and Tracking',
+      label: 'Amz Confirm Ship',
       icon: <RiContractLine size={20} />,
     },
     {
@@ -106,7 +111,6 @@ export const detailMenus = {
       label: 'Configuration',
       icon: <RiSettings2Line size={20} />,
       children: [
-        { key: '', label: 'Etsy Customization', icon: <TbBrandEtsy size={20} /> },
         { key: '', label: 'Manage stores', icon: <IoStorefrontOutline size={20} /> },
         { key: '', label: 'SKU Mapping', icon: <CgShoppingBag size={20} /> },
         { key: '', label: 'Cookies', icon: <TbCookie size={20} /> },

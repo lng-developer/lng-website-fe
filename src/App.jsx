@@ -25,6 +25,7 @@ import PNGTasks from './pages/design/PNGTasks';
 import IdeaTask from './pages/design/IdeaTask';
 import AdsReport from './pages/report/AdsReport';
 import Teams from './pages/cost_center/Teams';
+import ExtensionManager from './pages/extension';
 
 function App() {
   return (
@@ -63,6 +64,9 @@ function App() {
           <Route path={routes.psd_design} element={<PSDTasks />} />
           <Route path={routes.png_design} element={<PNGTasks />} />
           <Route path={routes.idea_task} element={<IdeaTask />} />
+
+          {/* Extension */}
+          <Route path={routes.extension} element={<ExtensionManager />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

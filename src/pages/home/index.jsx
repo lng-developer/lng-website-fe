@@ -140,6 +140,7 @@ const Home = () => {
       }
     } catch (error) {
       console.error(error);
+      toast.error('Erorr System!');
     }
   }, [filters]);
 
@@ -154,7 +155,8 @@ const Home = () => {
         toast.error(response.data?.message);
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message);
+      console.log(error);
+      toast.error('Erorr System!');
     } finally {
       setLoading(false);
     }

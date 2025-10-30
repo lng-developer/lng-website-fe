@@ -30,7 +30,7 @@ export default function OrderInfoForm({ orderId, seller, fulfillName, quantity }
       </div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800">
-          Quantity: <span style={{ color: dataColors.asin }}>{quantity}</span>
+          Quantity: <span style={{ color: dataColors.cancelled }}>{quantity}</span>
         </div>
       </div>
       <div className="mb-1 max-w-[220px]" style={{ position: 'relative', width: '100%' }}>
