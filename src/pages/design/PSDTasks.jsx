@@ -6,7 +6,7 @@ import { defaultFrom, defaultTo, formatDate, formatDateDetail } from '../../util
 import { debounce } from 'lodash';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
-import { Flex, Image, Input, Pagination, Popover, Table } from 'antd';
+import { Flex, Image, Input, Pagination, Popover, Table, Tooltip } from 'antd';
 import ButtonFilter from '../../components/ButtonFilter';
 import { toast } from 'sonner';
 import { getAllPsdTask, getTaskStatictisc } from '../../apis/psdTask';
@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { TbHistory } from 'react-icons/tb';
 import { FaLongArrowAltRight } from 'react-icons/fa';
+import TextArea from 'antd/es/input/TextArea';
 const PAGE_SIZE = 10;
 
 const PSDTasks = () => {
@@ -120,8 +121,9 @@ const PSDTasks = () => {
     ));
   };
 
-  const columns = [
-    {
+  const columns = useMemo(() => {
+    const baseColumns =[
+      {
       title: <span style={{ color: dataColors.title }}>Created At</span>,
       dataIndex: 'createdAt',
       key: 'createdAt',
@@ -244,8 +246,59 @@ const PSDTasks = () => {
         />
       ),
     },
-  ];
+    ]
+    const noteColumn = {
+      title: <span style={{ color: dataColors.title }}>Note</span>,
+      dataIndex: 'note',
+      key: 'note',
+      align: 'left',
+      width: 200, 
+      render: (note) => {
+        if (note && note.trim() !== '') {
+          return (
+            <TextArea
+              value={note}
+              readOnly
+              // bordered={false}
+              // autoSize={{ minRows: 2, maxRows: 6 }}
+           
+              style={{ 
+                padding: 6, 
+                backgroundColor: 'transparent', 
+                color: dataColors.cancelled,
+                fontWeight: 500,
+                cursor: 'default'
+              }} 
+            />
 
+          );
+        }
+        
+        // Nếu không có note, trả về null (ô trống)
+        return (
+            <TextArea
+              placeholder='Note'
+              readOnly
+              // bordered={false}
+              // autoSize={{ minRows: 2, maxRows: 6 }}
+              rows={1}
+            />
+
+          );
+      },
+    }
+  
+  if (isActiveFilter?.status !== 'all' && isActiveFilter?.status !== 'New' ) {
+      // Tạo một bản sao và chèn cột Note vào
+      const columnsWithNote = [...baseColumns];
+      columnsWithNote.splice(10, 0, noteColumn); // Chèn vào vị trí index 10
+      return columnsWithNote;
+    }
+
+    //Nếu không phải status "Requested", trả về mảng cột gốc
+    return baseColumns;
+
+  }, [isActiveFilter]);
   const fetchAllTask = async (params) => {
     setLoading(true);
     try {

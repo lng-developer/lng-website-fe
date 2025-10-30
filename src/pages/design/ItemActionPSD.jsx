@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { dowloadPSD } from '../../apis/listing';
 import ModalAssign from './ModalAssign';
+import ModalRequestPSD from './ModalRequestPSD';
 import { qctPsd, requestPsd, startPsd, uploadPsd } from '../../apis/psdTask';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
@@ -13,6 +14,9 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false); // <-- Spin pending
   const [isShowModal, setIsShowModal] = useState(false);
+
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false); // Loading cho nút Request
 
   const uploadProps = {
     accept: '.psd',
@@ -77,10 +81,12 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
     }
   };
 
-  const handleRequestPsd = async () => {
+  const handleRequestPsd = async (note) => {
+    setIsRequesting(true); // Bật loading
     try {
       const response = await requestPsd({
         taskId: idTask,
+        note: note,
       });
       if (response.status === 200) {
         toast.success('Request success!');
@@ -90,6 +96,8 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
     } finally {
       fetchAllListing(filters);
       fetchCountStatus();
+      setIsRequestModalOpen(false); // Đóng modal
+      setIsRequesting(false); // Tắt loading
     }
   };
 
@@ -166,7 +174,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
 
         {statusTask === 'New' && (
           <Tooltip title="Request upload">
-            <Button icon={<PlayCircleOutlined />} onClick={handleRequestPsd} />
+            <Button icon={<PlayCircleOutlined />} onClick={() => setIsRequestModalOpen(true)} />
           </Tooltip>
         )}
 
@@ -201,6 +209,12 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
         fetchAllListing={fetchAllListing}
         filters={filters}
         fetchCountStatus={fetchCountStatus}
+      />
+      <ModalRequestPSD
+        open={isRequestModalOpen}
+        onCancel={() => setIsRequestModalOpen(false)}
+        onOk={handleRequestPsd} 
+        loading={isRequesting}
       />
     </>
   );
