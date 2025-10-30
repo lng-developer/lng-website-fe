@@ -66,4 +66,5 @@ export {
   createMapping,
   updateMapping,
   deleteMapping,
+
 };
