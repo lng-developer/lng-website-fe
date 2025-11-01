@@ -82,10 +82,16 @@ const PSDTasks = () => {
       case 'Low':
         return dataColors.yellow;
       case 'Normal':
-        return dataColors.success;
+        return dataColors.process;
       case 'High':
         return dataColors.process;
       case 'Urgent':
+        return dataColors.purple;
+      case 'Easy':
+        return dataColors.success;
+      case 'Hard':
+        return dataColors.pink;
+      case 'Extremely':
         return dataColors.purple;
       default:
         return dataColors.default;
@@ -122,137 +128,137 @@ const PSDTasks = () => {
   };
 
   const columns = useMemo(() => {
-    const baseColumns =[
+    const baseColumns = [
       {
-      title: <span style={{ color: dataColors.title }}>Created At</span>,
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      align: 'center',
-      render: (data) => (
-        <Flex vertical={true}>
-          <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
-          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            (
-            {formatDistanceToNow(data, { addSuffix: true })
-              .replace(/^about /, '')
-              .replace(/^less than /, '')}
-            )
-          </span>
-        </Flex>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Product Image</span>,
-      dataIndex: 'listing',
-      key: 'product_image',
-      align: 'center',
-      render: (data) => (
-        <div className="flex justify-center">
-          <div
-            className="w-[100px] h-[100px] rounded-lg overflow-hidden"
-            style={{
-              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-            }}
-          >
-            <Image width={100} height={100} src={data?.product_image} className="rounded-lg" />
+        title: <span style={{ color: dataColors.title }}>Created At</span>,
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        align: 'center',
+        render: (data) => (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              (
+              {formatDistanceToNow(data, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
+            </span>
+          </Flex>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Product Image</span>,
+        dataIndex: 'listing',
+        key: 'product_image',
+        align: 'center',
+        render: (data) => (
+          <div className="flex justify-center">
+            <div
+              className="w-[100px] h-[100px] rounded-lg overflow-hidden"
+              style={{
+                boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+              }}
+            >
+              <Image width={100} height={100} src={data?.product_image} className="rounded-lg" />
+            </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Asin</span>,
-      dataIndex: 'listing',
-      key: 'asin',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.asin} color={dataColors.pending} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Status Task</span>,
-      dataIndex: 'status',
-      key: 'Status',
-      align: 'center',
-      render: (data) => (
-        <div className="flex items-center justify-center gap-1">
-          <StatusComponent title={data?.stt} color={handleColorStatus(data?.stt)} />
-          <Popover placement="bottomLeft" arrow={false} title={'History'} content={contentHistory(data?.history)}>
-            <TbHistory size={16} className="cursor-pointer" />
-          </Popover>
-        </div>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Assigned</span>,
-      dataIndex: 'designer',
-      key: 'designer',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.purple} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Priority</span>,
-      dataIndex: 'priority',
-      key: 'priority',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={handleColorPriority(data)} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>PSD Status</span>,
-      dataIndex: 'listing',
-      key: 'psd',
-      align: 'center',
-      render: (data) => (
-        <StatusComponent
-          title={data?.psd?.status || 'Unavailable'}
-          color={data?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled}
-        />
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Seller</span>,
-      dataIndex: 'seller',
-      key: 'seller',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Platform</span>,
-      dataIndex: 'listing',
-      key: 'platform',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.platform} color={dataColors.purple} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Asin Type</span>,
-      dataIndex: 'listing',
-      key: 'asin_type',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.asin_type} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Actions</span>,
-      dataIndex: 'actions',
-      key: 'actions',
-      align: 'center',
-      render: (data) => (
-        <ItemActionPSD
-          statusTask={data?.statusTask}
-          idTask={data?.idTask}
-          data={data}
-          asin={data?.asin}
-          fetchAllListing={fetchAllTask}
-          filters={filters}
-          isDelete={false}
-          fetchCountStatus={fetchCountStatus}
-          user={user}
-        />
-      ),
-    },
-    ]
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Asin</span>,
+        dataIndex: 'listing',
+        key: 'asin',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.asin} color={dataColors.pending} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Status Task</span>,
+        dataIndex: 'status',
+        key: 'Status',
+        align: 'center',
+        render: (data) => (
+          <div className="flex items-center justify-center gap-1">
+            <StatusComponent title={data?.stt} color={handleColorStatus(data?.stt)} />
+            <Popover placement="bottomLeft" arrow={false} title={'History'} content={contentHistory(data?.history)}>
+              <TbHistory size={16} className="cursor-pointer" />
+            </Popover>
+          </div>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Assigned</span>,
+        dataIndex: 'designer',
+        key: 'designer',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.purple} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Priority</span>,
+        dataIndex: 'priority',
+        key: 'priority',
+        align: 'center',
+        render: (data) => <StatusComponent title={data} color={handleColorPriority(data)} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>PSD Status</span>,
+        dataIndex: 'listing',
+        key: 'psd',
+        align: 'center',
+        render: (data) => (
+          <StatusComponent
+            title={data?.psd?.status || 'Unavailable'}
+            color={data?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled}
+          />
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Seller</span>,
+        dataIndex: 'seller',
+        key: 'seller',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Platform</span>,
+        dataIndex: 'listing',
+        key: 'platform',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.platform} color={dataColors.purple} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Asin Type</span>,
+        dataIndex: 'listing',
+        key: 'asin_type',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.asin_type} color={dataColors.asin} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Actions</span>,
+        dataIndex: 'actions',
+        key: 'actions',
+        align: 'center',
+        render: (data) => (
+          <ItemActionPSD
+            statusTask={data?.statusTask}
+            idTask={data?.idTask}
+            data={data}
+            asin={data?.asin}
+            fetchAllListing={fetchAllTask}
+            filters={filters}
+            isDelete={false}
+            fetchCountStatus={fetchCountStatus}
+            user={user}
+          />
+        ),
+      },
+    ];
     const noteColumn = {
       title: <span style={{ color: dataColors.title }}>Note</span>,
       dataIndex: 'note',
       key: 'note',
       align: 'left',
-      width: 200, 
+      width: 200,
       render: (note) => {
         if (note && note.trim() !== '') {
           return (
@@ -261,34 +267,32 @@ const PSDTasks = () => {
               readOnly
               // bordered={false}
               // autoSize={{ minRows: 2, maxRows: 6 }}
-           
-              style={{ 
-                padding: 6, 
-                backgroundColor: 'transparent', 
+
+              style={{
+                padding: 6,
+                backgroundColor: 'transparent',
                 color: dataColors.cancelled,
                 fontWeight: 500,
-                cursor: 'default'
-              }} 
+                cursor: 'default',
+              }}
             />
-
           );
         }
-        
+
         // Nếu không có note, trả về null (ô trống)
         return (
-            <TextArea
-              placeholder='Note'
-              readOnly
-              // bordered={false}
-              // autoSize={{ minRows: 2, maxRows: 6 }}
-              rows={1}
-            />
-
-          );
+          <TextArea
+            placeholder="Note"
+            readOnly
+            // bordered={false}
+            // autoSize={{ minRows: 2, maxRows: 6 }}
+            rows={1}
+          />
+        );
       },
-    }
-  
-  if (isActiveFilter?.status !== 'all' && isActiveFilter?.status !== 'New' ) {
+    };
+
+    if (isActiveFilter?.status !== 'all' && isActiveFilter?.status !== 'New') {
       // Tạo một bản sao và chèn cột Note vào
       const columnsWithNote = [...baseColumns];
       columnsWithNote.splice(10, 0, noteColumn); // Chèn vào vị trí index 10
@@ -297,8 +301,8 @@ const PSDTasks = () => {
 
     //Nếu không phải status "Requested", trả về mảng cột gốc
     return baseColumns;
-
   }, [isActiveFilter]);
+
   const fetchAllTask = async (params) => {
     setLoading(true);
     try {
@@ -307,6 +311,7 @@ const PSDTasks = () => {
         const result = response.data?.tasks?.map((item) => {
           return {
             ...item,
+            priority: item?.difficulty || item?.priority,
             status: {
               stt: item?.status,
               history: item?.history,

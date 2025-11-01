@@ -5,7 +5,7 @@ const getAllClient = (params) => {
 };
 
 const getLogs = (params) => {
-  return instance.get('/ext/logs', { params });
+  return instance.get('/logs', { params });
 };
 
 const requestExtension = (payload) => {

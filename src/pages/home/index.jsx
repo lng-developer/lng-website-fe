@@ -193,10 +193,11 @@ const Home = () => {
 
   const handleFilterForStatus = useCallback(
     (status) => {
-      if (status === 'All') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false });
-      if (status === 'NoCostCenter') return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false });
-      if (status === 'openCase') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true });
-      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false });
+      if (status === 'All') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false });
+      if (status === 'NoCostCenter') return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false });
+      if (status === 'openCase') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false });
+      if (status === 'invalidAddress') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true });
+      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false });
     },
     [updateFilter]
   );

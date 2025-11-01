@@ -31,6 +31,8 @@ const handleColorStatusScale = (stt) => {
       return dataColors.success;
     case 'Sent':
       return dataColors.success;
+    case 'Address Invalid':
+      return dataColors.cancelled;
     default:
       return dataColors.default;
   }

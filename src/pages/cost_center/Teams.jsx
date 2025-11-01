@@ -4,29 +4,13 @@ import { useOutletContext } from 'react-router-dom';
 import AddTeamModal from './AddTeamModal';
 import { dataColors } from '../../utils/dataColors';
 import { MdAdd } from 'react-icons/md';
-import {
-  getAllTeam,
-  removeTeamMembers,
-  updateTeam,
-  deleteTeam,
-  createTeam,
-  addTeamMembers,
-} from '../../apis/teams';
+import { getAllTeam, removeTeamMembers, updateTeam, deleteTeam, createTeam, addTeamMembers } from '../../apis/teams';
 import { getAllUsers } from '../../apis/user';
-import {
-  Tooltip,
-  Flex,
-  Table,
-  Spin,
-  Modal,
-  Space,
-  Form,
-  Input,
-} from 'antd';
+import { Tooltip, Flex, Table, Spin, Modal, Space, Form, Input } from 'antd';
 
 import { MdDeleteOutline, MdOutlineEdit } from 'react-icons/md';
 import { toast } from 'sonner';
-import UpdateTeamModal from './UpdateTeamModal'; 
+import UpdateTeamModal from './UpdateTeamModal';
 const Teams = () => {
   const { collapsed } = useOutletContext();
   const [dataTeams, setDataTeams] = useState([]);
@@ -49,7 +33,7 @@ const Teams = () => {
 
   const [isAddTeamModal, setIsAddTeamModal] = useState(false);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  
+
   const [expandedKeys, setExpandedKeys] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,11 +42,10 @@ const Teams = () => {
     try {
       const res = await getAllTeam();
       if (res.status === 200) {
-        const teamsData = res.data?.data || []; 
+        const teamsData = res.data?.data || [];
         setDataTeams(teamsData);
-        
-        
-        const allKeys = teamsData.map(item => item._id?.toString());
+
+        const allKeys = teamsData.map((item) => item._id?.toString());
         setExpandedKeys(allKeys);
       }
     } catch (error) {
@@ -74,44 +57,40 @@ const Teams = () => {
     }
   };
   const fetchAllUsers = async () => {
-      try {
-        const res = await getAllUsers({ all: true, perPage: 1000 }); 
-        if (res.status === 200) {
-          setAllUsers(res.data || []); 
-        
-        }
-      } catch (error) {
-        console.log('Failed to fetch users', error);
+    try {
+      const res = await getAllUsers({ all: true, perPage: 1000 });
+      if (res.status === 200) {
+        setAllUsers(res.data || []);
       }
-    };
+    } catch (error) {
+      console.log('Failed to fetch users', error);
+    }
+  };
 
- const formattedTeamData = useMemo(() => {
-  if (!dataTeams) return [];
+  const formattedTeamData = useMemo(() => {
+    if (!dataTeams) return [];
 
-  const filteredTeams = dataTeams.filter(team => 
-    (team.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const filteredTeams = dataTeams.filter((team) => (team.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
-  return filteredTeams.map((item) => ({
-    key: item._id?.toString(),
-    id: item._id?.toString(), 
-    _id: item._id, 
-    leader: item.leader?.full_name,
-    leader_id: item.leader?._id,
-    name: item.name || 'No name',
-    totalMembers: item.members.length || 0,
-    members: Array.isArray(item.members) ? item.members : [],
-  }));
-}, [dataTeams, searchQuery]);
+    return filteredTeams.map((item) => ({
+      key: item._id?.toString(),
+      id: item._id?.toString(),
+      _id: item._id,
+      leader: item.leader?.full_name,
+      leader_id: item.leader?._id,
+      name: item.name || 'No name',
+      totalMembers: item.members.length || 0,
+      members: Array.isArray(item.members) ? item.members : [],
+    }));
+  }, [dataTeams, searchQuery]);
 
-  const areAllExpanded =
-    dataTeams.length > 0 && expandedKeys.length === dataTeams.length;
+  const areAllExpanded = dataTeams.length > 0 && expandedKeys.length === dataTeams.length;
 
   const handleToggleAll = () => {
     if (areAllExpanded) {
       setExpandedKeys([]);
     } else {
-      const allKeys = dataTeams.map(item => item._id?.toString());
+      const allKeys = dataTeams.map((item) => item._id?.toString());
       setExpandedKeys(allKeys);
     }
   };
@@ -121,10 +100,10 @@ const Teams = () => {
 
   const handleCreateTeam = async (values) => {
     // 'values' từ modal sẽ là: { name: "...", members: [{userId: "leader_id"}, {userId: "member_id"}] }
-    
+
     // 1. Kiểm tra an toàn (dù form đã validate)
     if (!values.members || values.members.length === 0 || !values.members[0].userId) {
-      toast.error("Leader is required. Failed to create team.");
+      toast.error('Leader is required. Failed to create team.');
       return;
     }
 
@@ -135,14 +114,13 @@ const Teams = () => {
         // 2. Lấy leaderId từ item đầu tiên
         leaderId: values.members[0].userId,
         // 3. Lấy userIds từ TẤT CẢ item (backend của bạn yêu cầu cả leader trong userIds)
-        userIds: values.members.map(m => m.userId),
+        userIds: values.members.map((m) => m.userId),
       };
 
-
-      await createTeam(payload); 
-      toast.success('Team created successfully'); 
-      getDataTeams(); 
-      cancelAllModals(); 
+      await createTeam(payload);
+      toast.success('Team created successfully');
+      getDataTeams();
+      cancelAllModals();
     } catch (error) {
       console.error('Error creating team:', error);
       toast.error('Failed to create team');
@@ -163,28 +141,28 @@ const Teams = () => {
 
   const handleUpdateTeam = async (modalValues) => {
     setIsUpdatingTeam(true);
-   
+
     // Lấy dữ liệu gốc và dữ liệu mới
     const teamId = selectedTeam._id;
     const originalName = selectedTeam.name;
-    const originalMemberIds = new Set(selectedTeam.members.map(m => m._id));
-    
+    const originalMemberIds = new Set(selectedTeam.members.map((m) => m._id));
+
     const newName = modalValues.name;
-    const newMemberIds = new Set(modalValues.members ? modalValues.members.map(m => m.userId) : []);
+    const newMemberIds = new Set(modalValues.members ? modalValues.members.map((m) => m.userId) : []);
 
     try {
-      let tasks = []; 
+      let tasks = [];
 
       if (newName !== originalName) {
         tasks.push(updateTeam(teamId, { name: newName, active: selectedTeam.active }));
       }
 
-      const membersToAdd = [...newMemberIds].filter(id => !originalMemberIds.has(id));
+      const membersToAdd = [...newMemberIds].filter((id) => !originalMemberIds.has(id));
       if (membersToAdd.length > 0) {
         tasks.push(addTeamMembers(teamId, { userIds: membersToAdd }));
       }
 
-      const membersToRemove = [...originalMemberIds].filter(id => !newMemberIds.has(id));
+      const membersToRemove = [...originalMemberIds].filter((id) => !newMemberIds.has(id));
       if (membersToRemove.length > 0) {
         tasks.push(removeTeamMembers(teamId, { userIds: membersToRemove }));
       }
@@ -193,12 +171,11 @@ const Teams = () => {
         await Promise.all(tasks);
         toast.success('Team updated successfully');
       } else {
-        toast.info('No changes detected.'); 
+        toast.info('No changes detected.');
       }
 
-      getDataTeams(); 
+      getDataTeams();
       cancelAllModals();
-
     } catch (error) {
       console.error('Error updating team:', error);
       toast.error('Failed to update team. One or more operations failed.');
@@ -210,7 +187,7 @@ const Teams = () => {
   const handleDeleteTeam = async () => {
     try {
       setIsDeletingTeam(true);
-      await deleteTeam(selectedTeam._id); 
+      await deleteTeam(selectedTeam._id);
       toast.success('Team deleted successfully');
       getDataTeams();
       cancelAllModals();
@@ -232,8 +209,8 @@ const Teams = () => {
     // updateForm.resetFields();
   };
   const handleSearch = (value) => {
-  setSearchQuery(value);
-};
+    setSearchQuery(value);
+  };
 
   // --- Member actions ---
   const showDeleteMemberModal = (member, team) => {
@@ -246,7 +223,7 @@ const Teams = () => {
     if (!selectedMember || !selectedTeam) return;
 
     setIsDeletingMember(true);
-    
+
     //Kiểm tra xem thành viên bị xóa có phải là leader không
     const isLeader = selectedMember._id === selectedTeam.leader?._id;
 
@@ -270,14 +247,13 @@ const Teams = () => {
 
       // 4. Chạy tất cả các API call
       await Promise.all(tasks);
-      
+
       toast.success('Member removed successfully');
       if (isLeader) {
         toast.info('Team leader has been set to null.');
       }
 
       getDataTeams(); // Tải lại dữ liệu
-
     } catch (error) {
       console.error('Error removing member:', error);
       toast.error('Failed to remove member');
@@ -290,21 +266,7 @@ const Teams = () => {
   // --- Columns ---
   const teamColumns = [
     {
-      title: (
-        <Space>
-          <span>Team Name</span>
-          <span
-            style={{ cursor: 'pointer', color: dataColors.asin }}
-            onClick={handleToggleAll}
-          >
-            {areAllExpanded ? (
-              <IoIosArrowUp style={{ fontSize: 15 }} />
-            ) : (
-              <IoIosArrowDown style={{ fontSize: 15 }} />
-            )}
-          </span>
-        </Space>
-      ),
+      title: <span>Team Name</span>,
       dataIndex: 'name',
       key: 'name',
       render: (text) => <span className="font-medium">{text?.toString()}</span>,
@@ -314,12 +276,7 @@ const Teams = () => {
       title: 'Leader',
       dataIndex: 'leader',
       key: 'leader',
-      render: (leader) => (
-        <span className="font-medium">
-         
-          {leader || 'null'}
-        </span>
-      ),
+      render: (leader) => <span className="font-medium">{leader || 'null'}</span>,
     },
     // --- KẾT THÚC CỘT MỚI ---
     {
@@ -331,7 +288,7 @@ const Teams = () => {
     {
       title: 'Action',
       key: 'action',
-      align: 'center', 
+      align: 'center',
       render: (text, record) => (
         <Flex gap={10} justify="center">
           <Tooltip placement="top" title="Update">
@@ -346,7 +303,7 @@ const Teams = () => {
               <MdOutlineEdit size={20} />
             </button>
           </Tooltip>
-          
+
           <Tooltip placement="top" title="Delete">
             <button
               className="cursor-pointer border rounded"
@@ -361,13 +318,13 @@ const Teams = () => {
             </button>
           </Tooltip>
         </Flex>
-      )
+      ),
     },
   ];
 
   const getMemColumns = (teamRecord) => [
     {
-      title: "Member Name",
+      title: 'Member Name',
       dataIndex: 'full_name',
       key: 'memberName',
       render: (text) => <span className="font-medium">{text?.toString() || ''}</span>,
@@ -376,12 +333,8 @@ const Teams = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      
-      render: (roleObject) => (
-        <span className="font-medium">
-          {roleObject?.name || 'N/A'} 
-        </span>
-      ),
+
+      render: (roleObject) => <span className="font-medium">{roleObject?.name || 'N/A'}</span>,
     },
     {
       title: 'Action',
@@ -414,7 +367,6 @@ const Teams = () => {
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
-        
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Teams Group
@@ -447,13 +399,13 @@ const Teams = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <div className='mt-4'>
+          <div className="mt-4">
             <Table
               className="no-indent-table product-type "
               columns={teamColumns}
               dataSource={formattedTeamData}
               pagination={false}
-              rowKey="_id" 
+              rowKey="_id"
               expandable={{
                 expandedRowRender: (teamRecord) => (
                   <Table
@@ -461,9 +413,7 @@ const Teams = () => {
                     columns={getMemColumns(teamRecord)}
                     dataSource={teamRecord.members}
                     pagination={false}
-                    rowKey={(record, index) =>
-                      record._id ? record._id.toString() : `member-${index}` 
-                    }
+                    rowKey={(record, index) => (record._id ? record._id.toString() : `member-${index}`)}
                     style={{ padding: 10 }}
                   />
                 ),
@@ -475,31 +425,18 @@ const Teams = () => {
                   ) : (
                     <IoIosArrowDown style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
                   ),
-                  columnTitle: (
-                                <div style={{ cursor: 'pointer'}}
-                                onClick={handleToggleAll}
-                              >
-                                {areAllExpanded ? (
-                                  <IoIosArrowUp style={{ fontSize: 15 }} />
-                                ) : (
-                                  <IoIosArrowDown style={{ fontSize: 15 }} />
-                                )}
-                              </div>
-                                ),
+                columnTitle: (
+                  <div style={{ cursor: 'pointer' }} onClick={handleToggleAll}>
+                    {areAllExpanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                  </div>
+                ),
               }}
-              
             />
           </div>
         )}
       </div>
 
-      <AddTeamModal
-        open={isAddTeamModal}
-        onCancel={cancelAllModals}
-        onOk={handleCreateTeam}
-        loading={isAddingTeam}
-        allUsers={allUsers}
-      />
+      <AddTeamModal open={isAddTeamModal} onCancel={cancelAllModals} onOk={handleCreateTeam} loading={isAddingTeam} allUsers={allUsers} />
 
       <Modal
         title="Confirm Delete Member"
@@ -511,8 +448,7 @@ const Teams = () => {
         cancelText="Cancel"
       >
         <p>
-          Are you sure you want to remove member{' '}
-          <strong>{selectedMember?.full_name}</strong> from team{' '}
+          Are you sure you want to remove member <strong>{selectedMember?.full_name}</strong> from team{' '}
           <strong>{selectedTeam?.name}</strong>?
         </p>
       </Modal>
@@ -523,7 +459,7 @@ const Teams = () => {
         onOk={handleUpdateTeam}
         loading={isUpdatingTeam}
         allUsers={allUsers}
-        teamData={selectedTeam} 
+        teamData={selectedTeam}
       />
 
       <Modal
@@ -537,12 +473,9 @@ const Teams = () => {
         okButtonProps={{ danger: true }}
       >
         <p>
-          Are you sure you want to delete team{' '}
-          <strong>{selectedTeam?.name}</strong>?
+          Are you sure you want to delete team <strong>{selectedTeam?.name}</strong>?
         </p>
-        <p style={{ color: 'red' }}>
-          This action cannot be undone and will permanently delete the team.
-        </p>
+        <p style={{ color: 'red' }}>This action cannot be undone and will permanently delete the team.</p>
       </Modal>
     </div>
   );

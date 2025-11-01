@@ -39,6 +39,11 @@ const dataFilterStatus = [
     title: 'Open Case',
     status: 'openCase',
   },
+  {
+    key: 'invalidAddress',
+    title: 'Address Invalid',
+    status: 'invalidAddress',
+  },
 ];
 
 const dataFilterStatusFulfillment = [
@@ -180,6 +185,11 @@ const dataFilterStatusQC = [
     key: 'Sent',
     title: 'Completed',
     status: 'Sent',
+  },
+  {
+    key: 'Address Invalid',
+    title: 'Address Invalid',
+    status: 'Address Invalid',
   },
 ];
 

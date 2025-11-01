@@ -30,7 +30,7 @@ const ExtensionManager = () => {
         shopId: client?.shopId,
         machineId: client?.machineId,
         type: 'IMPORT_ORDERS',
-        requireAck: true,
+        payload: { action: 'click' },
       });
 
       if (response.status === 200) {

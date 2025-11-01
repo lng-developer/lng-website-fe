@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, filters, fetchCountStatus }) => {
   const [designerId, setDesignerId] = useState('');
   const [priority, setPriority] = useState('');
-  const [dueDate, setDueDate] = useState('');
   const [designers, setDesigners] = useState([]);
 
   const fetchDesigner = async () => {
@@ -32,7 +31,6 @@ const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, fil
       const response = await assignDesigner(idTask, {
         designer: designerId,
         priority: priority,
-        dueAt: dueDate,
       });
 
       if (response.status === 200) {
@@ -84,27 +82,23 @@ const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, fil
             optionFilterProp="label"
             options={[
               {
-                label: 'Low',
-                value: 'Low',
+                label: 'Easy',
+                value: 'Easy',
               },
               {
                 label: 'Normal',
                 value: 'Normal',
               },
               {
-                label: 'High',
-                value: 'High',
+                label: 'Hard',
+                value: 'Hard',
               },
               {
-                label: 'Urgent',
-                value: 'Urgent',
+                label: 'Extremely',
+                value: 'Extremely',
               },
             ]}
           />
-        </Flex>
-        <Flex vertical={true}>
-          <span className="font-medium">Due date</span>
-          <DatePicker onChange={(date, dateString) => setDueDate(dateString)} />
         </Flex>
       </Flex>
     </Modal>
