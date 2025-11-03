@@ -38,7 +38,7 @@ const ModalRequestPSD = ({ open, onCancel, onOk, loading }) => {
           name="note"
           label="Note"
          
-          rules={[{ required: true, message: 'Please enter a note for the designer!' }]}
+          rules={[{ required: false, message: 'Please enter a note for the designer!' }]}
         >
           <TextArea rows={4} placeholder="Enter your request note..." />
         </Form.Item>

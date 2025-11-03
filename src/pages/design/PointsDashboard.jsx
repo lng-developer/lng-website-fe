@@ -29,8 +29,6 @@ const PointsDashboard = () => {
   const sevenDaysAgo = subDays(today, 6);
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 50,
-    logsLimit: 20,
     from: toUtcISOString(startOfDay(sevenDaysAgo)),
     to: toUtcISOString(endOfDay(today)),
   });
