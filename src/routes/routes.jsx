@@ -17,6 +17,7 @@ const routes = {
   psd_design: '/design/psd',
   png_design: '/design/png',
   idea_task: '/design/idea',
+  points_dashboard: '/design/points',
   fulfillmentQc: '/fulfillment/qc',
   fulfillmentScale: '/fulfillment/scale',
   fulfillmentWorkingStatus: '/fulfillment/working-status',
