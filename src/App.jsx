@@ -26,6 +26,7 @@ import IdeaTask from './pages/design/IdeaTask';
 import AdsReport from './pages/report/AdsReport';
 import Teams from './pages/cost_center/Teams';
 import ExtensionManager from './pages/extension';
+import PointsDashboard from './pages/design/PointsDashboard';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
 
           {/* Extension */}
           <Route path={routes.extension} element={<ExtensionManager />} />
+          <Route path={routes.points_dashboard} element={<PointsDashboard />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

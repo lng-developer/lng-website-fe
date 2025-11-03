@@ -2,7 +2,6 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { dataFilterListing } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
-import DateRangePicker from '../../components/DateRangePicker';
 import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
 import { FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import NoImage from '../../assets/NoImage.jpg';
@@ -10,7 +9,7 @@ import StatusComponent from '../../components/StatusComponent';
 import { GoDotFill } from 'react-icons/go';
 import ItemAction from './table/ItemAction';
 import { MdAdd } from 'react-icons/md';
-import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { formatDate } from '../../utils/fomatDate';
 import { toast } from 'sonner';
 import { getAllListing, getListingStatictisc } from '../../apis/listing';
 import { debounce } from 'lodash';
@@ -48,8 +47,6 @@ const Listing = () => {
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    from: defaultFrom,
-    to: defaultTo,
     search: '',
     asinType: '',
     psdStatus: '',
@@ -125,6 +122,7 @@ const Listing = () => {
       dataIndex: 'total_sales',
       key: 'total_sales',
       align: 'center',
+      sorter: (a, b) => a.total_sales - b.total_sales, 
       render: (data) => <span className="font-medium">{data}</span>,
     },
     {
@@ -378,21 +376,6 @@ const Listing = () => {
                 Add Listing
               </span>
             </button>
-            <DateRangePicker
-              mode="range"
-              showOutsideDays
-              modifiersClassNames={{
-                selected: 'my-selected',
-                range_middle: 'my-range-middle',
-              }}
-              modifiersStyles={{
-                range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
-                },
-              }}
-              updateFilter={updateFilter}
-            />
           </div>
         </div>
       </div>
