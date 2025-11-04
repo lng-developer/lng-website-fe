@@ -38,7 +38,7 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
       dataIndex: 'points',
       key: 'points',
       align: 'center',
-      render: (points) => <span style={{ 
+      render: (points) => <span className='font-medium' style={{ 
             
             color: points > 0 ? 'green' : 'red' 
           }}>
@@ -55,7 +55,7 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
       footer={null}
       width={800}
       destroyOnClose
-      bodyStyle={{ height: '60vh', overflowY: 'auto' }}
+      bodyStyle={{ height: '60vh'}}
     >
       {userData ? (
         <>
@@ -68,8 +68,9 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
               rowKey="_id"
               pagination={{
                 pageSize: 8,
-                size: 'small',
-                hideOnSinglePage: false
+                size: 'large',
+                hideOnSinglePage: true,
+                showTotal: (total) => `Total ${total} items`,
               }}
             />
           ) : (

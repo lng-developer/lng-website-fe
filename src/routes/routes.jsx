@@ -34,6 +34,7 @@ const routes = {
   report_sale: '/report/sale',
   report_ads: '/report/ads',
   extension: '/extension',
+  sku_mapping: '/sku_mapping'
 };
 
 export { routes };
