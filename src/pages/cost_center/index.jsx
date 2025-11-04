@@ -7,7 +7,7 @@ import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { useCallback, useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
-import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
+import { formatDate } from '../../utils/fomatDate';
 import { deleteProductType, deleteProductTypeItem, getAllConfig, updateProductType } from '../../apis/config';
 import ModalAddProductType from './ModalAddProductType';
 import ModalDelete from '../../components/ModalDelete';

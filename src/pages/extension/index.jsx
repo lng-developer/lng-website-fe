@@ -10,7 +10,7 @@ import {
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Flex, Spin, Switch } from 'antd';
-import { getAllClient, requestExtension } from '../../apis/socketio';
+import { getAllClient, getLogs, requestExtension } from '../../apis/socketio';
 import RealtimeLogViewer from '../../components/RealtimeLogViewer';
 import { toast } from 'sonner';
 import { dataColors } from '../../utils/dataColors';
@@ -22,6 +22,9 @@ const ExtensionManager = () => {
   const [clients, setClients] = useState([]);
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
+  const [logs, setLogs] = useState([]);
+
+  console.log('selectedClient', selectedClient);
 
   const handleImportOrder = async (client) => {
     setIsLoadingImportOrder(true);
@@ -30,7 +33,9 @@ const ExtensionManager = () => {
         shopId: client?.shopId,
         machineId: client?.machineId,
         type: 'IMPORT_ORDERS',
-        payload: { action: 'click' },
+        action: 'click',
+        label: client?.label,
+        payload: {},
       });
 
       if (response.status === 200) {
@@ -40,6 +45,7 @@ const ExtensionManager = () => {
       console.log(error);
     } finally {
       setIsLoadingImportOrder(false);
+      fetchLogs(selectedClient?.machineId);
     }
   };
 
@@ -50,7 +56,8 @@ const ExtensionManager = () => {
         shopId: client?.shopId,
         machineId: client?.machineId,
         type: 'IMPORT_ADS_SPEND',
-        requireAck: true,
+        action: 'click',
+        label: client?.label,
         payload: {
           date: dateInput,
         },
@@ -63,6 +70,7 @@ const ExtensionManager = () => {
       console.log(error);
     } finally {
       setIsLoadingImportAds(false);
+      fetchLogs(selectedClient?.machineId);
     }
   };
 
@@ -86,9 +94,41 @@ const ExtensionManager = () => {
     }
   };
 
+  const fetchLogs = async (machineId) => {
+    try {
+      const response = await getLogs({ machineId });
+      if (response.status === 200) {
+        const result = response.data?.logs.map((raw) => {
+          return {
+            at: Number(raw.at || raw.time || Date.now()),
+            shopId: String(raw.shopId || ''),
+            machineId: String(raw.machineId || ''),
+            label: raw.label,
+            type: raw.type || raw.level || 'info',
+            message: String(raw.message || ''),
+            action: raw.action,
+          };
+        });
+        setLogs(result);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchAllClients();
   }, []);
+
+  useEffect(() => {
+    if (!selectedClient?.machineId) return;
+    const fetchData = () => {
+      fetchLogs(selectedClient.machineId);
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, [selectedClient]);
 
   return (
     <div>
@@ -245,11 +285,7 @@ const ExtensionManager = () => {
                 <div className="mt-4">
                   <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Activity Logs</h3>
                   <div>
-                    <RealtimeLogViewer
-                      apiBase={'https://api.lngmerch.co'}
-                      shopId={selectedClient.shopId}
-                      machineId={selectedClient.machineId}
-                    />
+                    <RealtimeLogViewer logs={logs} />
                   </div>
                 </div>
               </div>
