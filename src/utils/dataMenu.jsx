@@ -112,7 +112,7 @@ export const detailMenus = {
       icon: <RiSettings2Line size={20} />,
       children: [
         { key: '', label: 'Manage stores', icon: <IoStorefrontOutline size={20} /> },
-        { key: '', label: 'SKU Mapping', icon: <CgShoppingBag size={20} /> },
+        { key: routes.sku_mapping, label: 'SKU Mapping', icon: <CgShoppingBag size={20} /> },
         { key: '', label: 'Cookies', icon: <TbCookie size={20} /> },
         { key: '', label: 'Shopify Template ', icon: <LuLayoutList size={20} /> },
         { key: '', label: 'TM Keywords', icon: <HiOutlineKey size={20} /> },

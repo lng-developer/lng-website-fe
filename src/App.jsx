@@ -27,6 +27,7 @@ import AdsReport from './pages/report/AdsReport';
 import Teams from './pages/cost_center/Teams';
 import ExtensionManager from './pages/extension';
 import PointsDashboard from './pages/design/PointsDashboard';
+import SkuMapping from './pages/sku_mapping/SkuMapping';
 
 function App() {
   return (
@@ -69,6 +70,9 @@ function App() {
           {/* Extension */}
           <Route path={routes.extension} element={<ExtensionManager />} />
           <Route path={routes.points_dashboard} element={<PointsDashboard />} />
+
+          {/* SKU Mapping */}
+          <Route path={routes.sku_mapping} element={<SkuMapping />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

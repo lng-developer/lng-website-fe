@@ -91,7 +91,7 @@ const PointsDashboard = () => {
       key: 'name',
       fixed: 'left',
       width: 220,
-      render: (text) => <span className="font-bold">{text}</span>,
+      render: (text) => <span className="font-medium">{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Current Balance</span>,
@@ -247,6 +247,7 @@ const PointsDashboard = () => {
             current: filters.page,
             onChange: handlePageChange,
             showSizeChanger: true,
+            showTotal: (total) => `Total ${total} items`,
           }}
         />
 
