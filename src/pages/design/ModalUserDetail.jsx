@@ -11,20 +11,20 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
       title: <span  style={{ color: dataColors.title }}>Date</span>,
       dataIndex: 'created_at',
       key: 'date',
-      render: (date) => ( date ? <span className='font-medium'>{format(new Date(date), 'MMM d, yyyy')}</span> : <span className='font-bold'>N/A</span>
+      render: (date) => ( date ? <span className='font-medium whitespace-nowrap'>{format(new Date(date), 'MMM d, yyyy')}</span> : <span className='font-bold'>N/A</span>
       ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Task ID</span>,
       dataIndex: 'task_id',
       key: 'taskID',
-      render: (text) => <span className='font-medium'>{text}</span>,
+      render: (text) => <span className='font-medium whitespace-nowrap'>{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Type</span>,
       dataIndex: 'type',
       key: 'type',
-      render: (text) => <span className='font-medium'>{text}</span>,
+      render: (text) => <span className='font-medium whitespace-nowrap'>{text}</span>,
     },
     {
       title: <span style={{ color: dataColors.title }}>Balance After</span>,
@@ -53,9 +53,8 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={800}
+      width={900}
       destroyOnClose
-      bodyStyle={{ height: '60vh'}}
     >
       {userData ? (
         <>
@@ -67,7 +66,7 @@ const UserDetailModal = ({ open, onCancel, userData }) => {
               dataSource={userData.logs}
               rowKey="_id"
               pagination={{
-                pageSize: 8,
+                pageSize: 10,
                 size: 'large',
                 hideOnSinglePage: true,
                 showTotal: (total) => `Total ${total} items`,

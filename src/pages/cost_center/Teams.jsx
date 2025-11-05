@@ -401,7 +401,8 @@ const Teams = () => {
         ) : (
           <div className="mt-4">
             <Table
-              className="no-indent-table product-type "
+              className="no-indent-table "
+              bordered
               columns={teamColumns}
               dataSource={formattedTeamData}
               pagination={false}
@@ -409,7 +410,8 @@ const Teams = () => {
               expandable={{
                 expandedRowRender: (teamRecord) => (
                   <Table
-                    className="no-indent-table product-type"
+                    className="no-indent-table"
+                    bordered
                     columns={getMemColumns(teamRecord)}
                     dataSource={teamRecord.members}
                     pagination={false}

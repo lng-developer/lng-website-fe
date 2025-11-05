@@ -11,6 +11,10 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { formatDate } from '../../utils/fomatDate';
+import { FcCurrencyExchange } from 'react-icons/fc';
+import { FcCalendar } from 'react-icons/fc';
+import { FcConferenceCall } from 'react-icons/fc';
+
 const { Title } = Typography;
 
 const PointsDashboard = () => {
@@ -68,7 +72,7 @@ const PointsDashboard = () => {
   const handleFilterUpdate = (dateValues) => {
     setFilters((prevFilters) => ({
       ...prevFilters,
-      ...dateValues, 
+      ...dateValues,
       page: 1,
     }));
   };
@@ -141,13 +145,13 @@ const PointsDashboard = () => {
     },
   ];
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+  //       <Spin size="large" />
+  //     </div>
+  //   );
+  // }
   const formatApiRange = (range) => {
     if (!range || (!range.from && !range.to)) return 'All Time';
 
@@ -199,7 +203,7 @@ const PointsDashboard = () => {
                 {meta?.returned || 0}
               </span>
             </div>
-            <HiMiniUserGroup size={25} color={dataColors.success} />
+            <FcConferenceCall size={30} color={dataColors.success} />
           </div>
         </div>
 
@@ -214,7 +218,7 @@ const PointsDashboard = () => {
                 {totalBalance}
               </span>
             </div>
-            <AiOutlineDollar size={25} style={{ color: dataColors.pending }} />
+            <FcCurrencyExchange size={30} />
           </div>
         </div>
 
@@ -227,7 +231,7 @@ const PointsDashboard = () => {
               <div className="font-medium text-[#64748b]">Date Range</div>
               <span className="text-md ">{formatApiRange(filters)}</span>
             </div>
-            <AiOutlineCalendar size={25} />
+            <FcCalendar size={30} />
           </div>
         </div>
       </div>
@@ -235,7 +239,7 @@ const PointsDashboard = () => {
       <div className="px-8 py-4 h-full mt-8">
         {/* BẢNG USERS */}
         <Table
-          className="no-indent-table product-type  "
+          className="no-indent-table "
           bordered
           columns={columns}
           dataSource={users}

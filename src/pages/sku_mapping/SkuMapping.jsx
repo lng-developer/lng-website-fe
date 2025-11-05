@@ -2,21 +2,11 @@
 import { useOutletContext } from 'react-router-dom';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Card, Input, Select, Tag, Space, Typography, Spin, Row, Col, Button, Modal, Switch, Tooltip, Pagination } from 'antd'; // Thêm Button, Modal, Switch
-import {
-
-  CalendarOutlined,
-
-} from '@ant-design/icons';
+import { CalendarOutlined } from '@ant-design/icons';
 import { MdDeleteOutline, MdOutlineRemoveRedEye, MdAdd } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { toast } from 'sonner';
-import {
-  getSkuMappingConfig,
-  createSkuMappingConfig,
-  updateSkuMappingConfig,
-  deleteSkuMappingConfig,
-
-} from '../../apis/skuMapping';
+import { getSkuMappingConfig, createSkuMappingConfig, updateSkuMappingConfig, deleteSkuMappingConfig } from '../../apis/skuMapping';
 
 import ModalViewMapping from './ModalViewMapping';
 import ModalCreateUpdateMapping from './ModalCreateUpdateMapping';
@@ -45,7 +35,7 @@ const SkuMapping = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 8;
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -55,7 +45,7 @@ const SkuMapping = () => {
         day: 'numeric',
       });
     } catch (error) {
-      console.log(error)
+      console.log(error);
       return 'Invalid Date';
     }
   };
@@ -87,7 +77,7 @@ const SkuMapping = () => {
   //   });
   // }, [data, searchText, statusFilter]);
   useEffect(() => {
-    setCurrentPage(1); 
+    setCurrentPage(1);
   }, [searchText, statusFilter]);
 
   const filteredData = useMemo(() => {
@@ -244,13 +234,15 @@ const SkuMapping = () => {
       align: 'center',
       width: 120,
       // SỬA: Dùng Switch (Request 5)
-      render: (isActive) => <div className="font-medium">
-        {isActive ? 
-      <Switch checkedChildren='' unCheckedChildren='' defaultChecked disabled/> 
-      :
-      <Switch checkedChildren='' unCheckedChildren='' defaultChecked={false} disabled/> 
-      }
-      </div>,
+      render: (isActive) => (
+        <div className="font-medium">
+          {isActive ? (
+            <Switch checkedChildren="" unCheckedChildren="" defaultChecked disabled />
+          ) : (
+            <Switch checkedChildren="" unCheckedChildren="" defaultChecked={false} disabled />
+          )}
+        </div>
+      ),
     },
     {
       title: <span style={{ color: dataColors.title }}>Created Date</span>,
@@ -331,32 +323,32 @@ const SkuMapping = () => {
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center ">
           <Input
-                placeholder="Search..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                allowClear
-                className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
-
-              />
-              <Pagination
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            allowClear
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+          />
+          <Pagination
             size="large"
             current={currentPage}
             pageSize={PAGE_SIZE}
-            total={filteredData.length} 
+            total={filteredData.length}
             onChange={handlePageChange}
-            hideOnSinglePage 
+            hideOnSinglePage
             showTotal={(total) => `Total ${total} items`}
           />
-          </div>
-          <Spin spinning={loading}>
-            <Table
-              className="no-indent-table product-type mt-4"
-              columns={columns}
-              dataSource={paginatedData}
-              rowKey="_id"
-              pagination={false}
-            />
-          </Spin>
+        </div>
+        <Spin spinning={loading}>
+          <Table
+            className="no-indent-table mt-4"
+            columns={columns}
+            dataSource={paginatedData}
+            rowKey="_id"
+            bordered
+            pagination={false}
+          />
+        </Spin>
       </div>
 
       <ModalViewMapping open={isViewModalOpen} onCancel={handleCloseModals} record={selectedRecord} />

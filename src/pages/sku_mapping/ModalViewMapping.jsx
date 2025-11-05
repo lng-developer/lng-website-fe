@@ -58,7 +58,7 @@ const ModalViewMapping = ({ open, onCancel, record }) => {
       destroyOnClose
       className='p-6'
     >
-      <div className='w-full h-[700px]'>
+      <div className='w-full min-h-[550px]'>
         <Title level={5}>Type: {mapType}</Title>
         <Table 
           columns={columns} 
