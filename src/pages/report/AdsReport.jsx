@@ -4,16 +4,16 @@ import { useEffect, useState } from 'react';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
-import { FaMoneyBillWave } from 'react-icons/fa6';
 import { FcCalendar } from 'react-icons/fc';
-import { FcShop } from 'react-icons/fc';
 import { getAds } from '../../apis/report';
 import SelectSeller from '../../components/SelectSeller';
 import { getAllSellers } from '../../apis/user';
 import { toast } from 'sonner';
-import { Empty, Popover } from 'antd';
+import { Empty, Popover, Tooltip } from 'antd';
 import { HiMiniUserGroup } from 'react-icons/hi2';
-import { GiShop } from 'react-icons/gi';
+import { FcCurrencyExchange } from 'react-icons/fc';
+import { MdOutlineRefresh } from 'react-icons/md';
+import { FcShop } from 'react-icons/fc';
 
 const $ = (n) => (n >= 0 ? `$${Number(n).toFixed(2)}` : `-$${Math.abs(Number(n)).toFixed(2)}`);
 
@@ -86,7 +86,7 @@ const AdsReport = () => {
     if (user?.role === 'Admin') {
       fetchAllSellers();
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     getAllAds(filters);
@@ -128,10 +128,10 @@ const AdsReport = () => {
               <div>
                 <div className="font-medium text-[#64748b]">Total Spending ({summary?.days} days)</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.success }}>
-                  {$(summary?.totalSpending)}
+                  {$(summary?.totalSpending || 0)}
                 </span>
               </div>
-              <FaMoneyBillWave size={25} color={dataColors.success} />
+              <FcCurrencyExchange size={30} color={dataColors.success} />
             </div>
           </div>
 
@@ -143,10 +143,10 @@ const AdsReport = () => {
               <div>
                 <div className="font-medium text-[#64748b]">Total Sellers</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.process }}>
-                  {summary?.totalSellers}
+                  {summary?.totalSellers || 0}
                 </span>
               </div>
-              <HiMiniUserGroup size={25} color={dataColors.process} />
+              <HiMiniUserGroup size={30} color={dataColors.process} />
             </div>
           </div>
 
@@ -158,10 +158,10 @@ const AdsReport = () => {
               <div>
                 <div className="font-medium text-[#64748b]">Total Shops</div>
                 <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
-                  {summary?.totalShops}
+                  {summary?.totalShops || 0}
                 </span>
               </div>
-              <GiShop size={25} color={dataColors.pending} />
+              <FcShop size={30} color={dataColors.pending} />
             </div>
           </div>
         </div>
@@ -178,6 +178,17 @@ const AdsReport = () => {
               }}
             />
           )}
+          <Tooltip title="Refresh">
+            <button
+              className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+              onClick={() => {
+                getAllAds(filters);
+                toast.success('Refresh success!');
+              }}
+            >
+              <MdOutlineRefresh size={20} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Daily List */}

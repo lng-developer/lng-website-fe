@@ -34,7 +34,8 @@ import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import ItemCase from './table/ItemCase';
 import ModalImportOrder from './ModalImportOrder';
-import AsyncOrderModal from './ModalAsyncOrder';
+import { getAllTeam } from '../../apis/teams';
+import SelectSeller from '../../components/SelectSeller';
 
 const PAGE_SIZE = 10;
 
@@ -56,7 +57,8 @@ const Home = () => {
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [orderInfo, setOrderInfo] = useState({});
-  const [isShowModalAsync, setIsShowModalAsync] = useState(false);
+  const [teams, setTeams] = useState([]);
+  const [selectTeam, setSelectTeam] = useState('');
 
   const [filters, setFilters] = useState({
     page: currentPage,
@@ -68,6 +70,7 @@ const Home = () => {
     isNoCostCenter: false,
     openCase: false,
     shopName: '',
+    teamId: '',
   });
 
   // ---- Callbacks & Memos ----
@@ -443,6 +446,17 @@ const Home = () => {
     return results;
   }, [orders, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
 
+  const fetchAllTeams = useCallback(async () => {
+    try {
+      const result = await getAllTeam();
+      if (result.status === 200) {
+        setTeams(result.data?.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
   // ---- Effects ----
   useEffect(() => {
     const handleResize = () => {
@@ -458,6 +472,10 @@ const Home = () => {
   useEffect(() => {
     fetchAllShop();
   }, [fetchAllShop]);
+
+  useEffect(() => {
+    fetchAllTeams();
+  }, [fetchAllTeams]);
 
   useEffect(() => {
     fetchCountStatus();
@@ -479,17 +497,6 @@ const Home = () => {
             Manage Orders
           </h1>
           <div className="flex justify-center items-center gap-2">
-            <button
-              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => setIsShowModalAsync(true)}
-            >
-              <div style={{ color: 'black' }}>
-                <CloudDownloadOutlined size={15} />
-              </div>
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Async Orders
-              </span>
-            </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={handleOnclick}
@@ -568,6 +575,15 @@ const Home = () => {
                   fetchCountStatus();
                 }}
               />
+              <SelectSeller
+                title="Team"
+                ListData={teams}
+                value={selectTeam}
+                onChange={(val) => {
+                  setSelectTeam(val);
+                  updateFilter({ teamId: val });
+                }}
+              />
             </div>
             <Tooltip title="Refresh">
               <button
@@ -642,8 +658,6 @@ const Home = () => {
       >
         <span className="font-medium text-[#64748b]">Are you sure you want to replace this order? This action cannot be undone.</span>
       </Modal>
-
-      <AsyncOrderModal isModalOpen={isShowModalAsync} setIsModalOpen={setIsShowModalAsync} />
     </div>
   );
 };

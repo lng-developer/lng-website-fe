@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { RiLinkM } from 'react-icons/ri';
 import { debounce } from 'lodash';
 import { getOrderCostStatistics } from '../../apis/report';
+import NoImage from '../../assets/NoImage.jpg';
+import { MdOutlineRefresh } from 'react-icons/md';
 
 const PAGE_SIZE = 10;
 
@@ -284,7 +286,12 @@ const ReportOrderCost = () => {
                     boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
                   }}
                 >
-                  <Image height={100} width={100} src={itemSub?.listing?.product_image || itemSub?.baseImageUrl} className="rounded-lg" />
+                  <Image
+                    height={100}
+                    width={100}
+                    src={itemSub?.listing?.product_image || itemSub?.baseImageUrl || NoImage}
+                    className="rounded-lg"
+                  />
                 </div>
               </div>
             ),
@@ -502,6 +509,18 @@ const ReportOrderCost = () => {
                 }}
               />
             </div>
+            <Tooltip title="Refresh">
+              <button
+                className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                onClick={() => {
+                  fetchAllOrder(filters);
+                  fetchCountOrderCost(filters);
+                  toast.success('Refresh success!');
+                }}
+              >
+                <MdOutlineRefresh size={20} />
+              </button>
+            </Tooltip>
           </div>
           <div>
             <Pagination

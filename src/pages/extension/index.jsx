@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
-import {
-  RightOutlined,
-  ShoppingOutlined,
-  DollarOutlined,
-  ThunderboltOutlined,
-  ClockCircleFilled,
-  CloudDownloadOutlined,
-} from '@ant-design/icons';
+import { RightOutlined, DollarOutlined, ThunderboltOutlined, ClockCircleFilled, CloudDownloadOutlined } from '@ant-design/icons';
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Flex, Spin, Switch } from 'antd';
 import { getAllClient, getLogs, requestExtension } from '../../apis/socketio';
 import RealtimeLogViewer from '../../components/RealtimeLogViewer';
 import { toast } from 'sonner';
-import { dataColors } from '../../utils/dataColors';
+import { FcLinux } from 'react-icons/fc';
+import { FcCurrencyExchange } from 'react-icons/fc';
+import { FcAlarmClock } from 'react-icons/fc';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
@@ -23,8 +18,6 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
-
-  console.log('selectedClient', selectedClient);
 
   const handleImportOrder = async (client) => {
     setIsLoadingImportOrder(true);
@@ -101,7 +94,7 @@ const ExtensionManager = () => {
         const result = response.data?.logs.map((raw) => {
           return {
             at: Number(raw.at || raw.time || Date.now()),
-            shopId: String(raw.shopId || ''),
+            shop: raw.shop,
             machineId: String(raw.machineId || ''),
             label: raw.label,
             type: raw.type || raw.level || 'info',
@@ -184,13 +177,13 @@ const ExtensionManager = () => {
               style={{ marginTop: 10, color: 'white', fontSize: 15 }}
             >
               <ThunderboltOutlined className="text-md" />
-              Import Orders
+              Import Orders (All Clients)
             </button>
           </div>
 
           {/* Actions Panel */}
           <div className="lg:col-span-2">
-            {selectedClient ? (
+            {Object.keys(selectedClient).length > 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className={`w-4 h-4 rounded-full bg-green-500`}></div>
@@ -234,7 +227,7 @@ const ExtensionManager = () => {
                   <div className="w-full border border-slate-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
-                        <DollarOutlined style={{ fontSize: 30, color: dataColors.success, marginTop: 5 }} />
+                        <FcCurrencyExchange size={30} style={{ fontSize: 30, marginTop: 5 }} />
                         <div className="flex-1">
                           <span className="font-semibold text-slate-800 mb-2" style={{ fontSize: 15 }}>
                             Import Ads Spend
@@ -270,7 +263,7 @@ const ExtensionManager = () => {
                 <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <ClockCircleFilled style={{ fontSize: 30, color: '#1890ff' }} />
+                      <FcAlarmClock style={{ fontSize: 30, color: '#1890ff' }} />
                       <div>
                         <span className="font-semibold text-slate-800 mb-1" style={{ fontSize: 15 }}>
                           Auto Import Order
@@ -278,7 +271,7 @@ const ExtensionManager = () => {
                         <div className="text-sm text-slate-600">Running at 0:00, 4:00, 8:00, 12:00, 16:00, 20:00</div>
                       </div>
                     </div>
-                    <Switch />
+                    <Switch checked disabled />
                   </div>
                 </div>
 
@@ -291,11 +284,11 @@ const ExtensionManager = () => {
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingOutlined className="text-4xl text-slate-400" />
+                <div className="flex justify-center items-center mx-auto">
+                  <FcLinux size={200} className="text-4xl text-slate-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">Chọn một client</h3>
-                <p className="text-slate-600">Vui lòng chọn client bên trái để xem các tính năng</p>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">Select a client</h3>
+                <p className="text-slate-600">Please select client on the left to see features</p>
               </div>
             )}
           </div>

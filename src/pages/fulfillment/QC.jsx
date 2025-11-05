@@ -223,6 +223,16 @@ const QC = () => {
 
   const handleSearch = useCallback((e) => debouncedSearch(e.target.value), [debouncedSearch]);
 
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
+    }
+  }, []);
+
   useEffect(() => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
@@ -231,7 +241,11 @@ const QC = () => {
   const tableData = useMemo(() => {
     return (dataSource || []).map((item, index) => ({
       key: item?.orderId,
-      orderId: <StatusComponent title={item?.orderId} color={dataColors.default} isDefault />,
+      orderId: (
+        <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+          <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
+        </button>
+      ),
       status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
       scale_overall_status: (
         <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
@@ -260,7 +274,7 @@ const QC = () => {
           </span>
         </Flex>
       ),
-      scale_by: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
+      scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
       base_cost: <span className="font-medium">${item?.base_cost}</span>,
       shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
       qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
@@ -290,7 +304,7 @@ const QC = () => {
             style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
             className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
           >
-            <span>{itemSub?.cost_center?.vendorProductDisplayName}</span>
+            <span>{itemSub?.cost_center?.vendorProductDisplayName || 'No data'}</span>
           </div>
         ),
         action: (
