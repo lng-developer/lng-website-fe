@@ -9,6 +9,7 @@ import {
   RiContractLine,
   RiSettings2Line,
   RiErrorWarningLine,
+  RiAdminLine
 } from 'react-icons/ri';
 import {
   TbHomeStats,
@@ -28,7 +29,7 @@ import { HiOutlineBuildingStorefront, HiOutlineKey } from 'react-icons/hi2';
 import { BsFiletypePsd, BsGraphUp } from 'react-icons/bs';
 import { CgShoppingBag, CgFileDocument } from 'react-icons/cg';
 import { IoImageOutline, IoStorefrontOutline } from 'react-icons/io5';
-import { AiOutlineFileSync, AiOutlineCopy,AiOutlineFundView } from 'react-icons/ai';
+import { AiOutlineFileSync, AiOutlineCopy,AiOutlineFundView, AiFillIdcard  } from 'react-icons/ai';
 import { GrDocumentConfig } from 'react-icons/gr';
 import { BiCubeAlt } from 'react-icons/bi';
 import { BiExtension } from 'react-icons/bi';
@@ -116,6 +117,7 @@ export const detailMenus = {
         { key: '', label: 'Cookies', icon: <TbCookie size={20} /> },
         { key: '', label: 'Shopify Template ', icon: <LuLayoutList size={20} /> },
         { key: '', label: 'TM Keywords', icon: <HiOutlineKey size={20} /> },
+        { key: routes.management_account, label: 'Account', icon: <RiAdminLine size={20} /> },
       ],
     },
   ],

@@ -28,6 +28,7 @@ import Teams from './pages/cost_center/Teams';
 import ExtensionManager from './pages/extension';
 import PointsDashboard from './pages/design/PointsDashboard';
 import SkuMapping from './pages/sku_mapping/SkuMapping';
+import User from './pages/user/User';
 
 function App() {
   return (
@@ -73,6 +74,16 @@ function App() {
 
           {/* SKU Mapping */}
           <Route path={routes.sku_mapping} element={<SkuMapping />} />
+
+          {/* Management Account */}
+          <Route
+            path={routes.management_account}
+            element={
+              <PrivateRoute allowedRoles={['Admin']}>
+                <User />
+              </PrivateRoute>
+            }
+          />
         </Route>
 
         <Route path={routes.login} element={<Login />} />
