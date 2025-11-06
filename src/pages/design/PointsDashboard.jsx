@@ -145,24 +145,21 @@ const PointsDashboard = () => {
     },
   ];
 
-  // if (loading) {
-  //   return (
-  //     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-  //       <Spin size="large" />
-  //     </div>
-  //   );
-  // }
   const formatApiRange = (range) => {
     if (!range || (!range.from && !range.to)) return 'All Time';
+    console.log(range)
+    const fromDateObj = range.from.slice(0,10)
+    const toDateObj = range.to.slice(0,10);
 
-    const fromDate = formatDate(range.from);
-    const toDate = formatDate(range.to);
-    if (fromDate === toDate) {
-      return toDate;
+    const fromDateStr = formatDate(fromDateObj);
+    const toDateStr = formatDate(toDateObj);
+
+    console.log(typeof(fromDateStr))
+    if(fromDateStr === toDateStr){
+      return toDateStr
     }
 
-    // Nếu khác nhau
-    return `${fromDate} – ${toDate}`;
+    return `${fromDateStr} – ${toDateStr}`;
   };
   return (
     <div>
