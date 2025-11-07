@@ -3,7 +3,7 @@ import { RightOutlined, DollarOutlined, ThunderboltOutlined, ClockCircleFilled, 
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Flex, Spin, Switch } from 'antd';
-import { getAllClient, getLogs, requestExtension } from '../../apis/socketio';
+import { getAllClient, getLogs, pullAll, requestExtension } from '../../apis/socketio';
 import RealtimeLogViewer from '../../components/RealtimeLogViewer';
 import { toast } from 'sonner';
 import { FcLinux } from 'react-icons/fc';
@@ -63,6 +63,24 @@ const ExtensionManager = () => {
       console.log(error);
     } finally {
       setIsLoadingImportAds(false);
+      fetchLogs(selectedClient?.machineId);
+    }
+  };
+
+  const handleImportAllOrder = async () => {
+    try {
+      const response = await pullAll({
+        type: 'PULL_ALL',
+        action: 'click',
+        payload: {},
+      });
+
+      if (response.status === 200) {
+        toast.success('Request import order to extension success!');
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
       fetchLogs(selectedClient?.machineId);
     }
   };
@@ -172,7 +190,7 @@ const ExtensionManager = () => {
 
             {/* Import All Orders Button */}
             <button
-              // onClick={handleImportAllOrders}
+              onClick={handleImportAllOrder}
               className="w-full text-md mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
               style={{ marginTop: 10, color: 'white', fontSize: 15 }}
             >

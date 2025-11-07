@@ -89,6 +89,10 @@ const ModalAddIdeaTask = ({ showCreateModal, setShowCreateModal, fetchAllTask, f
             style={{ marginTop: '8px', width: '100%' }}
             options={[
               {
+                label: 'Ornament',
+                value: 'Ornament',
+              },
+              {
                 label: 'T-Shirt',
                 value: 'T-Shirt',
               },

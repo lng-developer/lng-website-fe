@@ -415,7 +415,7 @@ const Home = () => {
             listing={itemSub?.listing}
             scale_status={itemSub?.scale_status}
             asin={itemSub?.asin}
-            scale_by={item?.scale_by}
+            scale_by={item?.scaledBy}
           />
         ),
         sku: (

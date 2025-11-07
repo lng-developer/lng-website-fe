@@ -46,14 +46,6 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
     }
   }, [asin, listing?.psd?.status]);
 
-  const makeDownloadUrl = useCallback((url, filename) => {
-    if (!url) return '';
-    const parts = url.split('/upload/');
-    if (parts?.length !== 2) return url;
-    const attach = filename ? `fl_attachment:${filename}` : 'fl_attachment';
-    return `${parts[0]}/upload/${attach}/${parts[1]}`;
-  }, []);
-
   return (
     <div>
       <div className={arrFulfill?.length > 0 ? 'inline-grid grid-cols-2 gap-4' : ''}>
@@ -104,21 +96,6 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
             </Tooltip>
           </div>
         </div>
-
-        {linkFulfill?.front && (
-          <div className="flex-col gap-2 mt-2">
-            <div className="flex items-center">
-              <span className="mr-2 font-medium">Download:</span>
-            </div>
-            <a
-              href={`${makeDownloadUrl(linkFulfill?.front, asin)}`}
-              className="inline-flex items-center gap-1 rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground cursor-pointer"
-            >
-              <MdOutlineCloudDownload color={dataColors.pending} size={16} />
-              <span>Download Fulfill</span>
-            </a>
-          </div>
-        )}
 
         <div className="flex-col gap-2 mt-2">
           <div className="flex items-center">

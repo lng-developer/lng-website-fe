@@ -11,4 +11,8 @@ const getLogs = (params) => {
 const requestExtension = (payload) => {
   return instance.post('/ext/command', payload);
 };
-export { getAllClient, getLogs, requestExtension };
+
+const pullAll = (payload) => {
+  return instance.post('/ext/pull-all', payload);
+};
+export { getAllClient, getLogs, requestExtension, pullAll };
