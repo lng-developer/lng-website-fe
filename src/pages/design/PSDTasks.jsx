@@ -217,7 +217,7 @@ const PSDTasks = () => {
         dataIndex: 'seller',
         key: 'seller',
         align: 'center',
-        render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
+        render: (data) => <StatusComponent title={data?.full_name || 'Unknow'} color={dataColors.process} />,
       },
       {
         title: <span style={{ color: dataColors.title }}>Platform</span>,

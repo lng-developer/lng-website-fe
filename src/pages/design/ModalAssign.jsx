@@ -30,7 +30,7 @@ const ModalAssign = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, fil
     try {
       const response = await assignDesigner(idTask, {
         designer: designerId,
-        priority: priority,
+        difficulty: priority,
       });
 
       if (response.status === 200) {
