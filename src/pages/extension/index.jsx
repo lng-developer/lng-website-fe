@@ -162,29 +162,30 @@ const ExtensionManager = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h2 className="text-md font-semibold text-slate-800 mb-4">List clients online</h2>
               <Flex vertical gap={4}>
-                {clients.map((client) => (
-                  <button
-                    key={client.clientId}
-                    onClick={() => setSelectedClient(client)}
-                    className={`w-full flex items-center justify-between p-4 rounded-lg transition-all cursor-pointer text-md ${
-                      selectedClient.clientId === client.clientId
-                        ? 'bg-blue-50 border-2 border-blue-500'
-                        : 'bg-slate-50 border-2 border-transparent hover:border-slate-300'
-                    }`}
-                    style={{ fontSize: 14 }}
-                  >
-                    <div className="w-[93%] flex justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full bg-green-500`}></div>
-                        <span className="font-medium text-slate-700">{`${client.label} (${client.shopName})`}</span>
+                {clients.length > 0 &&
+                  clients?.map((client) => (
+                    <button
+                      key={client.clientId}
+                      onClick={() => setSelectedClient(client)}
+                      className={`w-full flex items-center justify-between p-4 rounded-lg transition-all cursor-pointer text-md ${
+                        selectedClient.clientId === client.clientId
+                          ? 'bg-blue-50 border-2 border-blue-500'
+                          : 'bg-slate-50 border-2 border-transparent hover:border-slate-300'
+                      }`}
+                      style={{ fontSize: 14 }}
+                    >
+                      <div className="w-[93%] flex justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full bg-green-500`}></div>
+                          <span className="font-medium text-slate-700">{`${client.label} (${client.shopName})`}</span>
+                        </div>
+                        <div style={{ color: '#8c8c8c' }}>{formatDateToUI(client.connectedAt)}</div>
                       </div>
-                      <div style={{ color: '#8c8c8c' }}>{formatDateToUI(client.connectedAt)}</div>
-                    </div>
-                    <RightOutlined
-                      className={`text-slate-400 transition-transform ${selectedClient.clientId === client.clientId ? 'rotate-90' : ''}`}
-                    />
-                  </button>
-                ))}
+                      <RightOutlined
+                        className={`text-slate-400 transition-transform ${selectedClient.clientId === client.clientId ? 'rotate-90' : ''}`}
+                      />
+                    </button>
+                  ))}
               </Flex>
             </div>
 
