@@ -2,11 +2,10 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { dataFilterListing } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Image, Input, Pagination, Table } from 'antd';
 import { FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import NoImage from '../../assets/NoImage.jpg';
 import StatusComponent from '../../components/StatusComponent';
-import { GoDotFill } from 'react-icons/go';
 import ItemAction from './table/ItemAction';
 import { MdAdd } from 'react-icons/md';
 import { formatDate } from '../../utils/fomatDate';
@@ -122,7 +121,7 @@ const Listing = () => {
       dataIndex: 'total_sales',
       key: 'total_sales',
       align: 'center',
-      sorter: (a, b) => a.total_sales - b.total_sales, 
+      sorter: (a, b) => a.total_sales - b.total_sales,
       render: (data) => <span className="font-medium">{data}</span>,
     },
     {
@@ -173,13 +172,10 @@ const Listing = () => {
           key: 'psdStt',
           align: 'center',
           render: (data) => (
-            <div
-              className="flex gap-2 items-center"
-              style={{ color: data.status === 'Available' ? dataColors.success : dataColors.cancelled }}
-            >
-              <GoDotFill />
-              <span className="font-medium">{data.status}</span>
-            </div>
+            <StatusComponent
+              title={data.status || 'Unavailable'}
+              color={data.status === 'Available' ? dataColors.success : dataColors.cancelled}
+            />
           ),
         },
       ],

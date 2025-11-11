@@ -456,9 +456,9 @@ export default function QcCanvasModal({
       <div style={{ display: 'flex', gap: 16 }}>
         {/* LEFT: thumbnails */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
-          {currentItem?.baseImageUrl && (
+          {currentItem?.listing?.product_image && (
             <img
-              src={currentItem?.baseImageUrl}
+              src={currentItem?.listing?.product_image}
               style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
               alt="mockup"
             />

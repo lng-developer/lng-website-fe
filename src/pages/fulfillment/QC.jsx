@@ -119,6 +119,12 @@ const QC = () => {
         align: 'center',
       },
       {
+        title: <span style={{ color: dataColors.title }}>Order Owner</span>,
+        dataIndex: 'seller',
+        key: 'seller',
+        align: 'center',
+      },
+      {
         title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
         dataIndex: 'fulfill_name',
         key: 'fulfill_name',
@@ -290,7 +296,13 @@ const QC = () => {
           />
         ),
         scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-        png_status: <StatusComponent title={'Completed'} color={dataColors.success} />,
+        seller: <StatusComponent title={item?.seller?.full_name} color={dataColors.process} />,
+        png_status: (
+          <StatusComponent
+            title={itemSub?.listing?.psd?.status}
+            color={itemSub?.listing?.psd?.status === 'Available' ? dataColors.success : dataColors.cancelled}
+          />
+        ),
         fulfill_name: (
           <div
             style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}

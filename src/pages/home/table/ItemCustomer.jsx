@@ -213,7 +213,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
       <div className="flex items-center justify-center gap-2">
         <Popover trigger="click" content={content} title={<span className="text-xl font-medium">Customer Information</span>}>
           <button className="hover:underline cursor-pointer hover:text-blue">
-            <span className="font-medium hover:text-blue-600 ">{customerInfor?.name}</span>
+            <span className="font-medium hover:text-blue-600 whitespace-nowrap">{customerInfor?.name}</span>
           </button>
         </Popover>
         <Tooltip title="Edit">

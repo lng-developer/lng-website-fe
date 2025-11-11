@@ -9,7 +9,7 @@ import {
   RiContractLine,
   RiSettings2Line,
   RiErrorWarningLine,
-  RiAdminLine
+  RiAdminLine,
 } from 'react-icons/ri';
 import {
   TbHomeStats,
@@ -29,7 +29,7 @@ import { HiOutlineBuildingStorefront, HiOutlineKey } from 'react-icons/hi2';
 import { BsFiletypePsd, BsGraphUp } from 'react-icons/bs';
 import { CgShoppingBag, CgFileDocument } from 'react-icons/cg';
 import { IoImageOutline, IoStorefrontOutline } from 'react-icons/io5';
-import { AiOutlineFileSync, AiOutlineCopy,AiOutlineFundView, AiFillIdcard  } from 'react-icons/ai';
+import { AiOutlineFileSync, AiOutlineCopy, AiOutlineFundView, AiFillIdcard } from 'react-icons/ai';
 import { GrDocumentConfig } from 'react-icons/gr';
 import { BiCubeAlt } from 'react-icons/bi';
 import { BiExtension } from 'react-icons/bi';
@@ -115,7 +115,6 @@ export const detailMenus = {
         { key: '', label: 'Manage stores', icon: <IoStorefrontOutline size={20} /> },
         { key: routes.sku_mapping, label: 'SKU Mapping', icon: <CgShoppingBag size={20} /> },
         { key: '', label: 'Cookies', icon: <TbCookie size={20} /> },
-        { key: '', label: 'Shopify Template ', icon: <LuLayoutList size={20} /> },
         { key: '', label: 'TM Keywords', icon: <HiOutlineKey size={20} /> },
         { key: routes.management_account, label: 'Account', icon: <RiAdminLine size={20} /> },
       ],
@@ -147,7 +146,7 @@ export const detailMenus = {
     { key: routes.png_design, label: 'PNG Tasks', icon: <IoImageOutline size={20} /> },
     { key: '', label: 'Embroider Listing', icon: <LuLayoutList size={20} /> },
     { key: '', label: 'Design Product Types', icon: <TbPackages size={20} /> },
-    { key: routes.points_dashboard, label: 'Points Dashboard', icon: <AiOutlineFundView size={20} /> }
+    { key: routes.points_dashboard, label: 'Points Dashboard', icon: <AiOutlineFundView size={20} /> },
   ],
   vendor: [
     { key: routes.vendor_list, label: 'List Vendor', icon: <LuLayoutList size={20} /> },
@@ -155,6 +154,5 @@ export const detailMenus = {
     { key: routes.vendor_products, label: 'Vendor Products', icon: <CgFileDocument size={20} /> },
     { key: '', label: 'Store Fulfill', icon: <TbBuildingStore size={20} /> },
     { key: '', label: 'Design Product Types', icon: <BiCubeAlt size={20} /> },
-    
   ],
 };
