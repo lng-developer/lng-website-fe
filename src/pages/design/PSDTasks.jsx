@@ -288,7 +288,7 @@ const PSDTasks = () => {
     if (isActiveFilter?.status !== 'all' && isActiveFilter?.status !== 'New') {
       // Tạo một bản sao và chèn cột Note vào
       const columnsWithNote = [...baseColumns];
-      columnsWithNote.splice(10, 0, noteColumn); // Chèn vào vị trí index 10
+      columnsWithNote.splice(9, 0, noteColumn); // Chèn vào vị trí index 10
       return columnsWithNote;
     }
 
