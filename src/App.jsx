@@ -29,6 +29,7 @@ import ExtensionManager from './pages/extension';
 import PointsDashboard from './pages/design/PointsDashboard';
 import SkuMapping from './pages/sku_mapping/SkuMapping';
 import User from './pages/user/User';
+import ConfirmShip from './pages/extension/ConfirmShip';
 
 function App() {
   return (
@@ -67,10 +68,11 @@ function App() {
           <Route path={routes.psd_design} element={<PSDTasks />} />
           <Route path={routes.png_design} element={<PNGTasks />} />
           <Route path={routes.idea_task} element={<IdeaTask />} />
+          <Route path={routes.points_dashboard} element={<PointsDashboard />} />
 
           {/* Extension */}
-          <Route path={routes.extension} element={<ExtensionManager />} />
-          <Route path={routes.points_dashboard} element={<PointsDashboard />} />
+          <Route path={routes.extensions} element={<ExtensionManager />} />
+          <Route path={routes.extensions_confirm_ship} element={<ConfirmShip />} />
 
           {/* SKU Mapping */}
           <Route path={routes.sku_mapping} element={<SkuMapping />} />

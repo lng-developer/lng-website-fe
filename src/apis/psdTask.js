@@ -68,6 +68,10 @@ const uploadIdaeTask = (id, payload) => {
   });
 };
 
+const deletePsdTask = (id) => {
+  return instance.delete(`/psd-task/${id}`);
+};
+
 export {
   getAllPsdTask,
   assignDesigner,
@@ -84,4 +88,5 @@ export {
   approveIdeaTask,
   rejectIdeaTask,
   uploadIdaeTask,
+  deletePsdTask,
 };

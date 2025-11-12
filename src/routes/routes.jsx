@@ -33,9 +33,10 @@ const routes = {
   report_ordersCost: '/report/orders-cost',
   report_sale: '/report/sale',
   report_ads: '/report/ads',
-  extension: '/extension',
+  extensions: '/extensions',
   sku_mapping: '/sku_mapping',
   management_account: '/account',
+  extensions_confirm_ship: '/extensions/confirm-ship',
 };
 
 export { routes };

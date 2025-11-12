@@ -267,7 +267,13 @@ const IdeaTask = () => {
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getIdeaTaskStatictisc(filters);
+      const formatFilter = {
+        page: filters?.page,
+        perPage: filters?.perPage,
+        from: filters?.from,
+        to: filters?.to,
+      };
+      const response = await getIdeaTaskStatictisc(formatFilter);
       if (response.status === 200) {
         const resultTabFilter = dataFilterIdeaTasks.map(({ key, title, status }) => ({
           key,

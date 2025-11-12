@@ -1,14 +1,22 @@
 import { Button, Space, Tooltip, Upload, Spin } from 'antd';
-import { UploadOutlined, DownloadOutlined, SolutionOutlined, PlayCircleOutlined, HourglassOutlined } from '@ant-design/icons';
+import {
+  UploadOutlined,
+  DownloadOutlined,
+  SolutionOutlined,
+  PlayCircleOutlined,
+  HourglassOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { dowloadPSD } from '../../apis/listing';
 import ModalAssign from './ModalAssign';
 import ModalRequestPSD from './ModalRequestPSD';
-import { qctPsd, requestPsd, startPsd, uploadPsd } from '../../apis/psdTask';
+import { deletePsdTask, qctPsd, requestPsd, startPsd, uploadPsd } from '../../apis/psdTask';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { dataColors } from '../../utils/dataColors';
+import ModalDelete from '../../components/ModalDelete';
 
 const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTask, fetchCountStatus, user }) => {
   const [fileList, setFileList] = useState([]);
@@ -17,6 +25,7 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false); // Loading cho nút Request
+  const [isShowModalDelete, setIsShowModalDelete] = useState(false);
 
   const uploadProps = {
     accept: '.psd',
@@ -152,6 +161,22 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      const response = await deletePsdTask(idTask);
+      if (response.status === 200) {
+        toast.success('Delete task success!');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Error server!');
+    } finally {
+      setIsShowModalDelete(false);
+      fetchAllListing(filters);
+      fetchCountStatus();
+    }
+  };
+
   return (
     <>
       <Space size="small" align="center">
@@ -161,11 +186,15 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
             <Spin size="small" tip="Pending" />
           </div>
         ) : (
-          <Tooltip title="Upload">
-            <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />} />
-            </Upload>
-          </Tooltip>
+          <>
+            {!(statusTask === 'QC Passed') && (
+              <Tooltip title="Upload">
+                <Upload {...uploadProps}>
+                  <Button icon={<UploadOutlined />} />
+                </Upload>
+              </Tooltip>
+            )}
+          </>
         )}
 
         <Tooltip title="Download">
@@ -200,6 +229,12 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
             </Tooltip>
           </>
         )}
+
+        {(user?.role === 'Admin' || user?.role === 'Design Leader') && (
+          <Tooltip title="Delete">
+            <Button icon={<DeleteOutlined />} onClick={() => setIsShowModalDelete(true)} />
+          </Tooltip>
+        )}
       </Space>
 
       <ModalAssign
@@ -213,8 +248,16 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
       <ModalRequestPSD
         open={isRequestModalOpen}
         onCancel={() => setIsRequestModalOpen(false)}
-        onOk={handleRequestPsd} 
+        onOk={handleRequestPsd}
         loading={isRequesting}
+      />
+
+      <ModalDelete
+        title="Delete task"
+        isShowModalDelete={isShowModalDelete}
+        setIsShowModalDelete={setIsShowModalDelete}
+        handleDelete={handleDelete}
+        text={'task'}
       />
     </>
   );

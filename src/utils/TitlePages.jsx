@@ -16,6 +16,7 @@ const TITLES = {
   '/design/idea': 'Idea Tasks',
   '/design/psd': 'PSD Tasks',
   '/design/png': 'PNG Tasks',
+  '/extensions': 'Extensions',
 };
 
 const TitlePages = () => {

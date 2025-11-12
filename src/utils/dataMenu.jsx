@@ -33,6 +33,8 @@ import { AiOutlineFileSync, AiOutlineCopy, AiOutlineFundView, AiFillIdcard } fro
 import { GrDocumentConfig } from 'react-icons/gr';
 import { BiCubeAlt } from 'react-icons/bi';
 import { BiExtension } from 'react-icons/bi';
+import { MdOutlineConnectedTv } from 'react-icons/md';
+
 import { routes } from '../routes/routes';
 
 export const topMenus = [
@@ -40,6 +42,7 @@ export const topMenus = [
   { key: 'fulfillment', icon: <MdBalance size={20} />, label: 'Fulfillment' },
   { key: 'design', icon: <RiPaletteLine size={20} />, label: 'Design' },
   { key: 'vendor', icon: <HiOutlineBuildingStorefront size={20} />, label: 'Vendor' },
+  { key: 'extensions', icon: <BiExtension size={20} />, label: 'Extensions' },
 ];
 
 export const detailMenus = {
@@ -92,20 +95,10 @@ export const detailMenus = {
       ],
     },
     {
-      key: routes.extension,
-      label: 'Extension',
-      icon: <BiExtension size={20} />,
-    },
-    {
       key: 'a',
       label: 'Monitoring',
       icon: <AiOutlineFileSync size={20} />,
       children: [{ key: '', label: 'Order Missing Sync', icon: <AiOutlineFileSync size={20} /> }],
-    },
-    {
-      key: 's',
-      label: 'Amz Confirm Ship',
-      icon: <RiContractLine size={20} />,
     },
     {
       key: 'd',
@@ -154,5 +147,17 @@ export const detailMenus = {
     { key: routes.vendor_products, label: 'Vendor Products', icon: <CgFileDocument size={20} /> },
     { key: '', label: 'Store Fulfill', icon: <TbBuildingStore size={20} /> },
     { key: '', label: 'Design Product Types', icon: <BiCubeAlt size={20} /> },
+  ],
+  extensions: [
+    {
+      key: routes.extensions,
+      label: 'Manage Clients',
+      icon: <MdOutlineConnectedTv size={20} />,
+    },
+    {
+      key: routes.extensions_confirm_ship,
+      label: 'Amz Confirm Ship',
+      icon: <RiContractLine size={20} />,
+    },
   ],
 };
