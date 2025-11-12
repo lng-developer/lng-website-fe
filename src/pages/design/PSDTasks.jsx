@@ -220,13 +220,6 @@ const PSDTasks = () => {
         render: (data) => <StatusComponent title={data?.full_name || 'Unknow'} color={dataColors.process} />,
       },
       {
-        title: <span style={{ color: dataColors.title }}>Platform</span>,
-        dataIndex: 'listing',
-        key: 'platform',
-        align: 'center',
-        render: (data) => <StatusComponent title={data?.platform} color={dataColors.purple} />,
-      },
-      {
         title: <span style={{ color: dataColors.title }}>Asin Type</span>,
         dataIndex: 'listing',
         key: 'asin_type',
