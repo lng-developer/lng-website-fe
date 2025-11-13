@@ -290,7 +290,18 @@ const FulfillmentScale = () => {
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getAllCountStatusScaleForDesign(filters);
+      const formatFilter = {
+        page: filters?.page,
+        perPage: filters?.perPage,
+        from: filters?.from,
+        to: filters?.to,
+        search: filters?.search,
+        shopName: filters?.shopName,
+        pngStatus: filters?.pngStatus,
+        asin_type: filters?.asin_type,
+        scale_status: filters?.scale_status,
+      };
+      const response = await getAllCountStatusScaleForDesign(formatFilter);
       if (response.status === 200) {
         const resultTabFilter =
           user?.role === 'Design Leader' || user?.role === 'Admin'
@@ -315,7 +326,7 @@ const FulfillmentScale = () => {
 
   const handleFilterForStatus = (status) => {
     if (status === 'All') {
-      updateFilter({ scale_status: '' });
+      updateFilter({ scale_status: '', unassigned: false });
       return;
     }
 
