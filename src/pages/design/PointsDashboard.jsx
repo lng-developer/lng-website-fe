@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Card, Row, Col, Statistic, Space, Button, Spin, Tag, Typography, DatePicker, Tooltip } from 'antd';
+import { Table, Typography } from 'antd';
 import { toast } from 'sonner';
 import { useOutletContext } from 'react-router-dom';
 import { getAllPointsWithLogs } from '../../apis/point';
 import UserDetailModal from './ModalUserDetail';
 import { dataColors } from '../../utils/dataColors';
 import { HiMiniUserGroup } from 'react-icons/hi2';
-import { AiOutlineDollar, AiOutlineCalendar } from 'react-icons/ai';
 import DateRangePicker from '../../components/DateRangePicker';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
-import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
+import { MdOutlineRemoveRedEye } from 'react-icons/md';
 import { formatDate } from '../../utils/fomatDate';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcCalendar } from 'react-icons/fc';
-import { FcConferenceCall } from 'react-icons/fc';
 
 const { Title } = Typography;
 
@@ -147,16 +145,16 @@ const PointsDashboard = () => {
 
   const formatApiRange = (range) => {
     if (!range || (!range.from && !range.to)) return 'All Time';
-    console.log(range)
-    const fromDateObj = range.from.slice(0,10)
-    const toDateObj = range.to.slice(0,10);
+    console.log(range);
+    const fromDateObj = range.from.slice(0, 10);
+    const toDateObj = range.to.slice(0, 10);
 
     const fromDateStr = formatDate(fromDateObj);
     const toDateStr = formatDate(toDateObj);
 
-    console.log(typeof(fromDateStr))
-    if(fromDateStr === toDateStr){
-      return toDateStr
+    console.log(typeof fromDateStr);
+    if (fromDateStr === toDateStr) {
+      return toDateStr;
     }
 
     return `${fromDateStr} – ${toDateStr}`;
@@ -196,11 +194,11 @@ const PointsDashboard = () => {
           <div className="flex items-center justify-between h-[50px]">
             <div>
               <div className="font-medium text-[#64748b]">Total Users</div>
-              <span className="text-xl font-bold" style={{ color: dataColors.success }}>
+              <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
                 {meta?.returned || 0}
               </span>
             </div>
-            <FcConferenceCall size={30} color={dataColors.success} />
+            <HiMiniUserGroup size={30} color={dataColors.pending} />
           </div>
         </div>
 
@@ -211,7 +209,7 @@ const PointsDashboard = () => {
           <div className="flex items-center justify-between h-[50px]">
             <div>
               <div className="font-medium text-[#64748b]">Total Balance</div>
-              <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
+              <span className="text-xl font-bold" style={{ color: dataColors.success }}>
                 {totalBalance}
               </span>
             </div>
@@ -226,7 +224,9 @@ const PointsDashboard = () => {
           <div className="flex items-center justify-between h-[50px]">
             <div>
               <div className="font-medium text-[#64748b]">Date Range</div>
-              <span className="text-md ">{formatApiRange(filters)}</span>
+              <span className="font-medium" style={{ color: dataColors.process }}>
+                {formatApiRange(filters)}
+              </span>
             </div>
             <FcCalendar size={30} />
           </div>

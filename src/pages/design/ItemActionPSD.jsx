@@ -81,12 +81,11 @@ const ItemActionPSD = ({ idTask, asin, fetchAllListing, filters, data, statusTas
           link.click();
           document.body.removeChild(link);
         }
+        toast.success('Download success!');
       }
     } catch (error) {
       console.log(error);
       toast.error('Download Failed!');
-    } finally {
-      toast.success('Download success!');
     }
   };
 

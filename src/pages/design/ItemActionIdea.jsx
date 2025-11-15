@@ -1,17 +1,16 @@
 import { Button, Space, Tooltip, Upload, Spin } from 'antd';
-import { UploadOutlined, DownloadOutlined, SolutionOutlined, PlayCircleOutlined, HourglassOutlined } from '@ant-design/icons';
+import { UploadOutlined, DownloadOutlined, SolutionOutlined, HourglassOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { dowloadPSD } from '../../apis/listing';
-import { approveIdeaTask, rejectIdeaTask, startIdeaPsd, uploadIdaeTask } from '../../apis/psdTask';
+import { approveIdeaTask, DownloadIdeaTask, rejectIdeaTask, startIdeaPsd, uploadIdaeTask } from '../../apis/psdTask';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { dataColors } from '../../utils/dataColors';
 import ModalAssignIdea from './ModalAssignIdea';
 
-const ItemActionIdeaTask = ({ idTask, asin, fetchAllListing, filters, statusTask, fetchCountStatus, user }) => {
+const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetchCountStatus, user }) => {
   const [fileList, setFileList] = useState([]);
-  const [uploading, setUploading] = useState(false); // <-- Spin pending
+  const [uploading, setUploading] = useState(false);
   const [isShowModal, setIsShowModal] = useState(false);
 
   const uploadProps = {
@@ -55,24 +54,22 @@ const ItemActionIdeaTask = ({ idTask, asin, fetchAllListing, filters, statusTask
 
   const downloadPSD = async () => {
     try {
-      const response = await dowloadPSD(asin);
+      const response = await DownloadIdeaTask(idTask);
       if (response.status === 200) {
-        const { signed_url, asin } = response.data || {};
+        const { signed_url } = response.data || {};
         if (signed_url) {
           const link = document.createElement('a');
           link.href = signed_url;
-          link.setAttribute('download', asin);
           link.setAttribute('target', '_parent');
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
         }
+        toast.success('Download success!');
       }
     } catch (error) {
       console.log(error);
       toast.error('Download Failed!');
-    } finally {
-      toast.success('Download success!');
     }
   };
 

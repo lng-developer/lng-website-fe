@@ -68,6 +68,10 @@ const uploadIdaeTask = (id, payload) => {
   });
 };
 
+const DownloadIdeaTask = (id) => {
+  return instance.get(`/idea-task/${id}/psd`);
+};
+
 const deletePsdTask = (id) => {
   return instance.delete(`/psd-task/${id}`);
 };
@@ -89,4 +93,5 @@ export {
   rejectIdeaTask,
   uploadIdaeTask,
   deletePsdTask,
+  DownloadIdeaTask,
 };

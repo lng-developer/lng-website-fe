@@ -6,7 +6,7 @@ import { Image, Input, Pagination, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { getALlOrder, getALlShop } from '../../apis/order';
@@ -145,6 +145,16 @@ const ReportOrderCost = () => {
     </div>
   );
 
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
+    }
+  }, []);
+
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Order ID</span>,
@@ -166,9 +176,9 @@ const ReportOrderCost = () => {
       render: (text) => <span className="font-medium">{text}</span>,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Source Type</span>,
-      dataIndex: 'platForm',
-      key: 'platForm',
+      title: <span style={{ color: dataColors.title }}>Platform</span>,
+      dataIndex: 'platform',
+      key: 'platform',
       align: 'center',
     },
     {
@@ -241,8 +251,8 @@ const ReportOrderCost = () => {
       const opCostVal = num(aft.opCost); // LNG cost
       const itemTax = num(aft.item_tax);
       const shippingTax = num(aft.shipping_tax);
-      const profit1Val = num(aft.profit1 ?? revenueVal - (baseVal + feeVal));
       const promoVal = num(aft.item_promotion_discount); // Diff
+      const profit1Val = num(revenueVal - (baseVal + feeVal + shippingTax + itemTax + promoVal));
 
       return {
         key: item?.orderId,
@@ -259,8 +269,12 @@ const ReportOrderCost = () => {
           </div>
         ),
         shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
-        orderId: <StatusComponent title={item?.orderId} color={dataColors.asin} />,
-        platForm: <span className="font-medium">Amazon</span>,
+        orderId: (
+          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+            <StatusComponent title={item?.orderId} color={dataColors.asin} />
+          </button>
+        ),
+        platform: <span className="font-medium">Amazon</span>,
 
         revenue: <span className="font-medium">{fmtMoney(revenueVal)}</span>,
         tax: <span className="font-medium">{fmtMoney(itemTax)}</span>,

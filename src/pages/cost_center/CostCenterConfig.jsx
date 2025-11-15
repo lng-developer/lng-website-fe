@@ -17,7 +17,6 @@ const PAGE_SIZE = 10;
 
 const CostCenterConfig = () => {
   const { collapsed } = useOutletContext();
-  const [activeTab, setActiveTab] = useState('amazon');
   const [configs, setConfigs] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -44,17 +43,6 @@ const CostCenterConfig = () => {
   const handlePageChange = (page, pageSize) => {
     setCurrentPage(page);
     updateFilter({ page: page, perPage: pageSize });
-  };
-
-  const tabs = [
-    { id: 'amazon', label: 'Amazon', value: 'amazon' },
-    { id: 'etsy', label: 'Etsy', value: 'etsy' },
-    { id: 'shopify', label: 'Shopify', value: 'shopify' },
-  ];
-
-  const handleTabClick = (tabValue) => {
-    setActiveTab(tabValue);
-    console.log('Selected tab:', tabValue);
   };
 
   const columns = [
@@ -368,7 +356,6 @@ const CostCenterConfig = () => {
     }
   };
   console.log('oke');
-  
 
   const handleUpdateStatus = async (id, params) => {
     try {
@@ -414,20 +401,7 @@ const CostCenterConfig = () => {
         </div>
       </div>
       <div className="mt-[60px] px-8 py-4 h-full">
-        <div className="flex flex-wrap gap-2 bg-[#f1f5f9] p-2 rounded-lg w-[207px]">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabClick(tab.value)}
-              className={`px-2 py-1 rounded-md !text-sm font-medium transition-all duration-200 cursor-pointer ${
-                activeTab === tab.value ? 'bg-white text-gray-900 shadow-sm' : '!text-[#64748b]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center">
           <div className="flex w-[40%] gap-2">
             <Input
               onChange={handleSearch}
