@@ -562,7 +562,6 @@ const Home = () => {
                 onChange={(val) => {
                   setShippingType(val);
                   updateFilter({ shippingType: val });
-                  fetchCountStatus();
                 }}
               />
               <SelectFilter
@@ -572,7 +571,6 @@ const Home = () => {
                 onChange={(val) => {
                   setSelectShop(val);
                   updateFilter({ shopName: val });
-                  fetchCountStatus();
                 }}
               />
               <SelectSeller

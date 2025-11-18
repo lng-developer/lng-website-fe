@@ -52,8 +52,8 @@ const startIdeaPsd = (id, payload) => {
   return instance.post(`/idea-task/${id}/start`, payload);
 };
 
-const approveIdeaTask = (id, payload) => {
-  return instance.post(`/idea-task/${id}/approve`, payload);
+const approveIdeaTask = (id) => {
+  return instance.post(`/idea-task/${id}/approve`);
 };
 
 const rejectIdeaTask = (id, payload) => {

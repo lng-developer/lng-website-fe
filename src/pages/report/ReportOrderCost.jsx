@@ -163,7 +163,7 @@ const ReportOrderCost = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Date Order</span>,
+      title: <span style={{ color: dataColors.title }}>Order Date</span>,
       dataIndex: 'orderDate',
       key: 'orderDate',
       align: 'center',

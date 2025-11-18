@@ -8,7 +8,7 @@ import { IoArrowUndo } from 'react-icons/io5';
 import { dataColors } from '../../utils/dataColors';
 import ModalAssignIdea from './ModalAssignIdea';
 
-const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetchCountStatus, user }) => {
+const ItemActionIdeaTask = ({ idTask, fetchAllTask, filters, statusTask, fetchCountStatus, user }) => {
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isShowModal, setIsShowModal] = useState(false);
@@ -36,7 +36,7 @@ const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetc
         onSuccess?.(res.data);
         toast.success(`${file.name} uploaded success!`);
         // Sau khi upload xong, refresh lại danh sách (đợi xong rồi mới tắt Spin)
-        await fetchAllListing?.(filters);
+        await fetchAllTask?.(filters);
       } catch (err) {
         console.error(err);
         onError?.(err);
@@ -83,7 +83,7 @@ const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetc
       console.log(error);
       toast.error('Error server!');
     } finally {
-      fetchAllListing(filters);
+      fetchAllTask(filters);
       fetchCountStatus();
     }
   };
@@ -98,7 +98,7 @@ const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetc
       console.log(error);
       toast.error('Error server!');
     } finally {
-      fetchAllListing(filters);
+      fetchAllTask(filters);
       fetchCountStatus();
     }
   };
@@ -113,7 +113,7 @@ const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetc
       console.log(error);
       toast.error('Error server!');
     } finally {
-      fetchAllListing(filters);
+      fetchAllTask(filters);
       fetchCountStatus();
     }
   };
@@ -170,7 +170,7 @@ const ItemActionIdeaTask = ({ idTask, fetchAllListing, filters, statusTask, fetc
         isShowModal={isShowModal}
         setIsShowModal={setIsShowModal}
         idTask={idTask}
-        fetchAllListing={fetchAllListing}
+        fetchAllTask={fetchAllTask}
         filters={filters}
         fetchCountStatus={fetchCountStatus}
       />

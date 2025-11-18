@@ -226,7 +226,7 @@ const IdeaTask = () => {
           idTask={data?._id}
           data={data}
           asin={data?.asin}
-          fetchAllListing={fetchAllTask}
+          fetchAllTask={fetchAllTask}
           filters={filters}
           fetchCountStatus={fetchCountStatus}
           user={user}

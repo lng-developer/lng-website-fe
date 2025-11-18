@@ -11,6 +11,7 @@ const STYLE_OPTS = [
   { label: 'Hoodie', value: 'Hoodie' },
   { label: 'Sweatshirt', value: 'Sweatshirt' },
   { label: 'Napkins', value: 'Napkins' },
+  { label: 'Ornament', value: 'Ornament' },
 ];
 
 const VARIANT_OPTS = [

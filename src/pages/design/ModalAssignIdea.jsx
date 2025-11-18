@@ -4,7 +4,7 @@ import { getAllDesigner } from '../../apis/user';
 import { assignIdeaDesigner } from '../../apis/psdTask';
 import { toast } from 'sonner';
 
-const ModalAssignIdea = ({ isShowModal, setIsShowModal, idTask, fetchAllListing, filters, fetchCountStatus }) => {
+const ModalAssignIdea = ({ isShowModal, setIsShowModal, idTask, fetchAllTask, filters, fetchCountStatus }) => {
   const [designerId, setDesignerId] = useState('');
   const [priority, setPriority] = useState('');
   const [designers, setDesigners] = useState([]);
@@ -40,7 +40,7 @@ const ModalAssignIdea = ({ isShowModal, setIsShowModal, idTask, fetchAllListing,
       console.log(error);
     } finally {
       setIsShowModal(false);
-      fetchAllListing(filters);
+      fetchAllTask(filters);
       fetchCountStatus();
     }
   };
