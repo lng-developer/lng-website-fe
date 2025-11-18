@@ -18,12 +18,12 @@ const ItemActionIdeaTask = ({ idTask, fetchAllTask, filters, statusTask, fetchCo
     multiple: false,
     maxCount: 1,
     fileList,
-    showUploadList: false, // không hiện danh sách file
+    showUploadList: false,
     customRequest: async ({ file, onSuccess, onError, onProgress }) => {
       const formData = new FormData();
       formData.append('file', file);
       try {
-        setUploading(true); // bật Spin ngay khi bắt đầu
+        setUploading(true);
         const res = await uploadIdaeTask(idTask, formData, {
           onUploadProgress: (evt) => {
             if (evt.total) {
@@ -35,15 +35,14 @@ const ItemActionIdeaTask = ({ idTask, fetchAllTask, filters, statusTask, fetchCo
 
         onSuccess?.(res.data);
         toast.success(`${file.name} uploaded success!`);
-        // Sau khi upload xong, refresh lại danh sách (đợi xong rồi mới tắt Spin)
         await fetchAllTask?.(filters);
       } catch (err) {
         console.error(err);
         onError?.(err);
         toast.error(`${file.name} upload failed!`);
       } finally {
-        setUploading(false); // tắt Spin
-        setFileList([]); // clear nếu cần
+        setUploading(false);
+        setFileList([]);
         fetchCountStatus();
       }
     },
@@ -120,27 +119,28 @@ const ItemActionIdeaTask = ({ idTask, fetchAllTask, filters, statusTask, fetchCo
 
   return (
     <>
-      <Space size="small" align="center">
-        {/* Khi đang upload -> hiện Spin pending; ngược lại hiện nút Upload */}
-        {uploading ? (
-          <div style={{ width: 32, display: 'flex', justifyContent: 'center' }}>
-            <Spin size="small" tip="Pending" />
-          </div>
-        ) : (
-          <Tooltip title="Upload">
-            <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />} />
-            </Upload>
-          </Tooltip>
-        )}
+      <Space size="small" align="center" direction="vertical">
+        <Space>
+          {uploading ? (
+            <div style={{ width: 32, display: 'flex', justifyContent: 'center' }}>
+              <Spin size="small" tip="Pending" />
+            </div>
+          ) : (
+            <Tooltip title="Upload">
+              <Upload {...uploadProps}>
+                <Button icon={<UploadOutlined />} />
+              </Upload>
+            </Tooltip>
+          )}
 
-        <Tooltip title="Download">
-          <Button
-            disabled={statusTask === 'Uploaded' || statusTask === 'QC Passed' ? false : true}
-            icon={<DownloadOutlined />}
-            onClick={downloadPSD}
-          />
-        </Tooltip>
+          <Tooltip title="Download">
+            <Button
+              disabled={statusTask === 'Uploaded' || statusTask === 'QC Passed' ? false : true}
+              icon={<DownloadOutlined />}
+              onClick={downloadPSD}
+            />
+          </Tooltip>
+        </Space>
 
         {statusTask === 'New' && (
           <Tooltip title="Assign Designer">
@@ -155,14 +155,14 @@ const ItemActionIdeaTask = ({ idTask, fetchAllTask, filters, statusTask, fetchCo
         )}
 
         {(user?.role === 'Admin' || user?.role === 'Seller') && statusTask === 'Uploaded' && (
-          <>
+          <Space>
             <Tooltip title="Passed">
               <Button icon={<FcApproval />} onClick={handlePassed} />
             </Tooltip>
             <Tooltip title="Reject">
               <Button icon={<IoArrowUndo color={dataColors.cancelled} />} onClick={handleReject} />
             </Tooltip>
-          </>
+          </Space>
         )}
       </Space>
 

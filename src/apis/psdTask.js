@@ -68,6 +68,14 @@ const uploadIdaeTask = (id, payload) => {
   });
 };
 
+const updateIdeaTask = (id, payload) => {
+  return instance.put(`/idea-task/${id}`, payload); // Giả sử dùng PUT
+};
+
+const deleteIdeaTask = (id) => {
+  return instance.delete(`/idea-task/${id}`);
+};
+
 const DownloadIdeaTask = (id) => {
   return instance.get(`/idea-task/${id}/psd`);
 };
@@ -86,6 +94,8 @@ export {
   getTaskStatictisc,
   getAllIdeaTask,
   createIdeaTask,
+  updateIdeaTask,
+  deleteIdeaTask,
   getIdeaTaskStatictisc,
   assignIdeaDesigner,
   startIdeaPsd,

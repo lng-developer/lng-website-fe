@@ -7,16 +7,19 @@ import DateRangePicker from '../../components/DateRangePicker';
 import ButtonFilter from '../../components/ButtonFilter';
 import { MdAdd } from 'react-icons/md';
 import { debounce } from 'lodash';
-import { Input, Select, Typography, Pagination, Image, Flex, Table, Popover } from 'antd';
+import { Input, Select, Typography, Pagination, Image, Flex, Table, Popover, Spin, Button, Tooltip, Space } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons'; // Import các icon cần thiết
 import { dataColors } from '../../utils/dataColors';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import StatusComponent from '../../components/StatusComponent';
-import { getAllIdeaTask, getIdeaTaskStatictisc } from '../../apis/psdTask';
-import ModalAddIdeaTask from './ModalAddIdeaTask';
+import { getAllIdeaTask, getIdeaTaskStatictisc, deleteIdeaTask } from '../../apis/psdTask';
+import ModalCreateUpdateIdeaTask from './ModalCreateUpdateIdeaTask';
+import ModalDeleteIdeaTask from './ModalDeleteIdeaTask';
 import ItemActionIdeaTask from './ItemActionIdea';
 import { TbHistory } from 'react-icons/tb';
 import { FaLongArrowAltRight } from 'react-icons/fa';
+import NoImage from '../../assets/NoImage.jpg';
 
 const { TextArea } = Input;
 const PAGE_SIZE = 10;
@@ -30,7 +33,12 @@ const IdeaTask = () => {
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null); // Dùng cho cả Edit và Delete
+
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -58,6 +66,35 @@ const IdeaTask = () => {
       return;
     }
     updateFilter({ status: status });
+  };
+
+  const handleOpenModal = (modalType, record = null) => {
+    setSelectedRecord(record);
+    if (modalType === 'edit') setIsEditModalOpen(true);
+    if (modalType === 'delete') setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseModals = () => {
+    setIsEditModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setSelectedRecord(null);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedRecord) return;
+    setIsDeleting(true);
+    try {
+      await deleteIdeaTask(selectedRecord._id);
+      toast.success('Task deleted successfully');
+      fetchAllTask(filters);
+      fetchCountStatus();
+      handleCloseModals();
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      toast.error('Failed to delete task');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const debouncedSearch = useMemo(
@@ -109,133 +146,8 @@ const IdeaTask = () => {
     ));
   };
 
-  const columns = [
-    {
-      title: <span style={{ color: dataColors.title }}>Created At</span>,
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      align: 'center',
-      render: (data) => (
-        <Flex vertical={true}>
-          <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
-          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            (
-            {formatDistanceToNow(data, { addSuffix: true })
-              .replace(/^about /, '')
-              .replace(/^less than /, '')}
-            )
-          </span>
-        </Flex>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Product Image</span>,
-      dataIndex: 'image',
-      key: 'image',
-      align: 'center',
-      render: (data) => (
-        <div className="flex justify-center">
-          <div
-            className="w-[100px] h-[100px] rounded-lg overflow-hidden"
-            style={{
-              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-            }}
-          >
-            <Image width={100} height={100} src={data} className="rounded-lg" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Status Task</span>,
-      dataIndex: 'status',
-      key: 'Status',
-      align: 'center',
-      render: (data) => (
-        <div className="flex items-center justify-center gap-1">
-          <StatusComponent title={data?.stt} color={handleColorStatus(data?.stt)} />
-          <Popover placement="bottomLeft" arrow={false} title={'History'} content={contentHistory(data?.history)}>
-            <TbHistory size={16} className="cursor-pointer" />
-          </Popover>
-        </div>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Link product</span>,
-      dataIndex: 'referenceLink',
-      key: 'referenceLink',
-      align: 'center',
-      render: (data) => (
-        <Link
-          to={data}
-          target="_blank"
-          style={{ borderColor: dataColors.pending, backgroundColor: `${dataColors.pending}10`, maxWidth: 220 }}
-          className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
-        >
-          <span
-            style={{
-              color: dataColors.pending,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: 'inline-block',
-            }}
-            className="whitespace-nowrap"
-          >
-            {data}
-          </span>
-        </Link>
-      ),
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Assigned</span>,
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.process} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Seller</span>,
-      dataIndex: 'createdBy',
-      key: 'createdBy',
-      align: 'center',
-      render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Description</span>,
-      dataIndex: 'description',
-      key: 'description',
-      align: 'center',
-      render: (data) => <TextArea value={data} spellCheck={false} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Product type</span>,
-      dataIndex: 'productType',
-      key: 'productType',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Actions</span>,
-      dataIndex: 'actions',
-      key: 'actions',
-      align: 'center',
-      render: (data) => (
-        <ItemActionIdeaTask
-          statusTask={data?.status}
-          idTask={data?._id}
-          data={data}
-          asin={data?.asin}
-          fetchAllTask={fetchAllTask}
-          filters={filters}
-          fetchCountStatus={fetchCountStatus}
-          user={user}
-        />
-      ),
-    },
-  ];
-
-  const fetchAllTask = async (params) => {
+  // --- SỬA Ở ĐÂY: BỌC 'fetchAllTask' TRONG 'useCallback' ---
+  const fetchAllTask = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getAllIdeaTask(params);
@@ -262,7 +174,7 @@ const IdeaTask = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Thêm mảng dependencies rỗng
 
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
@@ -291,7 +203,165 @@ const IdeaTask = () => {
   useEffect(() => {
     fetchCountStatus();
     fetchAllTask(filters);
-  }, [filters]);
+  }, [filters, fetchAllTask, fetchCountStatus]); // Thêm fetchAllTask và fetchCountStatus vào dependencies
+
+  const columns = useMemo(() => {
+    // Định nghĩa các cột cơ bản
+    const baseColumns = [
+      {
+        title: <span style={{ color: dataColors.title }}>Created At</span>,
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        align: 'center',
+        render: (data) => (
+          <Flex vertical={true}>
+            <span className="font-medium whitespace-nowrap">{formatDate(data)}</span>
+            <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+              (
+              {formatDistanceToNow(data, { addSuffix: true })
+                .replace(/^about /, '')
+                .replace(/^less than /, '')}
+              )
+            </span>
+          </Flex>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Product Image</span>,
+        dataIndex: 'image',
+        key: 'image',
+        align: 'center',
+        render: (data) => (
+          <div className="flex justify-center">
+            <div
+              className="w-[100px] h-[100px] rounded-lg overflow-hidden"
+              style={{
+                boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+              }}
+            >
+              <Image width={100} height={100} src={data} fallback={NoImage} className="rounded-lg" />
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Status Task</span>,
+        dataIndex: 'status',
+        key: 'Status',
+        align: 'center',
+        render: (data) => (
+          <div className="flex items-center justify-center gap-1">
+            <StatusComponent title={data?.stt} color={handleColorStatus(data?.stt)} />
+            <Popover placement="bottomLeft" arrow={false} title={'History'} content={contentHistory(data?.history)}>
+              <TbHistory size={16} className="cursor-pointer" />
+            </Popover>
+          </div>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Link product</span>,
+        dataIndex: 'referenceLink',
+        key: 'referenceLink',
+        align: 'center',
+        render: (data) => (
+          <Link
+            to={data}
+            target="_blank"
+            style={{ borderColor: dataColors.pending, backgroundColor: `${dataColors.pending}10`, maxWidth: 220 }}
+            className={`inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground`}
+          >
+            <span
+              style={{
+                color: dataColors.pending,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: 'inline-block',
+              }}
+              className="whitespace-nowrap"
+            >
+              {data}
+            </span>
+          </Link>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Assigned</span>,
+        dataIndex: 'assignedTo',
+        key: 'assignedTo',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.process} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Seller</span>,
+        dataIndex: 'createdBy',
+        key: 'createdBy',
+        align: 'center',
+        render: (data) => <StatusComponent title={data?.full_name} color={dataColors.process} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Description</span>,
+        dataIndex: 'description',
+        key: 'description',
+        align: 'center',
+        render: (data) => <TextArea value={data} spellCheck={false} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Product type</span>,
+        dataIndex: 'productType',
+        key: 'productType',
+        align: 'center',
+        render: (data) => <StatusComponent title={data} color={dataColors.asin} />,
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Actions</span>,
+        dataIndex: 'actions',
+        key: 'actions',
+        align: 'center',
+        // eslint-disable-next-line no-unused-vars
+        render: (data, record) => (
+          <ItemActionIdeaTask
+            statusTask={data?.status}
+            idTask={data?._id}
+            data={data}
+            asin={data?.asin}
+            fetchAllTask={fetchAllTask}
+            filters={filters}
+            fetchCountStatus={fetchCountStatus}
+            user={user}
+            // onEdit và onDelete đã bị xóa khỏi đây
+          />
+        ),
+      },
+    ];
+
+    // Thêm cột "Edit/Delete" nếu là Admin hoặc Seller
+    if (user?.role === 'Admin' || user?.role === 'Seller') {
+      baseColumns.push({
+        title: <span style={{ color: dataColors.title }}>Edit/Delete</span>,
+        key: 'adminActions',
+        align: 'center',
+        width: 100,
+        fixed: 'right', // Ghim cột sang phải
+        render: (
+          _,
+          record // Lấy toàn bộ record
+        ) => (
+          <Space>
+            <Tooltip title="Update Task">
+              <Button icon={<EditOutlined />} onClick={() => handleOpenModal('edit', record)} />
+            </Tooltip>
+            <Tooltip title="Delete Task">
+              <Button icon={<DeleteOutlined />} danger onClick={() => handleOpenModal('delete', record)} />
+            </Tooltip>
+          </Space>
+        ),
+      });
+    }
+
+    return baseColumns;
+    // Cập nhật dependencies (lý do chính gây ra lỗi)
+  }, [user, filters, fetchCountStatus, fetchAllTask]);
 
   return (
     <div>
@@ -303,7 +373,7 @@ const IdeaTask = () => {
           <div className="flex justify-center items-center gap-2">
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => handleOpenModal('edit', null)}
             >
               <MdAdd size={20} color="black" />
               <span className="text-sm font-medium" style={{ color: 'black' }}>
@@ -319,8 +389,8 @@ const IdeaTask = () => {
               }}
               modifiersStyles={{
                 range_middle: {
-                  backgroundColor: '#f3f4f6', // màu xám nhạt
-                  fontWeight: 'normal', // không in đậm
+                  backgroundColor: '#f3f4f6',
+                  fontWeight: 'normal',
                 },
               }}
               updateFilter={updateFilter}
@@ -361,22 +431,34 @@ const IdeaTask = () => {
           </div>
         </div>
         <div className="mt-4">
-          <Table
-            className="no-indent-table"
-            columns={columns}
-            dataSource={dataSource}
-            rowKey="key"
-            bordered={true}
-            pagination={false}
-            loading={loading}
-          />
+          <Spin spinning={loading}>
+            <Table
+              className="no-indent-table"
+              columns={columns}
+              dataSource={dataSource}
+              rowKey="_id"
+              bordered={true}
+              pagination={false}
+              // Xóa 'loading' prop thừa ở đây
+            />
+          </Spin>
         </div>
       </div>
-      <ModalAddIdeaTask
-        setShowCreateModal={setShowCreateModal}
-        showCreateModal={showCreateModal}
+
+      <ModalCreateUpdateIdeaTask
+        open={isEditModalOpen}
+        onCancel={handleCloseModals}
         fetchAllTask={fetchAllTask}
         filters={filters}
+        initialData={selectedRecord}
+      />
+
+      <ModalDeleteIdeaTask
+        open={isDeleteModalOpen}
+        onCancel={handleCloseModals}
+        onOk={handleDelete}
+        loading={isDeleting}
+        record={selectedRecord}
       />
     </div>
   );
