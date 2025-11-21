@@ -217,7 +217,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, filters, address_
               className="font-medium hover:text-blue-600"
               style={{
                 display: 'inline-block',
-                maxWidth: 130,
+                maxWidth: 120,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

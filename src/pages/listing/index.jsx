@@ -47,8 +47,6 @@ const Listing = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     search: '',
-    asinType: '',
-    psdStatus: '',
     store: '',
   });
 
@@ -121,7 +119,7 @@ const Listing = () => {
       dataIndex: 'total_sales',
       key: 'total_sales',
       align: 'center',
-      sorter: (a, b) => a.total_sales - b.total_sales,
+      sorter: true,
       render: (data) => <span className="font-medium">{data}</span>,
     },
     {
@@ -327,6 +325,25 @@ const Listing = () => {
     }
   };
 
+  const handleTableChange = (pagination, filters, sorter, extra) => {
+    if (extra.action === 'sort') {
+      const { order } = sorter;
+      if (order === 'ascend') {
+        updateFilter({ sort: 'total_sales', order: 'asc' });
+      } else if (order === 'descend') {
+        updateFilter({ sort: 'total_sales', order: 'des' });
+      } else {
+        const resultFilter = {
+          page: filters.currentPage,
+          perPage: filters.perPage,
+          search: filters.search,
+          store: filters.store,
+        };
+        setFilters(resultFilter);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchAllShop();
   }, []);
@@ -335,12 +352,12 @@ const Listing = () => {
     if (user?.role === 'Admin') {
       fetchAllSellers();
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     fetchCountStatus();
     fetchAllListing(filters);
-  }, [filters]);
+  }, [fetchCountStatus, filters]);
 
   return (
     <div>
@@ -442,7 +459,7 @@ const Listing = () => {
           <div className="flex w-[40%] gap-2">
             <Input
               onChange={handleSearch}
-              placeholder="Search orders by ID, Customer..."
+              placeholder="Search Asin"
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
@@ -489,6 +506,7 @@ const Listing = () => {
             bordered={true}
             pagination={false}
             loading={loading}
+            onChange={handleTableChange}
           />
         </div>
       </div>

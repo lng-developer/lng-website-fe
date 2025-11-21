@@ -1,6 +1,6 @@
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
-import { FcCancel } from 'react-icons/fc';
+import NoImage from '../../../assets/NoImage.jpg';
 
 const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
   return (
@@ -28,7 +28,7 @@ const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
               boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
             }}
           >
-            <Image width={80} src={linkImage} />
+            <Image width={80} src={linkImage} fallback={NoImage} />
           </div>
         </div>
       )}

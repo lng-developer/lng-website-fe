@@ -102,7 +102,7 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
             <span className="mr-2 font-medium">ASIN Type:</span>
           </div>
           <div>
-            <StatusComponent title={listing?.asin_type || 'No data'} color="#0958d7" />
+            <StatusComponent title={listing?.asin_type || 'No data'} color={dataColors.asin} />
           </div>
         </div>
 

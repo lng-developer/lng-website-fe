@@ -10,19 +10,14 @@ import { LuImport } from 'react-icons/lu';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { TbHistory, TbReplace } from 'react-icons/tb';
 import { BiRefresh } from 'react-icons/bi';
-import { CloudDownloadOutlined } from '@ant-design/icons';
-
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
-
 import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
-
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { dataFilterStatus } from '../../utils/dataFilter';
-
 import SubItemImage from './table/SubItemImage';
 import SubItemSku from './table/SubItemSku';
 import SubItemCustom from './table/SubItemCustom';
@@ -493,8 +488,11 @@ const Home = () => {
     <div className="overflow-hidden">
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
-          <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
-            Manage Orders
+          <h1 className="text-2xl !mb-0 flex items-center" style={{ color: 'black' }}>
+            Manage Orders{' '}
+            <span className="text-xs ml-5 italic" style={{ color: dataColors.title, fontStyle: 'italic' }}>
+              Last updated at 10:56
+            </span>
           </h1>
           <div className="flex justify-center items-center gap-2">
             <button

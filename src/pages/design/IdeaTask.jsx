@@ -290,7 +290,7 @@ const IdeaTask = () => {
         dataIndex: 'assignedTo',
         key: 'assignedTo',
         align: 'center',
-        render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.process} />,
+        render: (data) => <StatusComponent title={data?.full_name || 'Pending assign'} color={dataColors.purple} />,
       },
       {
         title: <span style={{ color: dataColors.title }}>Seller</span>,
@@ -304,7 +304,7 @@ const IdeaTask = () => {
         dataIndex: 'description',
         key: 'description',
         align: 'center',
-        render: (data) => <TextArea value={data} spellCheck={false} />,
+        render: (data) => <TextArea value={data} style={{ color: dataColors.cancelled, fontWeight: 500 }} spellCheck={false} />,
       },
       {
         title: <span style={{ color: dataColors.title }}>Product type</span>,
