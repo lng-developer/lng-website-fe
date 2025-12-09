@@ -12,7 +12,7 @@ const LEVEL_STYLE = {
   default: 'text-slate-200',
 };
 
-export default function RealtimeLogViewer({ logs }) {
+export default function RealtimeLogViewer({ logs, isConfirmShip = false }) {
   const boxRef = useRef(null);
 
   // 3) Auto-scroll nếu đang gần cuối
@@ -27,9 +27,8 @@ export default function RealtimeLogViewer({ logs }) {
     const ts = Number(time || Date.now());
     const d = new Date(ts);
     const timeText = d.toLocaleTimeString('vi-VN');
-    const dateText = d.toLocaleDateString('vi-VN');
 
-    return `[${timeText} ${dateText}]`;
+    return `[${timeText}]`;
   };
 
   const rendered = useMemo(
@@ -39,9 +38,18 @@ export default function RealtimeLogViewer({ logs }) {
         return (
           <div key={i} className={`${color} flex items-center gap-2`}>
             <div className={`w-1.5 h-1.5 rounded-full bg-slate-500`}></div>
-            <span className="text-slate-400">{formatDateToUI(l.at)}</span>{' '}
-            <span style={{ color: dataColors.yellow }}>[{l?.action.toLocaleUpperCase()}]</span>
-            <span className="text-teal-400">[{`${l?.machineId}/${l?.label} (${l?.shop?.shopName})`}]:</span>
+            {isConfirmShip ? (
+              <>
+                <span className="text-slate-400">{formatDateToUI(l.at)}</span>
+                <span className="text-teal-400">[{`${l?.shop?.shopName}`}]:</span>
+              </>
+            ) : (
+              <>
+                <span className="text-slate-400">{formatDateToUI(l.at)}</span>{' '}
+                <span style={{ color: dataColors.yellow }}>[{l?.action.toLocaleUpperCase()}]</span>
+                <span className="text-teal-400">[{`${l?.machineId}/${l?.label} (${l?.shop?.shopName})`}]:</span>
+              </>
+            )}
             <span>{l.message}</span>
           </div>
         );
@@ -50,7 +58,12 @@ export default function RealtimeLogViewer({ logs }) {
   );
 
   return (
-    <div ref={boxRef} className="p-3 bg-slate-900 text-slate-200 rounded-md h-96 overflow-auto font-mono text-sm leading-6">
+    <div
+      ref={boxRef}
+      className={`p-3 bg-slate-900 text-slate-200 rounded-xl ${
+        isConfirmShip ? 'min-h-50' : 'h-96'
+      } overflow-auto font-mono text-sm leading-6`}
+    >
       {rendered}
     </div>
   );

@@ -15,4 +15,39 @@ const requestExtension = (payload) => {
 const pullAll = (payload) => {
   return instance.post('/ext/pull-all', payload);
 };
-export { getAllClient, getLogs, requestExtension, pullAll };
+
+const createFileConfirmShip = (payload) => {
+  return instance.post('/shipping-batches', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+const getShippingBatch = () => {
+  return instance.get('/shipping-batches');
+};
+
+const updateTrackingFake = (batchId, payload) => {
+  return instance.post(`/shipping-batches/${batchId}/update-from-system`, {
+    machineId: payload.machineId,
+    label: payload.label,
+  });
+};
+
+const downloadFileConfirmShip = (batchId) => {
+  return instance.get(`/shipping-batches/${batchId}/download`, {
+    responseType: 'blob',
+  });
+};
+
+export {
+  getAllClient,
+  getLogs,
+  requestExtension,
+  pullAll,
+  createFileConfirmShip,
+  getShippingBatch,
+  updateTrackingFake,
+  downloadFileConfirmShip,
+};
