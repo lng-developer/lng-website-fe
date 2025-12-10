@@ -61,7 +61,7 @@ export default function RealtimeLogViewer({ logs, isConfirmShip = false }) {
     <div
       ref={boxRef}
       className={`p-3 bg-slate-900 text-slate-200 rounded-xl ${
-        isConfirmShip ? 'min-h-50' : 'h-96'
+        isConfirmShip ? 'min-h-50 max-h-120' : 'h-96'
       } overflow-auto font-mono text-sm leading-6`}
     >
       {rendered}

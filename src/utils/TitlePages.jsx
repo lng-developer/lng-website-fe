@@ -16,6 +16,7 @@ const TITLES = {
   '/design/idea': 'Idea Tasks',
   '/design/psd': 'PSD Tasks',
   '/design/png': 'PNG Tasks',
+  '/design/points': 'Points Dashboard',
   '/extensions': 'Extensions',
   '/extensions/confirm-ship': 'Confirm Shipping',
 };

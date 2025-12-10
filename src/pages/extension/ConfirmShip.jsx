@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   RightOutlined,
   UploadOutlined,
-  SyncOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
   DownloadOutlined,
   EditOutlined,
 } from '@ant-design/icons';
-import { Flex, Table, Button, Tag, Upload, Modal, Tooltip, Input, Tabs } from 'antd';
+import { Flex, Table, Button, Tag, Upload, Modal, Tooltip, Input, Tabs, Pagination } from 'antd';
 import { MdOutlineRefresh } from 'react-icons/md';
 import {
   createFileConfirmShip,
@@ -25,6 +24,11 @@ import RealtimeLogViewer from '../../components/RealtimeLogViewer';
 import { MdAdd } from 'react-icons/md';
 import { FcLinux } from 'react-icons/fc';
 import { toast } from 'sonner';
+import { ConfirmShipModal } from '../../components/ConfirmModal';
+import { formatDate } from '../../utils/fomatDate';
+import { formatDistanceToNow } from 'date-fns';
+import { dataColors } from '../../utils/dataColors';
+import { CopyOutlined, CheckCircleFilled } from '@ant-design/icons';
 
 const ConfirmShip = () => {
   const { collapsed } = useOutletContext();
@@ -35,9 +39,10 @@ const ConfirmShip = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [fileList, setFileList] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const selectedBatch = useMemo(() => {
-    return batches.find((b) => b.id === selectedBatchId) || null;
+    return batches.find((b) => b.batchId === selectedBatchId) || null;
   }, [batches, selectedBatchId]);
 
   const fetchAllClients = async () => {
@@ -102,44 +107,88 @@ const ConfirmShip = () => {
     return () => clearInterval(interval);
   }, [selectedClient]);
 
-  const formatDateToUI = (timeString) => {
-    if (!timeString) return '';
-    const d = new Date(timeString);
-    return `${d.toLocaleTimeString('vi-VN')} - ${d.toLocaleDateString('vi-VN')}`;
-  };
-
   const handleViewDetail = (batch) => {
-    setSelectedBatchId(batch.id);
+    setSelectedBatchId(batch.batchId);
     setIsDetailModalOpen(true);
   };
 
   // --- Columns ---
   const batchColumns = [
     {
-      title: 'Batch ID',
-      dataIndex: 'batchId',
-      key: 'batchId',
-      render: (text) => <span className="font-medium text-slate-700">{text}</span>,
-    },
-    {
       title: 'Created At',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (text) => <span>{formatDateToUI(text)}</span>,
+      render: (value) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span className="font-medium whitespace-nowrap">{formatDate(value)}</span>
+
+          <span className="text-xs whitespace-nowrap" style={{ color: dataColors.title }}>
+            (
+            {formatDistanceToNow(value, { addSuffix: true })
+              .replace(/^about /, '')
+              .replace(/^less than /, '')}
+            )
+          </span>
+        </div>
+      ),
     },
+
     {
-      title: 'Status File',
+      title: 'Batch ID',
+      dataIndex: 'batchId',
+      key: 'batchId',
+      render: (text) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Box Batch ID */}
+          <div
+            className="text-xs font-medium whitespace-nowrap"
+            style={{
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid #bfdbfe',
+              background: '#eff6ff',
+              color: '#1d4ed8',
+            }}
+          >
+            {text}
+          </div>
+
+          {/* Button Copy */}
+          <Tooltip title="Copy Batch ID">
+            <Button type="text" size="small" icon={<CopyOutlined />} onClick={() => navigator.clipboard.writeText(text)} />
+          </Tooltip>
+        </div>
+      ),
+    },
+
+    {
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (text) => <span className="font-semibold">{text}</span>,
+      render: (status) => (
+        <Tag
+          color="success"
+          style={{
+            borderRadius: 999,
+            paddingInline: 16,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <CheckCircleFilled style={{ fontSize: 12 }} />
+          <span className="font-semibold">{status}</span>
+        </Tag>
+      ),
     },
     {
       title: 'Action',
       key: 'action',
       render: (_, record) => (
         <Flex gap="small">
+          {' '}
           <Tooltip title="View Details">
-            <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
+            <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />{' '}
           </Tooltip>
           <Tooltip title="Download File">
             <Button icon={<DownloadOutlined />} onClick={() => downloadShippingFile(record.batchId)} />
@@ -340,7 +389,17 @@ const ConfirmShip = () => {
     }
   };
 
+  const handleConfirmShip = async () => {
+    handleRequestExtension();
+    await new Promise((resolve) => setTimeout(resolve, 60000));
+  };
+
   const handleSearch = () => {};
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    fetchBatchs();
+  };
 
   return (
     <div>
@@ -378,7 +437,7 @@ const ConfirmShip = () => {
                           <span className="font-medium text-slate-700">{`${client.label} (${client.shopName})`}</span>
                         </div>
                         <div style={{ color: '#8c8c8c' }}>
-                          [{new Date(Number(client.connectedAt || Date.now())).toLocaleTimeString('vi-VN')}{' '}
+                          [{new Date(Number(client.connectedAt || Date.now())).toLocaleTimeString('vi-VN')}
                           {new Date(Number(client.connectedAt || Date.now())).toLocaleDateString('vi-VN')}]
                         </div>
                       </div>
@@ -408,42 +467,41 @@ const ConfirmShip = () => {
                         <span className="font-medium">Upload Tracking</span>
                       </Button>
                     </Upload>
-                    <Button icon={<MdAdd />} onClick={handleRequestExtension}>
+                    <Button icon={<MdAdd />} onClick={() => setIsModalOpen(true)}>
                       <span className="font-medium">Create Confim Ship</span>
                     </Button>
                   </div>
                 </div>
 
                 {/* Upload Batches Table */}
-                <div className="mb-6">
-                  <div className="flex gap-2 mb-4">
-                    <Input
-                      onChange={handleSearch}
-                      placeholder="Search batchId..."
-                      className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
-                    />
+                <div className="">
+                  <div className="flex gap-2 justify-between mb-4">
+                    <div className="flex gap-2">
+                      <Input
+                        onChange={handleSearch}
+                        style={{ width: 250 }}
+                        placeholder="Search batchId..."
+                        className="flex h-10 rounded-md border border-input bg-background px-3 py-1  text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+                      />
+                      <div>
+                        <Tooltip title="Refresh">
+                          <button
+                            className="h-10 py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                            onClick={() => {
+                              fetchBatchs();
+                              toast.success('Refresh success!');
+                            }}
+                          >
+                            <MdOutlineRefresh size={20} />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
                     <div>
-                      <Tooltip title="Refresh">
-                        <button
-                          className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
-                          onClick={() => {
-                            fetchBatchs();
-                            toast.success('Refresh success!');
-                          }}
-                        >
-                          <MdOutlineRefresh size={20} />
-                        </button>
-                      </Tooltip>
+                      <Pagination total={batches?.length} showTotal={(total) => `Total ${total} items`} defaultPageSize={10} />
                     </div>
                   </div>
-                  <Table
-                    className="no-indent-table "
-                    bordered
-                    dataSource={batches}
-                    columns={batchColumns}
-                    rowKey="id"
-                    pagination={{ pageSize: 5 }}
-                  />
+                  <Table className="no-indent-table " bordered dataSource={batches} columns={batchColumns} rowKey="id" pagination={false} />
                 </div>
               </div>
             ) : (
@@ -481,6 +539,7 @@ const ConfirmShip = () => {
         </div>
         <Tabs defaultActiveKey="1" items={detailTabItems} />
       </Modal>
+      <ConfirmShipModal open={isModalOpen} onClose={handleCloseModal} onConfirm={handleConfirmShip} />
     </div>
   );
 };
