@@ -52,6 +52,10 @@ const deleteMapping = (id) => {
   return instance.delete(`/mapping/${id}`);
 };
 
+const reorderProductTypeItems = (groupId, payload) => {
+  return instance.put(`/product-type/${groupId}/reorder`, payload);
+};
+
 export {
   getAllConfig,
   createProductType,
@@ -66,5 +70,5 @@ export {
   createMapping,
   updateMapping,
   deleteMapping,
-
+  reorderProductTypeItems,
 };

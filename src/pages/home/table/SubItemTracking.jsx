@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Form, Input, Select, Button, Tooltip } from 'antd';
-import { CopyOutlined } from '@ant-design/icons';
+import { CopyOutlined, TruckOutlined } from '@ant-design/icons';
 import { trackingOrder } from '../../../apis/order';
 import { toast } from 'sonner';
 import { TbEdit } from 'react-icons/tb';
@@ -47,20 +47,30 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
   return (
     <div style={{ maxWidth: 320 }}>
       <Form form={form} layout="vertical" initialValues={initialValues} onFinish={onFinish} size="middle">
-        {/* bỏ allowClear để không hiện icon xoá */}
         <Form.Item name="fulfillment" rules={[{ max: 100, message: 'Tối đa 100 ký tự' }]}>
           <Input placeholder="Fulfillment" style={{ marginBottom: 10 }} />
         </Form.Item>
 
-        {/* tracking + icon copy ở cuối input */}
         <Form.Item name="tracking" rules={[{ max: 100, message: 'Tối đa 100 ký tự' }]}>
           <Input
             placeholder="Tracking"
             style={{ marginBottom: 10 }}
             suffix={
-              <Tooltip title="Copy tracking">
-                <CopyOutlined onClick={copyTracking} style={{ color: '#666', cursor: 'pointer' }} />
-              </Tooltip>
+              <>
+                {initialValues?.tracking && (
+                  <>
+                    <Tooltip title="View USPS">
+                      <a href={`https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${initialValues?.tracking}`} target="_blank">
+                        <TruckOutlined style={{ color: '#666', cursor: 'pointer', marginRight: 5 }} />
+                      </a>
+                    </Tooltip>
+
+                    <Tooltip title="Copy tracking">
+                      <CopyOutlined onClick={copyTracking} style={{ color: '#666', cursor: 'pointer' }} />
+                    </Tooltip>
+                  </>
+                )}
+              </>
             }
           />
         </Form.Item>
@@ -78,7 +88,6 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
           />
         </Form.Item>
 
-        {/* bỏ allowClear để không hiện icon xoá */}
         <Form.Item name="note" rules={[{ max: 500, message: 'Tối đa 500 ký tự' }]}>
           <TextArea rows={2} placeholder="Note" maxLength={200} style={{ marginBottom: 10 }} />
         </Form.Item>

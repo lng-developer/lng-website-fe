@@ -29,6 +29,7 @@ import { formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import { dataColors } from '../../utils/dataColors';
 import { CopyOutlined, CheckCircleFilled } from '@ant-design/icons';
+import StatusComponent from '../../components/StatusComponent';
 
 const ConfirmShip = () => {
   const { collapsed } = useOutletContext();
@@ -144,7 +145,7 @@ const ConfirmShip = () => {
             className="text-xs font-medium whitespace-nowrap"
             style={{
               padding: '4px 12px',
-              borderRadius: 6,
+              borderRadius: 100,
               border: '1px solid #bfdbfe',
               background: '#eff6ff',
               color: '#1d4ed8',
@@ -160,7 +161,32 @@ const ConfirmShip = () => {
         </div>
       ),
     },
-
+    {
+      title: 'Confirm Date',
+      dataIndex: 'confirmShipDate',
+      key: 'confirmShipDate',
+      render: (value, record) => (
+        <>
+          {value ? (
+            <span className="font-medium whitespace-nowrap">{formatDate(value)}</span>
+          ) : (
+            <>
+              {record?.type === 'CONFIRM' ? (
+                <span className="font-medium whitespace-nowrap">{formatDate(record?.createdAt)}</span>
+              ) : (
+                <StatusComponent title="N/A" color={dataColors.default} isDefault />
+              )}
+            </>
+          )}
+        </>
+      ),
+    },
+    {
+      title: 'Type File',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type) => <StatusComponent title={type} color={type === 'UPDATE_FAKE' ? dataColors.process : dataColors.asin} />,
+    },
     {
       title: 'Status',
       dataIndex: 'status',
@@ -186,12 +212,11 @@ const ConfirmShip = () => {
       key: 'action',
       render: (_, record) => (
         <Flex gap="small">
-          {' '}
           <Tooltip title="View Details">
-            <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />{' '}
+            <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
           </Tooltip>
           <Tooltip title="Download File">
-            <Button icon={<DownloadOutlined />} onClick={() => downloadShippingFile(record.batchId)} />
+            <Button icon={<DownloadOutlined />} onClick={() => downloadShippingFile(record.batchId, record.type, record.confirmShipDate)} />
           </Tooltip>
         </Flex>
       ),
@@ -332,9 +357,15 @@ const ConfirmShip = () => {
     }
   };
 
-  const downloadShippingFile = async (batchId) => {
+  const downloadShippingFile = async (batchId, type, confirmShipDate) => {
+    let shipDate;
+    if (type === 'UPDATE_FAKE') {
+      shipDate = confirmShipDate;
+    } else {
+      shipDate = '';
+    }
     try {
-      const response = await downloadFileConfirmShip(batchId);
+      const response = await downloadFileConfirmShip(batchId, shipDate);
 
       // Tạo Blob từ dữ liệu trả về
       const blob = new Blob([response.data], {
@@ -454,9 +485,9 @@ const ConfirmShip = () => {
           {/* --- CỘT PHẢI --- */}
           <div className="lg:col-span-2 h-full overflow-y-auto">
             {selectedClient?.clientId ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-full">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4  pb-4">
+                <div className="flex items-center justify-between pb-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full bg-green-500`}></div>
                     <span className="font-medium text-slate-700">{`${selectedClient.label} (${selectedClient.shopName})`}</span>
@@ -498,10 +529,17 @@ const ConfirmShip = () => {
                       </div>
                     </div>
                     <div>
-                      <Pagination total={batches?.length} showTotal={(total) => `Total ${total} items`} defaultPageSize={10} />
+                      {/* <Pagination total={batches?.length} showTotal={(total) => `Total ${total} items`} defaultPageSize={9} /> */}
                     </div>
                   </div>
-                  <Table className="no-indent-table " bordered dataSource={batches} columns={batchColumns} rowKey="id" pagination={false} />
+                  <Table
+                    className="no-indent-table "
+                    bordered
+                    dataSource={batches}
+                    columns={batchColumns}
+                    rowKey="id"
+                    pagination={{ defaultPageSize: 8, showTotal: (total) => `Total ${total} items` }}
+                  />
                 </div>
               </div>
             ) : (

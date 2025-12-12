@@ -1,18 +1,25 @@
+import React, { useCallback, useEffect, useState, useContext } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Input, Tooltip, Table, Modal, Select, Pagination } from 'antd';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
 import { MdDeleteOutline, MdOutlineRemoveRedEye } from 'react-icons/md';
-import { useCallback, useEffect, useState } from 'react';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import ModalView from './ModalView';
 import { formatDate } from '../../utils/fomatDate';
-import { deleteProductType, deleteProductTypeItem, getAllConfig, updateProductType } from '../../apis/config';
+import { deleteProductType, deleteProductTypeItem, getAllConfig, reorderProductTypeItems, updateProductType } from '../../apis/config';
 import ModalAddProductType from './ModalAddProductType';
 import ModalDelete from '../../components/ModalDelete';
 import { getALlVendorProduct } from '../../apis/vendor';
 import { toast } from 'sonner';
+
+// DnD Kit
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { MdDragIndicator } from 'react-icons/md';
+
 const PAGE_SIZE = 10;
 
 const CostCenterProductTypes = () => {
@@ -43,6 +50,77 @@ const CostCenterProductTypes = () => {
     search: '',
   });
 
+  // DnD UI states
+  const [activeRow, setActiveRow] = useState(null);
+  const [overId, setOverId] = useState(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+
+  // Drag handle + sortable row context
+  const DragHandleContext = React.createContext(null);
+
+  const DragHandle = () => {
+    const ctx = useContext(DragHandleContext);
+    if (!ctx) return null;
+
+    const { setActivatorNodeRef, listeners, attributes } = ctx;
+
+    return (
+      <span
+        ref={setActivatorNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 22,
+          height: 22,
+          cursor: 'grab',
+          color: '#64748b',
+          borderRadius: 6,
+        }}
+        title="Drag to reorder"
+      >
+        <MdDragIndicator size={18} />
+      </span>
+    );
+  };
+
+  const SortableBodyRow = (props) => {
+    const { children, ...restProps } = props;
+    const rowKey = restProps['data-row-key'];
+
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+      id: rowKey,
+      transition: {
+        duration: 220,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)',
+      },
+    });
+
+    const style = {
+      ...restProps.style,
+      transform: CSS.Transform.toString(transform),
+      transition,
+      ...(isDragging ? { opacity: 0.35 } : null),
+    };
+
+    return (
+      <DragHandleContext.Provider value={{ attributes, listeners, setActivatorNodeRef }}>
+        <tr ref={setNodeRef} style={style} {...restProps} className={`${restProps.className || ''} dnd-row`}>
+          {children}
+        </tr>
+      </DragHandleContext.Provider>
+    );
+  };
+
   const updateFilter = (newValues) => {
     setFilters((prev) => ({
       ...prev,
@@ -58,9 +136,7 @@ const CostCenterProductTypes = () => {
 
   const handleExpand = (expanded, record) => {
     if (expanded) {
-      if (expandedRowKeys) {
-        setExpandedRowKeys([...expandedRowKeys, record.key]);
-      }
+      if (expandedRowKeys) setExpandedRowKeys([...expandedRowKeys, record.key]);
     } else {
       setExpandedRowKeys(expandedRowKeys?.filter((key) => key !== record.key));
     }
@@ -77,9 +153,7 @@ const CostCenterProductTypes = () => {
 
   const handleExpand2 = (expanded, record) => {
     if (expanded) {
-      if (expandedRowKeys2) {
-        setExpandedRowKeys2([...expandedRowKeys2, record.key]);
-      }
+      if (expandedRowKeys2) setExpandedRowKeys2([...expandedRowKeys2, record.key]);
     } else {
       setExpandedRowKeys2(expandedRowKeys2?.filter((key) => key !== record.key));
     }
@@ -92,6 +166,52 @@ const CostCenterProductTypes = () => {
       setExpandedRowKeys2(dataSource[index]?.items?.map((item) => item.key));
     }
     setIsShowRowKeys2((prev) => !prev);
+  };
+
+  // Reorder Level 2: update UI + call API
+  const handleDragEndLevel2 = async ({ active, over }, parentIndex) => {
+    if (!over || active.id === over.id) return;
+
+    const parent = dataSource[parentIndex];
+    const currentItems = parent?.items || [];
+
+    const oldIndex = currentItems.findIndex((x) => x.key === active.id);
+    const newIndex = currentItems.findIndex((x) => x.key === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Build new array with updated "order"
+    const moved = arrayMove(currentItems, oldIndex, newIndex).map((it, idx) => ({
+      ...it,
+      order: idx + 1,
+    }));
+
+    // Payload to backend: { orders: [{ itemId, order }, ...] }
+    const ordersPayload = moved.map((it, idx) => ({
+      itemId: it?._id || it?.id || it?.key,
+      order: idx + 1,
+    }));
+
+    const groupId = parent?._id || parent?.id || parent?.key;
+
+    // Update UI immediately
+    setDataSource((prev) => {
+      const next = [...prev];
+      if (!next[parentIndex]?.items) return prev;
+      next[parentIndex] = { ...next[parentIndex], items: moved };
+      return next;
+    });
+
+    // Call API
+    try {
+      const res = await reorderProductTypeItems(groupId, { orders: ordersPayload });
+      if (res.status === 200) {
+        toast.success('Reorder success!');
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error('Reorder error!');
+      fetchAllConfig(filters);
+    }
   };
 
   const columnLevel1 = [
@@ -223,7 +343,6 @@ const CostCenterProductTypes = () => {
     },
   ];
 
-  // Columns cho bảng con (SKU)
   const skuColumns = [
     {
       title: <span style={{ color: dataColors.title }}>SKU</span>,
@@ -277,15 +396,15 @@ const CostCenterProductTypes = () => {
         const result = response.data?.items?.map((k) => {
           return {
             ...k,
-            key: k._id,
+            key: k._id || k.id,
             items: k?.items?.map((j) => {
               return {
                 ...j,
-                key: j._id,
+                key: j._id || j.id,
                 payload: {
-                  productTypeId: k._id,
+                  productTypeId: k._id || k.id,
                   cost_centers: j.cost_centers,
-                  _id: j._id,
+                  _id: j._id || j.id,
                 },
               };
             }),
@@ -387,6 +506,21 @@ const CostCenterProductTypes = () => {
 
   return (
     <div>
+      {/* CSS for DnD visuals */}
+      <style>
+        {`
+          .product-type tr.dnd-over td {
+            border-top: 2px solid #3b82f6 !important;
+          }
+          .dnd-overlay {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+          }
+        `}
+      </style>
+
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
@@ -405,6 +539,7 @@ const CostCenterProductTypes = () => {
           </div>
         </div>
       </div>
+
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center">
           <Input
@@ -423,6 +558,7 @@ const CostCenterProductTypes = () => {
             />
           </div>
         </div>
+
         <div className="mt-4">
           <Table
             className="no-indent-table product-type"
@@ -430,44 +566,115 @@ const CostCenterProductTypes = () => {
             dataSource={dataSource}
             expandable={{
               indentSize: 0,
-              expandedRowRender: (r, index) => (
-                <Table
-                  className="no-indent-table product-type"
-                  columns={columnsLevel2}
-                  dataSource={dataSource[index]?.items}
-                  pagination={false}
-                  expandable={{
-                    indentSize: 0,
-                    expandedRowRender: (r, index2) => (
+              expandedRowRender: (r, index) => {
+                const level2Data = dataSource[index]?.items || [];
+                const level2Ids = level2Data.map((i) => i.key);
+
+                return (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={({ active }) => {
+                      const row = (dataSource[index]?.items || []).find((x) => x.key === active.id);
+                      setActiveRow(row || null);
+                    }}
+                    onDragOver={({ over }) => {
+                      setOverId(over?.id || null);
+                    }}
+                    onDragEnd={(evt) => {
+                      setActiveRow(null);
+                      setOverId(null);
+                      handleDragEndLevel2(evt, index);
+                    }}
+                    onDragCancel={() => {
+                      setActiveRow(null);
+                      setOverId(null);
+                    }}
+                  >
+                    <SortableContext items={level2Ids} strategy={verticalListSortingStrategy}>
                       <Table
                         className="no-indent-table product-type"
-                        columns={skuColumns}
-                        dataSource={dataSource[index]?.items[index2]?.cost_centers}
-                        pagination={true}
+                        columns={columnsLevel2}
+                        dataSource={level2Data}
+                        pagination={false}
+                        onRow={(record) => ({
+                          className: record.key === overId ? 'dnd-over' : '',
+                        })}
+                        components={{
+                          body: {
+                            row: SortableBodyRow,
+                          },
+                        }}
+                        expandable={{
+                          indentSize: 0,
+                          expandedRowRender: (r, index2) => (
+                            <Table
+                              className="no-indent-table product-type"
+                              columns={skuColumns}
+                              dataSource={dataSource[index]?.items[index2]?.cost_centers}
+                              pagination={true}
+                              rowKey="key"
+                              style={{ padding: 10 }}
+                            />
+                          ),
+
+                          // Drag icon tách riêng khỏi expand icon
+                          expandIcon: ({ expanded, onExpand, record }) => (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 10,
+                                width: '100%',
+                              }}
+                            >
+                              <div style={{ width: 24, display: 'flex', justifyContent: 'center' }}>
+                                <DragHandle />
+                              </div>
+
+                              <div
+                                style={{ width: 24, display: 'flex', justifyContent: 'center' }}
+                                className="cursor-pointer"
+                                onClick={(e) => onExpand(record, e)}
+                                title="Expand"
+                              >
+                                {!expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                              </div>
+                            </div>
+                          ),
+
+                          expandedRowKeys: expandedRowKeys2,
+                          onExpand: handleExpand2,
+                          columnTitle: (
+                            <div
+                              className="flex justify-center items-center h-full w-full cursor-pointer"
+                              onClick={() => handleShowRowKeys2(index)}
+                            >
+                              <IoIosArrowDown style={{ fontSize: 15 }} />
+                            </div>
+                          ),
+                        }}
                         rowKey="key"
                         style={{ padding: 10 }}
                       />
-                    ),
-                    expandIcon: ({ expanded, onExpand, record }) => (
-                      <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
-                        {!expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
-                      </div>
-                    ),
-                    expandedRowKeys: expandedRowKeys2,
-                    onExpand: handleExpand2,
-                    columnTitle: (
-                      <div
-                        className="flex justify-center items-center  h-full w-full cursor-pointer"
-                        onClick={() => handleShowRowKeys2(index)}
-                      >
-                        <IoIosArrowDown style={{ fontSize: 15 }} />
-                      </div>
-                    ),
-                  }}
-                  rowKey="key"
-                  style={{ padding: 10 }}
-                />
-              ),
+                    </SortableContext>
+
+                    <DragOverlay>
+                      {activeRow ? (
+                        <div className="dnd-overlay" style={{ padding: 12, minWidth: 520 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <MdDragIndicator size={18} style={{ color: '#64748b' }} />
+                            <div style={{ fontWeight: 600 }}>{activeRow.vendor_name}</div>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Product ID: {activeRow.product_id}</div>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
+                );
+              },
+
               expandIcon: ({ expanded, onExpand, record }) => (
                 <div className="flex justify-center items-center  h-full w-full cursor-pointer" onClick={(e) => onExpand(record, e)}>
                   {expanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
@@ -487,6 +694,7 @@ const CostCenterProductTypes = () => {
           />
         </div>
       </div>
+
       <ModalView
         isOpenModal={isOpenModal}
         setIsOpenModal={setIsOpenModal}
@@ -494,12 +702,14 @@ const CostCenterProductTypes = () => {
         setDataView={setDataView}
         dataView={dataView}
       />
+
       <ModalAddProductType
         open={openModalAdd}
         onCancel={() => setOpenModalAdd(false)}
         vendorProducts={vendorProducts}
         fetchAllConfig={fetchAllConfig}
       />
+
       <ModalDelete
         title="Delete Product Type"
         isShowModalDelete={isShowModalDelete}
@@ -507,6 +717,7 @@ const CostCenterProductTypes = () => {
         handleDelete={handleDeleteProductType}
         text={'product type'}
       />
+
       <ModalDelete
         title="Delete Vendor Product"
         isShowModalDelete={isShowModalDeleteItem}
@@ -514,6 +725,7 @@ const CostCenterProductTypes = () => {
         handleDelete={handleDeleteProductTypeItem}
         text={'vendor product'}
       />
+
       <Modal
         open={isShowModalUpdate}
         title="Add New Vendor Product"

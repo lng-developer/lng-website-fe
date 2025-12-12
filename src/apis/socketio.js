@@ -35,8 +35,8 @@ const updateTrackingFake = (batchId, payload) => {
   });
 };
 
-const downloadFileConfirmShip = (batchId) => {
-  return instance.get(`/shipping-batches/${batchId}/download`, {
+const downloadFileConfirmShip = (batchId, shipDate) => {
+  return instance.get(`/shipping-batches/${batchId}/download?shipDate=${shipDate}`, {
     responseType: 'blob',
   });
 };
