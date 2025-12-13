@@ -123,7 +123,12 @@ const importAsyncOrder = (payload) => {
 const ChangeTimeAutoOrder = (payload) => {
   return instance.post('/admin/schedule', payload);
 };
-
+export const retryScaleOrder = (orderId) => {
+  return instance.post(`/scale/orders/${orderId}/scale/send`);
+};
+export const syncVendorTracking = (payload) => {
+  return instance.post('/ext/vendor-sync/batch', payload);
+};
 export {
   getALlOrder,
   updateStatusOrder,

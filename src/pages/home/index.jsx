@@ -6,7 +6,8 @@ import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { LuImport } from 'react-icons/lu';
+import { LuImport, LuArchiveRestore, LuArrowDownNarrowWide } from 'react-icons/lu';
+import { AiOutlineLoading } from 'react-icons/ai';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { TbHistory, TbReplace } from 'react-icons/tb';
 import { BiRefresh } from 'react-icons/bi';
@@ -14,7 +15,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
-import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode, syncVendorTracking } from '../../apis/order';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { dataFilterStatus } from '../../utils/dataFilter';
@@ -30,8 +31,9 @@ import ItemShippingType from './table/ItemShippingType';
 import ItemCase from './table/ItemCase';
 import ModalImportOrder from './ModalImportOrder';
 import { getAllTeam } from '../../apis/teams';
+import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
-
+// import { ArchiveRestore } from 'lucide-react';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -54,7 +56,7 @@ const Home = () => {
   const [orderInfo, setOrderInfo] = useState({});
   const [teams, setTeams] = useState([]);
   const [selectTeam, setSelectTeam] = useState('');
-
+  const [isImporting, setIsImporting] = useState(false);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -159,7 +161,57 @@ const Home = () => {
       setLoading(false);
     }
   }, []);
+  const handleImportTracking = useCallback(async () => {
+    if (isImporting) return;
 
+    setIsImporting(true);
+
+    // const toastId = toast(
+    //   <span className="flex flex-row justify-center items-center gap-6">
+    //     <LoadingOutlined spin size={15} />
+    //     Processing import tracking...
+    //   </span>,
+    //   {
+    //     duration: Infinity,
+    //     style: {
+    //       backgroundColor: '#e6f7ff',
+    //       border: '1px solid #69b1ff',
+    //       color: '#003a8c',
+    //       fontWeight: 500,
+    //     },
+    //   }
+    // );
+    const toastId = toast('Processing import tracking...', {
+      duration: Infinity,
+      icon: <LoadingOutlined spin style={{ color: '#003a8c', fontSize: '16px' }} />,
+
+      style: {
+        backgroundColor: '#e6f7ff',
+        border: '1px solid #69b1ff',
+        color: '#003a8c',
+        fontWeight: 500,
+        gap: '12px',
+      },
+    });
+    try {
+      const response = await syncVendorTracking({ max: 300 });
+
+      if (response.status === 200) {
+        console.log(response);
+        toast.success('Import tracking finished!', { id: toastId });
+
+        fetchAllOrder(filters);
+        fetchCountStatus();
+      } else {
+        toast.error('Import tracking failed!', { id: toastId });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'System Error!', { id: toastId });
+    } finally {
+      setIsImporting(false);
+    }
+  }, [fetchAllOrder, fetchCountStatus, filters, isImporting]);
   const handleCopy = useCallback(async (textToCopy) => {
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -495,6 +547,17 @@ const Home = () => {
             </span>
           </h1>
           <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md  text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer "
+              onClick={handleImportTracking}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Tracking
+              </span>
+              <div style={{ color: 'black' }}>
+                <LuArrowDownNarrowWide size={15} />
+              </div>
+            </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={handleOnclick}

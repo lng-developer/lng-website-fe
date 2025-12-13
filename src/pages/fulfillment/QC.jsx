@@ -10,7 +10,7 @@ import { dataFilterStatusQC } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
-import { getAllCountStatusQC, getAllQC, getALlShop } from '../../apis/order';
+import { getAllCountStatusQC, getAllQC, getALlShop, retryScaleOrder } from '../../apis/order';
 import { toast } from 'sonner';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -21,6 +21,8 @@ import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
 import { MdOutlineRefresh } from 'react-icons/md';
+import { MdOutlineReplay } from 'react-icons/md';
+import { BiRefresh } from 'react-icons/bi';
 import SelectSeller from '../../components/SelectSeller';
 
 const PAGE_SIZE = 10;
@@ -80,30 +82,36 @@ const QC = () => {
   }, [isShowRowkeys, dataSource]);
 
   const columns = useMemo(
-    () => [
-      { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'orderId', key: 'orderId', align: 'center' },
-      {
-        title: <span style={{ color: dataColors.title }}>Status QC</span>,
-        dataIndex: 'scale_overall_status',
-        key: 'scale_overall_status',
-        align: 'center',
-      },
-      { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'createdAt', key: 'createdAt', align: 'center' },
-      {
-        title: <span style={{ color: dataColors.title }}>Order Date</span>,
-        dataIndex: 'purchase_date',
-        key: 'purchase_date',
-        align: 'center',
-      },
-      { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'base_cost', align: 'center' },
-    ],
-    []
+    () =>
+      [
+        { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'orderId', key: 'orderId', align: 'center' },
+        {
+          title: <span style={{ color: dataColors.title }}>Status QC</span>,
+          dataIndex: 'scale_overall_status',
+          key: 'scale_overall_status',
+          align: 'center',
+        },
+        { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'createdAt', key: 'createdAt', align: 'center' },
+        {
+          title: <span style={{ color: dataColors.title }}>Order Date</span>,
+          dataIndex: 'purchase_date',
+          key: 'purchase_date',
+          align: 'center',
+        },
+        { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
+        { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
+        { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
+        { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
+        isActiveFilter.title === 'Failed' && {
+          title: <span style={{ color: dataColors.title }}>Retry</span>,
+          dataIndex: 'action_retry',
+          key: 'action_retry',
+          align: 'center',
+        },
+        { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'base_cost', align: 'center' },
+      ].filter(Boolean),
+    [isActiveFilter.title]
   );
-
   const subColumns = useMemo(
     () => [
       {
@@ -243,6 +251,24 @@ const QC = () => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
+  const handleRetry = useCallback(
+    async (orderId) => {
+      try {
+        const response = await retryScaleOrder(orderId);
+        if (response.status === 200) {
+          toast.success('Retry request sent successfully!');
+          // Load lại dữ liệu sau khi retry thành công
+          fetchAllQC(filters);
+        } else {
+          toast.error('Retry failed!');
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error(error?.response?.data?.message || 'Retry error!');
+      }
+    },
+    [fetchAllQC, filters]
+  );
   // ======= FIX QUAN TRỌNG: tableData phụ thuộc dataSource =======
   const tableData = useMemo(() => {
     return (dataSource || []).map((item, index) => ({
@@ -281,6 +307,35 @@ const QC = () => {
         </Flex>
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
+      action_retry:
+        isActiveFilter.title === 'Failed' ? (
+          <Tooltip title="Retry Scale">
+            {/* <button
+              className="cursor-pointer p-2 rounded-full hover:bg-gray-100 text-blue-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRetry(item.orderId);
+              }}
+            >
+              <MdOutlineReplay size={22} />
+            </button> */}
+            <div
+              className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
+              style={{ borderColor: dataColors.pending }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRetry(item.orderId);
+              }}
+            >
+              <div>
+                <BiRefresh size={16} color={dataColors.pending} />
+              </div>
+              <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+                Retry
+              </span>
+            </div>
+          </Tooltip>
+        ) : null,
       base_cost: <span className="font-medium">${item?.base_cost}</span>,
       shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
       qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
