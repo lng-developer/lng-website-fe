@@ -336,7 +336,7 @@ const IdeaTask = () => {
     ];
 
     // Thêm cột "Edit/Delete" nếu là Admin hoặc Seller
-    if (user?.role === 'Admin' || user?.role === 'Seller') {
+    if (user?.role === 'Admin' || user?.role === 'Seller' || user?.role === 'Design Leader') {
       baseColumns.push({
         title: <span style={{ color: dataColors.title }}>Edit/Delete</span>,
         key: 'adminActions',

@@ -10,6 +10,7 @@ import { dataFilterStatusQC } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
+import { BiRefresh } from 'react-icons/bi';
 import { getAllCountStatusQC, getAllQC, getALlShop, retryScaleOrder } from '../../apis/order';
 import { toast } from 'sonner';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';

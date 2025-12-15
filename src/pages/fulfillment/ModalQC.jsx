@@ -350,6 +350,16 @@ export default function QcCanvasModal({
     return null;
   }, [currentItem?.scale_status]);
 
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
+    }
+  }, []);
+
   return (
     <Modal width={1350} open={open} onCancel={onClose} title={null} footer={null} style={{ top: '5%' }}>
       {/* ======= HEADER ======= */}
@@ -518,7 +528,10 @@ export default function QcCanvasModal({
               <Flex vertical gap={6}>
                 <div className="flex justify-between items-center">
                   <span className="font-medium">OrderId:</span>
-                  <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
+
+                  <button className="cursor-pointer" onClick={() => handleCopy(orderInfo?.orderId)}>
+                    <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
+                  </button>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Asin:</span>

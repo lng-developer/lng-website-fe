@@ -77,6 +77,7 @@ const FulfillmentScale = () => {
 
   const columns = useMemo(
     () => [
+      { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'orderId', key: 'orderId', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'orderDate', key: 'orderDate', align: 'center' },
       {
         title: <span style={{ color: dataColors.title }}>Scale Status</span>,
@@ -209,10 +210,25 @@ const FulfillmentScale = () => {
     [subColumns]
   );
 
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
+    }
+  }, []);
+
   // --- table data (memo hóa nặng nhất) ---
   const tableData = useMemo(() => {
     const results = (dataSource || []).map((item, index) => ({
       key: item?.orderId,
+      orderId: (
+        <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+          <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
+        </button>
+      ),
       orderDate: (
         <Flex vertical>
           <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>

@@ -6,7 +6,7 @@ import { CopyOutlined } from '@ant-design/icons';
 
 const { TextArea } = Input;
 
-export default function OrderInfoForm({ orderId, seller, fulfillName, quantity }) {
+export default function OrderInfoForm({ seller, fulfillName, quantity }) {
   const handleCopy = async (textToCopy) => {
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -18,12 +18,6 @@ export default function OrderInfoForm({ orderId, seller, fulfillName, quantity }
   };
   return (
     <div>
-      <div className="mb-1">
-        <div className="font-semibold text-gray-800 mb-1">Order ID:</div>
-        <button className="cursor-pointer" onClick={() => handleCopy(orderId)}>
-          <StatusComponent title={orderId} color={dataColors.pink} />
-        </button>
-      </div>
       <div className="mb-1">
         <div className="font-semibold text-gray-800 mb-1">Seller:</div>
         <StatusComponent title={seller || 'No data'} color={dataColors.process} />
