@@ -166,25 +166,9 @@ const Home = () => {
 
     setIsImporting(true);
 
-    // const toastId = toast(
-    //   <span className="flex flex-row justify-center items-center gap-6">
-    //     <LoadingOutlined spin size={15} />
-    //     Processing import tracking...
-    //   </span>,
-    //   {
-    //     duration: Infinity,
-    //     style: {
-    //       backgroundColor: '#e6f7ff',
-    //       border: '1px solid #69b1ff',
-    //       color: '#003a8c',
-    //       fontWeight: 500,
-    //     },
-    //   }
-    // );
     const toastId = toast('Processing import tracking...', {
-      duration: Infinity,
+      duration: Infinity, // Đang set là vô hạn
       icon: <LoadingOutlined spin style={{ color: '#003a8c', fontSize: '16px' }} />,
-
       style: {
         backgroundColor: '#e6f7ff',
         border: '1px solid #69b1ff',
@@ -193,21 +177,33 @@ const Home = () => {
         gap: '12px',
       },
     });
+
     try {
       const response = await syncVendorTracking({ max: 300 });
 
       if (response.status === 200) {
         console.log(response);
-        toast.success('Import tracking finished!', { id: toastId });
+        toast.success('Import tracking finished!', {
+          id: toastId,
+          duration: 4000,
+          style: {},
+          icon: undefined,
+        });
 
         fetchAllOrder(filters);
         fetchCountStatus();
       } else {
-        toast.error('Import tracking failed!', { id: toastId });
+        toast.error('Import tracking failed!', {
+          id: toastId,
+          duration: 4000,
+        });
       }
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data?.message || 'System Error!', { id: toastId });
+      toast.error(error?.response?.data?.message || 'System Error!', {
+        id: toastId,
+        duration: 4000,
+      });
     } finally {
       setIsImporting(false);
     }
