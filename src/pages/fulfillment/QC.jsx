@@ -21,30 +21,35 @@ import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
 import { MdOutlineRefresh } from 'react-icons/md';
-import { MdOutlineReplay } from 'react-icons/md';
-import { BiRefresh } from 'react-icons/bi';
 import SelectSeller from '../../components/SelectSeller';
 
 const PAGE_SIZE = 10;
 
 const QC = () => {
   const { collapsed } = useOutletContext();
+
   const [dataSource, setDataSource] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusQC[0]);
+
   const [openModalQC, setOpenMOdalQC] = useState(false);
+  const [dataView, setDataView] = useState({});
+  const [indexQC, setIndexQC] = useState(0);
+
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [tableHeight, setTableHeight] = useState(0);
-  const [dataView, setDataView] = useState({});
+
   const [tabFilter, setTabFilter] = useState(dataFilterStatusQC);
-  const [indexQC, setIndexQC] = useState(0);
+
   const [sellers, setSellers] = useState([]);
   const [selectSeller, setSelectSeller] = useState();
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -112,6 +117,7 @@ const QC = () => {
       ].filter(Boolean),
     [isActiveFilter.title]
   );
+
   const subColumns = useMemo(
     () => [
       {
@@ -164,7 +170,7 @@ const QC = () => {
     [subColumns]
   );
 
-  // fetchers
+  // =============== API ===============
   const fetchAllQC = useCallback(async (params) => {
     setLoading(true);
     try {
@@ -234,7 +240,6 @@ const QC = () => {
 
   // debounce search
   const debouncedSearch = useMemo(() => debounce((keyword) => updateFilter({ search: keyword || '' }), 300), [updateFilter]);
-
   const handleSearch = useCallback((e) => debouncedSearch(e.target.value), [debouncedSearch]);
 
   const handleCopy = useCallback(async (textToCopy) => {
@@ -269,7 +274,60 @@ const QC = () => {
     },
     [fetchAllQC, filters]
   );
-  // ======= FIX QUAN TRỌNG: tableData phụ thuộc dataSource =======
+
+  /**
+   * NEW: Queue tất cả item Pending theo đúng thứ tự hiển thị list hiện tại.
+   * Mỗi entry là 1 "target" để modal nhảy qua item/order kế tiếp.
+   */
+  const qcQueue = useMemo(() => {
+    const queue = [];
+    (dataSource || []).forEach((order, orderIndex) => {
+      (order?.items || []).forEach((it, itemIndex) => {
+        if (String(it?.scale_status || '').toLowerCase() === 'pending') {
+          queue.push({
+            orderIndex,
+            itemIndex,
+            orderId: order?.orderId,
+            orderItemId: it?.orderItemId,
+          });
+        }
+      });
+    });
+    return queue;
+  }, [dataSource]);
+
+  /**
+   * NEW: Sau Pass/Reject, parent tự chọn target kế tiếp trong queue và set lại modal content.
+   */
+  const goNextAfter = useCallback(
+    (currentOrderId, currentOrderItemId) => {
+      if (!qcQueue.length) {
+        setOpenMOdalQC(false);
+        return;
+      }
+
+      const idx = qcQueue.findIndex((x) => x.orderId === currentOrderId && x.orderItemId === currentOrderItemId);
+      const next = idx >= 0 ? qcQueue[idx + 1] : qcQueue[0];
+
+      if (!next) {
+        setOpenMOdalQC(false);
+        return;
+      }
+
+      const nextOrder = dataSource?.[next.orderIndex];
+      if (!nextOrder) {
+        setOpenMOdalQC(false);
+        return;
+      }
+
+      setDataView(nextOrder);
+      setIndexQC(next.itemIndex);
+      setOpenMOdalQC(true);
+    },
+    [qcQueue, dataSource]
+  );
+
+  // =============== TABLE DATA ===============
   const tableData = useMemo(() => {
     return (dataSource || []).map((item, index) => ({
       key: item?.orderId,
@@ -382,8 +440,8 @@ const QC = () => {
                   className="cursor-pointer border rounded"
                   style={{ padding: 6, borderColor: dataColors.default }}
                   onClick={() => {
-                    setDataView(item);
-                    setIndexQC(indexItem);
+                    setDataView(item); // orderInfo
+                    setIndexQC(indexItem); // item index trong order
                     setOpenMOdalQC(true);
                   }}
                 >
@@ -403,15 +461,17 @@ const QC = () => {
         ),
       })),
     }));
-  }, [dataSource]); // <-- đây là chỗ gây “No data” trước đó
+  }, [dataSource, handleCopy]);
 
-  // effects
+  // =============== EFFECTS ===============
   useEffect(() => {
     fetchAllShop();
   }, [fetchAllShop]);
+
   useEffect(() => {
     fetchAllSellersMemo();
   }, [fetchAllSellersMemo]);
+
   useEffect(() => {
     fetchAllQC(filters);
     fetchCountStatus();
@@ -419,8 +479,8 @@ const QC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240,
-        marginBottom = 20;
+      const headerHeight = 240;
+      const marginBottom = 20;
       setTableHeight(window.innerHeight - headerHeight - marginBottom);
     };
     handleResize();
@@ -505,6 +565,7 @@ const QC = () => {
               </Tooltip>
             </div>
           </div>
+
           <div>
             <Pagination
               total={totalCount}
@@ -553,8 +614,6 @@ const QC = () => {
         open={openModalQC}
         onClose={() => setOpenMOdalQC(false)}
         orderInfo={dataView}
-        stageWidth={900}
-        stageHeight={520}
         fetchAllQC={fetchAllQC}
         filters={filters}
         fetchCountStatus={fetchCountStatus}
@@ -563,6 +622,8 @@ const QC = () => {
         viewportWidth={1000}
         viewportHeight={750}
         indexQC={indexQC}
+        // NEW: Sau Pass/Reject -> nhảy sang order/item Pending kế tiếp
+        onNextAfter={goNextAfter}
       />
     </div>
   );

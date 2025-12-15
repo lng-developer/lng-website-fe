@@ -143,6 +143,8 @@ export default function QcCanvasModal({
   fetchCountStatus,
   orderInfo = {},
   indexQC = 0,
+  // NEW: parent sẽ nhận (orderId, orderItemId) và chuyển sang target kế tiếp trong queue Pending
+  onNextAfter,
 }) {
   const [bgColor, setBgColor] = useState('#2f6f8a');
   const [qcNote, setQcNote] = useState('');
@@ -153,7 +155,7 @@ export default function QcCanvasModal({
   const [activeLayer, setActiveLayer] = useState(null);
   const [decisionByItem, setDecisionByItem] = useState({});
 
-  /* -------- Derived values (memo) -------- */
+  /* -------- Derived values -------- */
   const totalItems = orderInfo?.items?.length || 0;
 
   const currentItem = useMemo(() => (totalItems ? orderInfo.items[currentIndex] : undefined), [orderInfo, totalItems, currentIndex]);
@@ -173,16 +175,13 @@ export default function QcCanvasModal({
     [viewportWidth, viewportHeight, logicalWidth, logicalHeight]
   );
 
-  const isSingleItem = totalItems <= 1;
-
   const sizeInfo = useMemo(() => {
     const active = activeLayer ? items.find((x) => x.id === activeLayer) : items.length === 1 ? items[0] : null;
-
     if (!active?.originalWidth || !active?.originalHeight) return null;
     return { wPx: active.originalWidth, hPx: active.originalHeight };
   }, [items, activeLayer]);
 
-  /* -------- Handlers (callback) -------- */
+  /* -------- Handlers -------- */
   const handlePageChange = useCallback((page) => setCurrentIndex(page - 1), []);
 
   const selectId = useCallback((id) => {
@@ -198,17 +197,15 @@ export default function QcCanvasModal({
 
   const makeUpdateHandler = useCallback((id) => (patch) => updateItem(id, patch), [updateItem]);
 
-  const goNextOrClose = useCallback(() => {
-    if (isSingleItem) {
-      onClose?.();
-    } else {
-      setCurrentIndex((i) => {
-        const next = i + 1;
-        return next < totalItems ? next : Math.max(0, i - 1);
-      });
+  const goNextTarget = useCallback(() => {
+    // Ưu tiên nhảy sang item/order kế tiếp (parent quản lý)
+    if (onNextAfter && orderInfo?.orderId && currentItem?.orderItemId) {
+      onNextAfter(orderInfo.orderId, currentItem.orderItemId);
+      return;
     }
-    setQcNote('');
-  }, [isSingleItem, onClose, totalItems]);
+    // fallback: đóng modal
+    onClose?.();
+  }, [onNextAfter, orderInfo?.orderId, currentItem?.orderItemId, onClose]);
 
   const handlePass = useCallback(async () => {
     try {
@@ -220,14 +217,13 @@ export default function QcCanvasModal({
       setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
     } catch (e) {
       console.log(e);
-
       toast.error('Error');
     } finally {
       fetchAllQC?.(filters);
       fetchCountStatus?.();
-      goNextOrClose();
+      goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextOrClose]);
+  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   const handleReject = useCallback(async () => {
     if (!qcNote) {
@@ -247,17 +243,32 @@ export default function QcCanvasModal({
     } finally {
       fetchAllQC?.(filters);
       fetchCountStatus?.();
-      goNextOrClose();
+      goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextOrClose]);
+  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   /* -------- Side effects -------- */
   useEffect(() => {
     setCurrentIndex(indexQC);
   }, [indexQC]);
 
-  // Pre-mark decisions from server
   useEffect(() => {
+    // reset khi đổi order
+    setQcNote('');
+    setErrorNote(false);
+    setActiveLayer(null);
+    setItems([]);
+    setShowBack(false);
+  }, [orderInfo?.orderId]);
+
+  useEffect(() => {
+    // reset note khi đổi item
+    setQcNote(currentItem?.qc_note || '');
+    setErrorNote(false);
+  }, [currentItem?.orderItemId]);
+
+  useEffect(() => {
+    // map trạng thái server -> decisionByItem (để hiển thị Passed/Rejected)
     const map = {};
     (orderInfo?.items || []).forEach((it) => {
       const st = String(it?.scale_status || '').toLowerCase();
@@ -267,7 +278,6 @@ export default function QcCanvasModal({
     setDecisionByItem((prev) => ({ ...map, ...prev }));
   }, [orderInfo]);
 
-  // Load images when modal opens or current item changes
   useEffect(() => {
     if (!open) return;
     if (!layersData.length) return setItems([]);
@@ -311,7 +321,7 @@ export default function QcCanvasModal({
     };
   }, [open, layersData, displayScale]);
 
-  /* -------- Derived UI bits (memo) -------- */
+  /* -------- UI derived -------- */
   const decidedStatus = useMemo(() => (currentItem ? decisionByItem[currentItem.orderItemId] : undefined), [decisionByItem, currentItem]);
 
   const showActionButtons = useMemo(
@@ -365,7 +375,6 @@ export default function QcCanvasModal({
             />
           </div>
 
-          {/* Size box */}
           <div
             style={{
               minWidth: 150,
@@ -392,7 +401,6 @@ export default function QcCanvasModal({
             )}
           </div>
 
-          {/* Background color + Back */}
           <div className="flex items-center">
             {showBack && (
               <div
@@ -527,6 +535,14 @@ export default function QcCanvasModal({
                   <span className="font-medium">Sku:</span>
                   <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
                 </div>
+
+                {orderInfo?.scaledBy && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Scale By:</span>
+                    <StatusComponent title={orderInfo?.scaledBy?.full_name} color={dataColors.process} />
+                  </div>
+                )}
+
                 {currentItem?.cost_center?.vendorProductDisplayName && (
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Vendor:</span>
@@ -536,6 +552,7 @@ export default function QcCanvasModal({
                     />
                   </div>
                 )}
+
                 {currentItem?.cost_center?.vendorProductDisplayName && (
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Product Name:</span>
@@ -546,6 +563,7 @@ export default function QcCanvasModal({
                     />
                   </div>
                 )}
+
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Fulfill Name:</span>
                   <div
@@ -560,6 +578,7 @@ export default function QcCanvasModal({
                     </span>
                   </div>
                 </div>
+
                 {currentItem?.cost_center?.vendorProductSKU && (
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Vendor Product Sku:</span>
@@ -596,7 +615,6 @@ export default function QcCanvasModal({
               QC Note
             </Title>
             <Input.TextArea
-              defaultValue={currentItem?.qc_note || ''}
               value={qcNote}
               spellCheck={false}
               style={{ borderColor: errorNote ? '#FB2C36' : '' }}
