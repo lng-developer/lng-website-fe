@@ -226,7 +226,7 @@ const FulfillmentScale = () => {
       key: item?.orderId,
       orderId: (
         <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
-          <StatusComponent title={item?.orderId} color={dataColors.default} isDefault={true} />
+          <StatusComponent title={item?.orderId} color={dataColors.pink} />
         </button>
       ),
       orderDate: (

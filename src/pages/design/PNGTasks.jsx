@@ -86,6 +86,12 @@ const FulfillmentScale = () => {
 
   const columns = [
     {
+      title: <span style={{ color: dataColors.title }}>Order ID</span>,
+      dataIndex: 'orderId',
+      key: 'orderId',
+      align: 'center',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Order Date</span>,
       dataIndex: 'orderDate',
       key: 'orderDate',
@@ -143,11 +149,26 @@ const FulfillmentScale = () => {
     }));
   };
 
+  const handleCopy = useCallback(async (textToCopy) => {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.info('Copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to copy!');
+    }
+  }, []);
+
   // render Orders
   const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
       return {
         key: item?.orderId,
+        orderId: (
+          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+            <StatusComponent title={item?.orderId} color={dataColors.pink} />
+          </button>
+        ),
         orderDate: (
           <Flex vertical={true}>
             <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
