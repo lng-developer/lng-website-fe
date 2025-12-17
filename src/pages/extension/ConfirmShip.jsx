@@ -1,23 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import {
-  RightOutlined,
-  UploadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  EyeOutlined,
-  DownloadOutlined,
-  EditOutlined,
-} from '@ant-design/icons';
-import { Flex, Table, Button, Tag, Upload, Modal, Tooltip, Input, Tabs, Pagination } from 'antd';
+import { RightOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
+import { Flex, Table, Button, Tag, Modal, Tooltip, Input, Tabs } from 'antd';
 import { MdOutlineRefresh } from 'react-icons/md';
 import {
-  createFileConfirmShip,
   downloadFileConfirmShip,
+  downloadFileUpdateTracking,
   getAllClient,
   getLogs,
   getShippingBatch,
   requestExtension,
+  updateAllTrackingFake,
   updateTrackingFake,
 } from '../../apis/socketio';
 import RealtimeLogViewer from '../../components/RealtimeLogViewer';
@@ -39,7 +32,6 @@ const ConfirmShip = () => {
   const [batches, setBatches] = useState([]);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState(null);
-  const [fileList, setFileList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const selectedBatch = useMemo(() => {
@@ -215,9 +207,18 @@ const ConfirmShip = () => {
           <Tooltip title="View Details">
             <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
           </Tooltip>
-          <Tooltip title="Download File">
-            <Button icon={<DownloadOutlined />} onClick={() => downloadShippingFile(record.batchId, record.type, record.confirmShipDate)} />
-          </Tooltip>
+          {record.type === 'UPDATE_GLOBAL' ? (
+            <Tooltip title="Download File">
+              <Button icon={<DownloadOutlined />} onClick={() => downloadFileUpdate(record.batchId, record.type, record.confirmShipDate)} />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Download File">
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={() => downloadShippingFile(record.batchId, record.type, record.confirmShipDate)}
+              />
+            </Tooltip>
+          )}
         </Flex>
       ),
     },
@@ -310,40 +311,9 @@ const ConfirmShip = () => {
     ];
   }, [selectedBatch]);
 
-  const uploadProps = {
-    accept: '.txt',
-    multiple: false,
-    maxCount: 1,
-    fileList,
-    showUploadList: false,
-    customRequest: async ({ file, onSuccess, onError }) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('machineId', selectedClient.clientId);
-      formData.append('label', selectedClient.label);
-      try {
-        const res = await createFileConfirmShip(formData);
-        onSuccess?.(res.data);
-        toast.success(`${file.name} uploaded success!`);
-      } catch (err) {
-        console.error(err);
-        onError?.(err);
-        toast.error(`${file.name} upload failed!`);
-      } finally {
-        setFileList([]); // clear nếu cần
-      }
-    },
-    onChange(info) {
-      setFileList(info.fileList);
-    },
-  };
-
   const handleUpdateTracking = async () => {
     try {
-      const response = await updateTrackingFake(selectedBatch?.batchId, {
-        machineId: selectedBatch.machineId,
-        label: selectedBatch.label,
-      });
+      const response = await updateTrackingFake(selectedBatch?.batchId);
 
       if (response.status === 200 || response.status === 201) {
         toast.success(response.data?.message || 'Update tracking fake success!');
@@ -374,6 +344,42 @@ const ConfirmShip = () => {
 
       // Lấy tên file từ header nếu có
       let fileName = 'confirm_ship.txt';
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?(.*)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      // Tạo link ảo và trigger download
+      const urlBlob = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = urlBlob;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(urlBlob);
+    } catch (error) {
+      console.log(error);
+      toast.error('Download file confirm ship error!');
+    } finally {
+      toast.success('Download file confirm ship success!');
+    }
+  };
+
+  const downloadFileUpdate = async () => {
+    try {
+      const response = await downloadFileUpdateTracking(selectedClient?.shopId);
+
+      // Tạo Blob từ dữ liệu trả về
+      const blob = new Blob([response.data], {
+        type: 'text/tab-separated-values;charset=utf-8',
+      });
+
+      // Lấy tên file từ header nếu có
+      let fileName = 'update_tracking.txt';
       const disposition = response.headers['content-disposition'];
       if (disposition && disposition.includes('filename=')) {
         const match = disposition.match(/filename="?(.*)"?/);
@@ -430,6 +436,20 @@ const ConfirmShip = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     fetchBatchs();
+  };
+
+  const handleUpateAllTrackingFake = async () => {
+    try {
+      const response = await updateAllTrackingFake(selectedClient?.shopId);
+
+      if (response.status === 200) {
+        toast.success('Update tracking fake success!');
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      fetchBatchs();
+    }
   };
 
   return (
@@ -493,11 +513,9 @@ const ConfirmShip = () => {
                     <span className="font-medium text-slate-700">{`${selectedClient.label} (${selectedClient.shopName})`}</span>
                   </div>
                   <div className="flex gap-2">
-                    <Upload {...uploadProps}>
-                      <Button icon={<UploadOutlined />}>
-                        <span className="font-medium">Upload Tracking</span>
-                      </Button>
-                    </Upload>
+                    <Button icon={<EditOutlined />} onClick={() => handleUpateAllTrackingFake()}>
+                      <span className="font-medium">Update Fake Tracking</span>
+                    </Button>
                     <Button icon={<MdAdd />} onClick={() => setIsModalOpen(true)}>
                       <span className="font-medium">Create Confim Ship</span>
                     </Button>

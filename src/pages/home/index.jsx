@@ -357,12 +357,11 @@ const Home = () => {
         pagination={false}
         rowKey="key"
         rowClassName={() => 'table-row-center'}
-        style={{ padding: 10 }}
+        style={{ padding: 16 }}
       />
     );
   }, []);
 
-  // table data (renderOrderInTable => tableData)
   const tableData = useMemo(() => {
     const results = (orders || []).map((item, index) => ({
       key: item?.orderId,
@@ -500,7 +499,6 @@ const Home = () => {
     }
   }, []);
 
-  // ---- Effects ----
   useEffect(() => {
     const handleResize = () => {
       const headerHeight = 240;
@@ -531,7 +529,6 @@ const Home = () => {
     }
   }, [orders, isShowRowkeys]);
 
-  // ---- JSX ----
   return (
     <div className="overflow-hidden">
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>

@@ -11,7 +11,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
   const [shopId, setShopId] = useState('');
   const [checkErrorShop, setCheckErrorShop] = useState(false);
   const [checkErrorUpload, setCheckErrorUpload] = useState(false);
-  const [typeOrder, setTypeOrder] = useState('New');
 
   const handleResetValue = () => {
     setShops([]);
@@ -54,7 +53,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
     const formData = new FormData();
     formData.append('file', fileFormat);
     formData.append('shopId', shopId);
-    formData.append('type', typeOrder);
     try {
       toast.success('Import success!');
       handleResetValue();
@@ -139,21 +137,6 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
             <span className="text-[#ff0000]">Please upload file</span>
           </div>
         )}
-        <div>
-          <div>
-            <span className="font-medium">Import Type:</span>
-          </div>
-          <div>
-            <div className="flex gap-2 items-center">
-              <Radio.Group onChange={(e) => setTypeOrder(e.target.value)} value={typeOrder} optionType="default">
-                <Radio checked={true} value="New">
-                  New
-                </Radio>
-                <Radio value="Latest ship date">Latest ship date</Radio>
-              </Radio.Group>
-            </div>
-          </div>
-        </div>
       </div>
     </Modal>
   );

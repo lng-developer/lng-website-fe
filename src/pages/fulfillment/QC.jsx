@@ -165,7 +165,7 @@ const QC = () => {
         pagination={false}
         rowKey="key"
         rowClassName={() => 'table-row-center'}
-        style={{ padding: 10 }}
+        style={{ padding: 16 }}
       />
     ),
     [subColumns]
@@ -623,7 +623,6 @@ const QC = () => {
         viewportWidth={1000}
         viewportHeight={750}
         indexQC={indexQC}
-        // NEW: Sau Pass/Reject -> nhảy sang order/item Pending kế tiếp
         onNextAfter={goNextAfter}
       />
     </div>

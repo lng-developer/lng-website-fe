@@ -2,7 +2,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { dataFilterListing } from '../../utils/dataFilter';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Image, Input, Pagination, Table } from 'antd';
+import { Flex, Image, Input, Pagination, Table, Tooltip } from 'antd';
 import { FaBitcoin, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import NoImage from '../../assets/NoImage.jpg';
 import StatusComponent from '../../components/StatusComponent';
@@ -23,6 +23,7 @@ import { getAllSellers } from '../../apis/user';
 import SelectSeller from '../../components/SelectSeller';
 import { getALlShop } from '../../apis/order';
 import { useAuth } from '../../context/AuthContext';
+import { MdOutlineRefresh } from 'react-icons/md';
 const PAGE_SIZE = 10;
 
 const Listing = () => {
@@ -485,6 +486,18 @@ const Listing = () => {
                   fetchCountStatus();
                 }}
               />
+              <Tooltip title="Refresh">
+                <button
+                  className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => {
+                    fetchAllListing(filters);
+                    fetchCountStatus();
+                    toast.success('Refresh success!');
+                  }}
+                >
+                  <MdOutlineRefresh size={20} />
+                </button>
+              </Tooltip>
             </div>
           </div>
           <div>

@@ -185,72 +185,74 @@ const PointsDashboard = () => {
           </div>
         </div>
       </div>
-      {/* THỐNG KÊ */}
-      <div className="w-[60%] pt-20 px-8 flex justify-between items-center">
-        <div
-          className="w-[32%] p-4 rounded-lg"
-          style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
-        >
-          <div className="flex items-center justify-between h-[50px]">
-            <div>
-              <div className="font-medium text-[#64748b]">Total Users</div>
-              <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
-                {meta?.returned || 0}
-              </span>
+
+      <div className="mt-[60px] px-8 py-4 h-full">
+        {/* THỐNG KÊ */}
+        <div className="w-[60%] flex justify-between items-center">
+          <div
+            className="w-[32%] p-4 rounded-lg"
+            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+          >
+            <div className="flex items-center justify-between h-[50px]">
+              <div>
+                <div className="font-medium text-[#64748b]">Total Users</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.pending }}>
+                  {meta?.returned || 0}
+                </span>
+              </div>
+              <HiMiniUserGroup size={30} color={dataColors.pending} />
             </div>
-            <HiMiniUserGroup size={30} color={dataColors.pending} />
+          </div>
+
+          <div
+            className="w-[32%] p-4 rounded-lg"
+            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+          >
+            <div className="flex items-center justify-between h-[50px]">
+              <div>
+                <div className="font-medium text-[#64748b]">Total Balance</div>
+                <span className="text-xl font-bold" style={{ color: dataColors.success }}>
+                  {totalBalance}
+                </span>
+              </div>
+              <FcCurrencyExchange size={30} />
+            </div>
+          </div>
+
+          <div
+            className="w-[32%] p-4 rounded-lg"
+            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+          >
+            <div className="flex items-center justify-between h-[50px]">
+              <div>
+                <div className="font-medium text-[#64748b]">Date Range</div>
+                <span className="font-medium" style={{ color: dataColors.process }}>
+                  {formatApiRange(filters)}
+                </span>
+              </div>
+              <FcCalendar size={30} />
+            </div>
           </div>
         </div>
-
-        <div
-          className="w-[32%] p-4 rounded-lg"
-          style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
-        >
-          <div className="flex items-center justify-between h-[50px]">
-            <div>
-              <div className="font-medium text-[#64748b]">Total Balance</div>
-              <span className="text-xl font-bold" style={{ color: dataColors.success }}>
-                {totalBalance}
-              </span>
-            </div>
-            <FcCurrencyExchange size={30} />
-          </div>
+        <div className="mt-4">
+          {/* BẢNG USERS */}
+          <Table
+            className="no-indent-table "
+            bordered
+            columns={columns}
+            dataSource={users}
+            rowKey="_id"
+            loading={loading}
+            pagination={{
+              total: meta?.totalUsers,
+              pageSize: filters.limit,
+              current: filters.page,
+              onChange: handlePageChange,
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} items`,
+            }}
+          />
         </div>
-
-        <div
-          className="w-[32%] p-4 rounded-lg"
-          style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
-        >
-          <div className="flex items-center justify-between h-[50px]">
-            <div>
-              <div className="font-medium text-[#64748b]">Date Range</div>
-              <span className="font-medium" style={{ color: dataColors.process }}>
-                {formatApiRange(filters)}
-              </span>
-            </div>
-            <FcCalendar size={30} />
-          </div>
-        </div>
-      </div>
-
-      <div className="px-8 py-4 h-full mt-8">
-        {/* BẢNG USERS */}
-        <Table
-          className="no-indent-table "
-          bordered
-          columns={columns}
-          dataSource={users}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            total: meta?.totalUsers,
-            pageSize: filters.limit,
-            current: filters.page,
-            onChange: handlePageChange,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} items`,
-          }}
-        />
 
         <UserDetailModal open={isDetailModalOpen} onCancel={handleCloseDetailModal} userData={selectedUser} />
       </div>

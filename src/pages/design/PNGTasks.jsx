@@ -3,7 +3,7 @@ import { dataFilterStatusFulfillment, dataFilterStatusFulfillmentDesign } from '
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Input, Pagination, Table } from 'antd';
+import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import StatusComponent from '../../components/StatusComponent';
@@ -14,6 +14,7 @@ import { getAllCountStatusScaleForDesign, getAllFulfillScaleForDesign, getALlSho
 import DynamicImageUpload from '../../components/DynamicImageUpload';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
+import { MdOutlineRefresh } from 'react-icons/md';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import OrderInfoForm from '../fulfillment/table/ItemOrderInfo';
@@ -488,6 +489,18 @@ const FulfillmentScale = () => {
                   updateFilter({ asin_type: val });
                 }}
               />
+              <Tooltip title="Refresh">
+                <button
+                  className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => {
+                    fetchAllFulfill(filters);
+                    fetchCountStatus();
+                    toast.success('Refresh success!');
+                  }}
+                >
+                  <MdOutlineRefresh size={20} />
+                </button>
+              </Tooltip>
             </div>
           </div>
           <div>

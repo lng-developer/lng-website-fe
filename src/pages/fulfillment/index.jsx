@@ -91,7 +91,6 @@ const FulfillmentScale = () => {
       { title: <span style={{ color: dataColors.title }}>Order Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'orderOwner', key: 'orderOwner', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Express</span>, dataIndex: 'express', key: 'express', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
     ],
     []
@@ -204,7 +203,7 @@ const FulfillmentScale = () => {
         pagination={false}
         rowKey="key"
         rowClassName={() => 'table-row-center'}
-        style={{ padding: 10 }}
+        style={{ padding: 16 }}
       />
     ),
     [subColumns]
@@ -247,7 +246,6 @@ const FulfillmentScale = () => {
       status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
       orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
       scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
-      express: <StatusComponent title={item?.express || 'No data'} color={dataColors.pending} />,
       scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
       actions: <ItemAction />,
       subItems: (item?.items || []).map((itemSub, indexItem) => ({

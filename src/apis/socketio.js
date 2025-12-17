@@ -28,15 +28,24 @@ const getShippingBatch = () => {
   return instance.get('/shipping-batches');
 };
 
-const updateTrackingFake = (batchId, payload) => {
-  return instance.post(`/shipping-batches/${batchId}/update-from-system`, {
-    machineId: payload.machineId,
-    label: payload.label,
+const updateTrackingFake = (batchId) => {
+  return instance.post(`/shipping-batches/${batchId}/update-from-system`);
+};
+
+const updateAllTrackingFake = (machineId) => {
+  return instance.post(`/shipping-batches/update-all-fake`, {
+    machineId,
   });
 };
 
 const downloadFileConfirmShip = (batchId, shipDate) => {
   return instance.get(`/shipping-batches/${batchId}/download?shipDate=${shipDate}`, {
+    responseType: 'blob',
+  });
+};
+
+const downloadFileUpdateTracking = (machineId) => {
+  return instance.get(`/shipping-batches/download-all-updated?machineId=${machineId}`, {
     responseType: 'blob',
   });
 };
@@ -50,4 +59,6 @@ export {
   getShippingBatch,
   updateTrackingFake,
   downloadFileConfirmShip,
+  updateAllTrackingFake,
+  downloadFileUpdateTracking,
 };
