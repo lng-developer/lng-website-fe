@@ -10,6 +10,7 @@ const TITLES = {
   '/cost-center/config': 'Config Cost Center',
   '/cost-center/product-types': 'Product Type Groups',
   '/cost-center/mapping': 'Mapping Cost Center',
+  '/cost-center/group-standards': 'Teams Group',
   '/report/sale': 'Sale Report',
   '/report/orders-cost': 'Report Orders Cost',
   '/report/ads': 'Amazon Ads Report',
@@ -19,6 +20,10 @@ const TITLES = {
   '/design/points': 'Points Dashboard',
   '/extensions': 'Extensions',
   '/extensions/confirm-ship': 'Confirm Shipping',
+  '/account': 'Users Management',
+  '/sku_mapping': 'SKU Mapping',
+  '/vendor/list-vendor': 'Manage Vendor',
+  '/vendor/vendor-products': 'Vendor Products',
 };
 
 const TitlePages = () => {

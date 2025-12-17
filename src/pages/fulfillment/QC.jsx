@@ -104,8 +104,14 @@ const QC = () => {
           key: 'purchase_date',
           align: 'center',
         },
-        { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
+        {
+          title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
+          dataIndex: 'shipping_type',
+          key: 'shipping_type',
+          align: 'center',
+        },
+        { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
         isActiveFilter.title === 'Failed' && {
@@ -114,7 +120,6 @@ const QC = () => {
           key: 'action_retry',
           align: 'center',
         },
-        { title: <span style={{ color: dataColors.title }}>Basecost</span>, dataIndex: 'base_cost', key: 'base_cost', align: 'center' },
       ].filter(Boolean),
     [isActiveFilter.title]
   );
@@ -369,15 +374,6 @@ const QC = () => {
       action_retry:
         isActiveFilter.title === 'Failed' ? (
           <Tooltip title="Retry Scale">
-            {/* <button
-              className="cursor-pointer p-2 rounded-full hover:bg-gray-100 text-blue-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRetry(item.orderId);
-              }}
-            >
-              <MdOutlineReplay size={22} />
-            </button> */}
             <div
               className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
               style={{ borderColor: dataColors.pending }}
@@ -395,7 +391,7 @@ const QC = () => {
             </div>
           </Tooltip>
         ) : null,
-      base_cost: <span className="font-medium">${item?.base_cost}</span>,
+      shipping_type: <StatusComponent title={item?.shipping_type} color={dataColors.asin} />,
       shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
       qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
       subItems: (item?.items || []).map((itemSub, indexItem) => ({

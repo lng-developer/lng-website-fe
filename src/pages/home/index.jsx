@@ -33,7 +33,8 @@ import ModalImportOrder from './ModalImportOrder';
 import { getAllTeam } from '../../apis/teams';
 import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
-// import { ArchiveRestore } from 'lucide-react';
+import dayjs from 'dayjs';
+const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 
 const Home = () => {
@@ -57,6 +58,10 @@ const Home = () => {
   const [teams, setTeams] = useState([]);
   const [selectTeam, setSelectTeam] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
+    const saved = localStorage.getItem(LAST_UPDATED_KEY);
+    return saved ? new Date(saved) : null;
+  });
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -69,6 +74,17 @@ const Home = () => {
     shopName: '',
     teamId: '',
   });
+
+  const updateLastUpdatedAt = useCallback(() => {
+    const now = new Date();
+    setLastUpdatedAt(now);
+    localStorage.setItem(LAST_UPDATED_KEY, now.toISOString());
+  }, []);
+
+  const lastUpdatedText = useMemo(() => {
+    if (!lastUpdatedAt) return 'Last updated: —';
+    return `Last updated at ${dayjs(lastUpdatedAt).format('HH:mm')}`;
+  }, [lastUpdatedAt]);
 
   // ---- Callbacks & Memos ----
   const updateFilter = useCallback((newValues) => {
@@ -144,23 +160,27 @@ const Home = () => {
     }
   }, [filters]);
 
-  const fetchAllOrder = useCallback(async (params) => {
-    setLoading(true);
-    try {
-      const response = await getALlOrder(params);
-      if (response.status === 200) {
-        setOrders(response.data?.data);
-        setTotalCount(response.data?.totalCount);
-      } else {
-        toast.error(response.data?.message);
+  const fetchAllOrder = useCallback(
+    async (params) => {
+      setLoading(true);
+      try {
+        const response = await getALlOrder(params);
+        if (response.status === 200) {
+          setOrders(response.data?.data);
+          setTotalCount(response.data?.totalCount);
+        } else {
+          toast.error(response.data?.message);
+        }
+      } catch (error) {
+        console.log(error);
+        toast.error('Erorr System!');
+      } finally {
+        setLoading(false);
+        updateLastUpdatedAt();
       }
-    } catch (error) {
-      console.log(error);
-      toast.error('Erorr System!');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [updateLastUpdatedAt]
+  );
   const handleImportTracking = useCallback(async () => {
     if (isImporting) return;
 
@@ -536,7 +556,7 @@ const Home = () => {
           <h1 className="text-2xl !mb-0 flex items-center" style={{ color: 'black' }}>
             Manage Orders{' '}
             <span className="text-xs ml-5 italic" style={{ color: dataColors.title, fontStyle: 'italic' }}>
-              Last updated at 10:56
+              {lastUpdatedText}
             </span>
           </h1>
           <div className="flex justify-center items-center gap-2">
@@ -545,7 +565,7 @@ const Home = () => {
               onClick={handleImportTracking}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Import Tracking
+                Pull Tracking
               </span>
               <div style={{ color: 'black' }}>
                 <LuArrowDownNarrowWide size={15} />

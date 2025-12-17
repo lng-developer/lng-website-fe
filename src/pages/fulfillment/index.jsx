@@ -22,7 +22,8 @@ import { handleColorStatus, handleColorStatusScale } from '../../utils/handleCol
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
-
+import dayjs from 'dayjs';
+const LAST_UPDATED_KEY = 'orders_fulfill_last_updated_at';
 const PAGE_SIZE = 10;
 
 const FulfillmentScale = () => {
@@ -38,6 +39,10 @@ const FulfillmentScale = () => {
   const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
+    const saved = localStorage.getItem(LAST_UPDATED_KEY);
+    return saved ? new Date(saved) : null;
+  });
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
@@ -47,6 +52,17 @@ const FulfillmentScale = () => {
     search: '',
     shopName: '',
   });
+
+  const updateLastUpdatedAt = useCallback(() => {
+    const now = new Date();
+    setLastUpdatedAt(now);
+    localStorage.setItem(LAST_UPDATED_KEY, now.toISOString());
+  }, []);
+
+  const lastUpdatedText = useMemo(() => {
+    if (!lastUpdatedAt) return 'Last updated: —';
+    return `Last updated at ${dayjs(lastUpdatedAt).format('HH:mm')}`;
+  }, [lastUpdatedAt]);
 
   // ====== Callbacks & Memos ======
   const updateFilter = useCallback((newValues) => {
@@ -104,22 +120,26 @@ const FulfillmentScale = () => {
   }, []);
 
   // --- fetchers ---
-  const fetchAllFulfill = useCallback(async (params) => {
-    setLoading(true);
-    try {
-      const response = await getAllFulfillScale(params);
-      if (response.status === 200) {
-        setDataSource(response.data?.data);
-        setTotalCount(response.data?.totalCount);
-      } else {
-        toast.error(response.data?.message);
+  const fetchAllFulfill = useCallback(
+    async (params) => {
+      setLoading(true);
+      try {
+        const response = await getAllFulfillScale(params);
+        if (response.status === 200) {
+          setDataSource(response.data?.data);
+          setTotalCount(response.data?.totalCount);
+        } else {
+          toast.error(response.data?.message);
+        }
+      } catch (error) {
+        toast.error(error?.response?.data?.message);
+      } finally {
+        setLoading(false);
+        updateLastUpdatedAt();
       }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [updateLastUpdatedAt]
+  );
 
   const fetchCountStatus = useCallback(async () => {
     try {
@@ -331,6 +351,9 @@ const FulfillmentScale = () => {
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Group Task Scale
+            <span className="text-xs ml-5 italic" style={{ color: dataColors.title, fontStyle: 'italic' }}>
+              {lastUpdatedText}
+            </span>
           </h1>
           <div className="flex justify-center items-center gap-2">
             <DateRangePicker
