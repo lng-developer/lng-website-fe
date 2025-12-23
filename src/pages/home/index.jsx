@@ -34,8 +34,52 @@ import { getAllTeam } from '../../apis/teams';
 import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
+import OrderLogPopover from '../../components/OrderLogPopover';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
+
+const mockEvents = [
+  {
+    id: '1',
+    title: 'Order',
+    actorName: '',
+    at: '2025-07-23T07:42:12.000Z',
+    status: 'SUCCESS',
+    meta: { orderId: '112-6460110-1390647' },
+  },
+  {
+    id: '2',
+    title: 'Fulfill Order',
+    actorName: 'Trần Thị Thu Trang',
+    at: '2025-07-23T09:26:07.000Z',
+    status: 'SUCCESS',
+    changes: [{ field: 'Order Fulfill', to: '#f35af31-d676-4f92-9f5d-c9673214c5e6' }],
+  },
+  {
+    id: '3',
+    title: 'Update Item',
+    actorName: 'Vũ Thị Uyên',
+    at: '2025-07-23T11:16:33.000Z',
+    status: 'SUCCESS',
+    changes: [{ field: 'PrintSide', to: 'back' }],
+  },
+  {
+    id: '4',
+    title: 'Update Item',
+    actorName: 'Vũ Thị Uyên',
+    at: '2025-07-23T11:16:37.000Z',
+    status: 'SUCCESS',
+    changes: [{ field: 'PrintSide', to: 'front' }],
+  },
+  {
+    id: '5',
+    title: 'Update Item',
+    actorName: 'Vũ Thị Uyên',
+    at: '2025-07-23T16:21:36.000Z',
+    status: 'SUCCESS',
+    changes: [{ field: 'Status', from: 'New', to: 'CANCELLED' }],
+  },
+];
 
 const Home = () => {
   const [orders, setOrders] = useState([]);
@@ -402,7 +446,11 @@ const Home = () => {
       status: (
         <div className="flex items-center justify-center gap-1">
           <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />
-          <TbHistory size={16} className="cursor-pointer" />
+          <OrderLogPopover
+            orderCreatedAt={item?.createdAt}
+            events={item?.history}
+            triggerNode={<TbHistory size={16} className="cursor-pointer" />}
+          />
         </div>
       ),
       created: (

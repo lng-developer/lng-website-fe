@@ -290,3 +290,11 @@
   > th:not(:last-child):not(.ant-table-selection-column):not(.ant-table-row-expand-icon-cell):not([colspan])::before {
   background-color: transparent !important;
 }
+
+.ant-timeline-item {
+  padding-bottom: 5px !important;
+}
+
+.ant-timeline-item .ant-timeline-item-tail {
+  border-inline-start: 2px solid #000 !important;
+}

@@ -443,7 +443,7 @@ const ConfirmShip = () => {
       const response = await updateAllTrackingFake(selectedClient?.shopId);
 
       if (response.status === 200) {
-        toast.success('Update tracking fake success!');
+        toast.success(response.data?.message);
       }
     } catch (error) {
       console.log(error);
