@@ -29,9 +29,9 @@ import { HiOutlineBuildingStorefront, HiOutlineKey } from 'react-icons/hi2';
 import { BsFiletypePsd, BsGraphUp } from 'react-icons/bs';
 import { CgShoppingBag, CgFileDocument } from 'react-icons/cg';
 import { IoImageOutline, IoStorefrontOutline } from 'react-icons/io5';
-import { AiOutlineFileSync, AiOutlineCopy, AiOutlineFundView, AiFillIdcard } from 'react-icons/ai';
+import { AiOutlineFileSync, AiOutlineCopy, AiOutlineFundView, AiFillIdcard, AiOutlineHome } from 'react-icons/ai';
 import { GrDocumentConfig } from 'react-icons/gr';
-import { BiCubeAlt } from 'react-icons/bi';
+import { BiCubeAlt, BiHomeAlt } from 'react-icons/bi';
 import { BiExtension } from 'react-icons/bi';
 import { MdOutlineConnectedTv } from 'react-icons/md';
 
@@ -47,6 +47,11 @@ export const topMenus = [
 
 export const detailMenus = {
   sales: [
+    {
+      key: routes.dashboard,
+      label: 'Dashboard',
+      icon: <BiHomeAlt size={20} />,
+    },
     {
       key: routes.order_amazon,
       label: 'Orders',

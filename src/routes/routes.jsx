@@ -1,4 +1,5 @@
 const routes = {
+  dashboard: '/dashboard',
   home: '/',
   order: '/order',
   sale_listing: '/sales/listing',
