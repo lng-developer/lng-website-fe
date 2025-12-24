@@ -30,6 +30,8 @@ export default function OrderLogPopover({ events = [], triggerNode, orderCreated
         return 'Change status order by';
       case 'SCALE_APPROVE_ITEM':
         return 'Update item by';
+      case 'OPEN_CASE':
+        return 'Update item by';
       default:
         break;
     }

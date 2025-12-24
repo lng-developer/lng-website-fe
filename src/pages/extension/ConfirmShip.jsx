@@ -209,7 +209,7 @@ const ConfirmShip = () => {
           </Tooltip>
           {record.type === 'UPDATE_GLOBAL' ? (
             <Tooltip title="Download File">
-              <Button icon={<DownloadOutlined />} onClick={() => downloadFileUpdate(record.batchId, record.type, record.confirmShipDate)} />
+              <Button icon={<DownloadOutlined />} onClick={() => downloadFileUpdate(record.batchId)} />
             </Tooltip>
           ) : (
             <Tooltip title="Download File">
@@ -369,9 +369,9 @@ const ConfirmShip = () => {
     }
   };
 
-  const downloadFileUpdate = async () => {
+  const downloadFileUpdate = async (batchId) => {
     try {
-      const response = await downloadFileUpdateTracking(selectedClient?.shopId);
+      const response = await downloadFileUpdateTracking(selectedClient?.shopId, batchId);
 
       // Tạo Blob từ dữ liệu trả về
       const blob = new Blob([response.data], {
