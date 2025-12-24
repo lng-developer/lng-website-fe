@@ -22,10 +22,11 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
           }}
           style={{ ...provided.draggableProps.style, opacity: snapshot.isDragging ? 0.8 : 1 }}
           className={`
-              bg-white p-3 rounded-lg shadow-sm border border-slate-200 mb-2.5 group 
-              hover:border-blue-400 cursor-pointer hover:shadow-md transition-all
-              ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200 rotate-2' : ''}
-          `}
+    bg-white p-3 rounded-lg shadow-sm border border-slate-200 mb-2.5 group 
+    hover:border-blue-400 cursor-pointer hover:shadow-md 
+    transition-colors duration-0
+    ${snapshot.isDragging ? 'shadow-lg ring-1 ring-blue-200 rotate-2' : ''}
+`}
         >
           {task.attachments && task.attachments.length > 0 && (
             <div className="h-32 w-full mb-2 rounded-md overflow-hidden bg-slate-100">

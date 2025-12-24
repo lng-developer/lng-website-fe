@@ -93,10 +93,10 @@ const KanbanColumn = React.memo(
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={`
-              flex-1 overflow-y-auto px-2 min-h-[50px]
-              ${snapshot.isDraggingOver ? 'bg-black/5 rounded-lg mx-1' : ''} 
-              scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
-            `}
+      flex-1 overflow-y-auto px-2 min-h-[50px]
+      ${snapshot.isDraggingOver ? 'bg-slate-100/50' : ''} 
+      scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
+    `}
             >
               {items.map((task, index) => (
                 <TaskCard
