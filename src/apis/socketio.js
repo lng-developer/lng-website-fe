@@ -45,7 +45,7 @@ const downloadFileConfirmShip = (batchId, shipDate) => {
 };
 
 const downloadFileUpdateTracking = (machineId, batchId) => {
-  return instance.get(`/shipping-batches/download-all-updated?machineId=${machineId}?batchId=${batchId}`, {
+  return instance.get(`/shipping-batches/download-all-updated?machineId=${machineId}&batchId=${batchId}`, {
     responseType: 'blob',
   });
 };
