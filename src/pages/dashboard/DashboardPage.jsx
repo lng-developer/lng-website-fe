@@ -276,7 +276,7 @@ const Dashboard = () => {
               <Select>
                 <Select.Option value="Design">Design</Select.Option>
                 <Select.Option value="Dev">Development</Select.Option>
-                <Select.Option value="Marketing">Marketing</Select.Option>
+                <Select.Option value="Seller">Seller</Select.Option>
               </Select>
             </Form.Item>
           </div>

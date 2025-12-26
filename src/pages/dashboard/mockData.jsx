@@ -110,7 +110,7 @@ export const MOCK_TASKS = {
       assignee: 'Le Van C',
       priority: 'High',
       due: '2025-10-23',
-      tag: 'Marketing',
+      tag: 'Seller',
       description: '',
       note: '',
       isCompleted: false,
