@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Checkbox, Image, Tooltip, Avatar, Button, Input, Tag, Divider, Upload, message } from 'antd';
+import { Modal, Checkbox, Image, Tooltip, Avatar, Button, Input, Tag, Divider, Upload, message, Popconfirm, Select } from 'antd';
 import {
   CloseOutlined,
   PlusOutlined,
@@ -7,38 +7,35 @@ import {
   CheckOutlined,
   CloseCircleOutlined,
   PaperClipOutlined,
-  SaveOutlined,
+  DeleteOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { FiEdit } from 'react-icons/fi';
+import { MdOutlineDelete } from 'react-icons/md';
 import { useAuth } from '../../../context/AuthContext';
-import { COLUMN_CONFIG } from '../mockData';
+import { COLUMN_CONFIG, ALL_MEMBERS } from '../mockData';
 
-const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTask }) => {
+const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTask, onDeleteTask }) => {
   const { user } = useAuth();
 
-  // State quản lý chế độ edit
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
-
-  // State lưu giá trị tạm thời khi đang gõ
   const [descValue, setDescValue] = useState('');
   const [noteValue, setNoteValue] = useState('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
 
-  // Reset state khi mở modal task mới
   useEffect(() => {
     if (task) {
       setDescValue(task.description || '');
       setNoteValue(task.note || '');
       setIsEditingDesc(false);
       setIsEditingNote(false);
+      setIsAddingMember(false);
     }
   }, [task]);
 
-  // --- SỬA LỖI TẠI ĐÂY: Đưa useMemo lên trước lệnh return null ---
-  // Kiểm tra quyền: Admin hoặc Leader mới được sửa
   const canEdit = useMemo(() => ['Admin', 'Leader'].includes(user?.role), [user]);
 
-  // Sau khi gọi hết tất cả các Hooks thì mới được return
   if (!task) return null;
 
   const headerColor = COLUMN_CONFIG[columnId]?.headerColor || '#ccc';
@@ -61,8 +58,40 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
     const imageUrl = URL.createObjectURL(file);
     const newAttachments = [...(task.attachments || []), imageUrl];
     onUpdateTask({ ...task, attachments: newAttachments });
-    message.success('Image added successfully');
+    message.success('Image added');
   };
+
+  // Yêu cầu 3: Xóa attachment
+  const handleDeleteAttachment = (indexToRemove) => {
+    const newAttachments = task.attachments.filter((_, index) => index !== indexToRemove);
+    onUpdateTask({ ...task, attachments: newAttachments });
+    message.success('Attachment deleted');
+  };
+
+  // Yêu cầu 1: Thêm logic "Select All" cho Leader/Admin
+  const handleAddMember = (value) => {
+    if (value === 'ALL') {
+      // Gộp tất cả thành viên, loại bỏ trùng lặp
+      const mergedMembers = Array.from(new Set([...task.assignees, ...ALL_MEMBERS]));
+      onUpdateTask({ ...task, assignees: mergedMembers });
+      message.success('All members added');
+    } else {
+      if (task.assignees.includes(value)) {
+        message.warning('Member already assigned');
+        return;
+      }
+      const newAssignees = [...task.assignees, value];
+      onUpdateTask({ ...task, assignees: newAssignees });
+      message.success(`Added ${value}`);
+    }
+    setIsAddingMember(false);
+  };
+
+  // Tạo option cho Select thêm thành viên
+  const memberOptions = ALL_MEMBERS.map((m) => ({ label: m, value: m }));
+  if (canEdit) {
+    memberOptions.unshift({ label: 'Select All Team', value: 'ALL', className: 'font-bold text-blue-600' });
+  }
 
   return (
     <Modal
@@ -73,7 +102,6 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
       closeIcon={null}
       styles={{ content: { padding: 0, overflow: 'hidden', borderRadius: '12px' } }}
     >
-      {/* ... Phần giao diện giữ nguyên không đổi ... */}
       <div style={{ backgroundColor: headerColor }} className="h-10 w-full pr-2 flex flex-row items-center justify-end group">
         <button onClick={onClose} className="px-2 py-1 hover:bg-black/10 rounded-full text-white transition-colors cursor-pointer z-10">
           <CloseOutlined />
@@ -81,9 +109,8 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
       </div>
 
       <div className="p-4 grid grid-cols-1 lg:grid-cols-3">
-        {/* CỘT TRÁI (CHI TIẾT) */}
+        {/* CỘT TRÁI */}
         <div className="col-span-2 pr-2">
-          {/* Title & Checkbox */}
           <div className="flex gap-4 mb-4">
             <div className="mt-1">
               <Checkbox checked={task.isCompleted} onChange={(e) => onUpdateTask({ ...task, isCompleted: e.target.checked })} />
@@ -99,20 +126,33 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                 <span className="underline decoration-1 cursor-pointer font-medium text-slate-700">{COLUMN_CONFIG[columnId]?.title}</span>
               </p>
             </div>
-            {/* Nút duyệt task */}
             {canEdit && (
               <div className="flex flex-row gap-2">
+                <Popconfirm
+                  title="Delete the task"
+                  description="Are you sure to delete this task?"
+                  onConfirm={() => onDeleteTask(task.id, columnId)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <Tooltip title={' Delete Task'}>
+                    <button className="flex items-center justify-center cursor-pointer  border-1 rounded-md h-[32px] w-[32px] bg-red-400 border-red-500 text-red-200 hover:opacity-85">
+                      <MdOutlineDelete size={20} color="white" />
+                    </button>
+                  </Tooltip>
+                </Popconfirm>
+
                 <Tooltip title="Accept">
                   <Button type="primary" className="bg-green-600 hover:bg-green-500" icon={<CheckOutlined />} onClick={handleAccept} />
                 </Tooltip>
                 <Tooltip title="Reject">
-                  <Button danger icon={<CloseCircleOutlined />} onClick={handleReject} />
+                  <Button icon={<CloseCircleOutlined />} onClick={handleReject} />
                 </Tooltip>
               </div>
             )}
           </div>
 
-          {/* Attachments Section */}
+          {/* Attachments (Cập nhật giao diện xóa) */}
           {(task.attachments?.length > 0 || canEdit) && (
             <div className="mb-6 ml-9">
               <div className="flex items-center gap-2 mb-2">
@@ -125,17 +165,20 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                   </Upload>
                 )}
               </div>
-
               <Image.PreviewGroup>
                 <div className="flex gap-4 flex-wrap">
                   {task.attachments?.map((url, idx) => (
-                    <Image
-                      key={idx}
-                      width={120}
-                      height={90}
-                      src={url}
-                      className="object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90"
-                    />
+                    <div key={idx} className="relative group">
+                      <Image width={120} height={90} src={url} className="object-cover rounded-lg border border-slate-200" />
+                      {/* Nút xóa attachment */}
+                      {canEdit && (
+                        <Popconfirm title="Delete image?" onConfirm={() => handleDeleteAttachment(idx)} okText="Yes" cancelText="No">
+                          <div className="absolute top-1 right-1 bg-white/80 hover:bg-white text-red-500 rounded-full w-5 h-5 flex items-center justify-center cursor-pointer shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <CloseOutlined style={{ fontSize: '10px' }} />
+                          </div>
+                        </Popconfirm>
+                      )}
+                    </div>
                   ))}
                 </div>
               </Image.PreviewGroup>
@@ -144,15 +187,36 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
 
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1 space-y-6">
-              {/* Members & Labels */}
+              {/* Members */}
               <div className="flex flex-wrap gap-6">
                 <div>
                   <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Members</h4>
-                  <div className="flex gap-2">
-                    <Tooltip title={task.assignee}>
-                      <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{task.assignee?.charAt(0)}</Avatar>
-                    </Tooltip>
-                    {canEdit && <Button shape="circle" icon={<PlusOutlined />} size="small" />}
+                  <div className="flex gap-2 items-center">
+                    <Avatar.Group maxCount={5}>
+                      {task.assignees?.map((member, idx) => (
+                        <Tooltip title={member} key={idx}>
+                          <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{member.charAt(0)}</Avatar>
+                        </Tooltip>
+                      ))}
+                    </Avatar.Group>
+
+                    {canEdit && (
+                      <div className="relative">
+                        {!isAddingMember ? (
+                          <Button shape="circle" icon={<PlusOutlined />} size="small" onClick={() => setIsAddingMember(true)} />
+                        ) : (
+                          <Select
+                            autoFocus
+                            style={{ width: 160 }}
+                            size="small"
+                            placeholder="Select member"
+                            onSelect={handleAddMember}
+                            onBlur={() => setIsAddingMember(false)}
+                            options={memberOptions}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -161,12 +225,11 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                     <Tag color="blue" className="px-3 py-1 text-sm rounded cursor-pointer hover:opacity-80 m-0">
                       {task.tag}
                     </Tag>
-                    {canEdit && <Button shape="circle" icon={<PlusOutlined />} size="small" />}
                   </div>
                 </div>
               </div>
 
-              {/* DESCRIPTION SECTION */}
+              {/* Description & Notes (Giữ nguyên) */}
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <AlignLeftOutlined className="text-lg text-slate-600" />
@@ -175,7 +238,7 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                     <Tooltip title="Edit">
                       <FiEdit
                         size={14}
-                        className="cursor-pointer text-slate-500 hover:text-slate-800"
+                        className="cursor-pointer text-slate-500 hover:text-slate-800 mb-2"
                         onClick={() => setIsEditingDesc(true)}
                       />
                     </Tooltip>
@@ -184,13 +247,7 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                 <div className="ml-8">
                   {isEditingDesc ? (
                     <div className="space-y-2">
-                      <Input.TextArea
-                        rows={4}
-                        value={descValue}
-                        onChange={(e) => setDescValue(e.target.value)}
-                        placeholder="Add a more detailed description..."
-                        autoFocus
-                      />
+                      <Input.TextArea rows={4} value={descValue} onChange={(e) => setDescValue(e.target.value)} autoFocus />
                       <div className="flex gap-2">
                         <Button type="primary" size="small" onClick={handleSaveDesc}>
                           Save
@@ -219,7 +276,6 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                 </div>
               </div>
 
-              {/* NOTE SECTION */}
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <PaperClipOutlined className="text-lg text-slate-600" />
@@ -228,7 +284,7 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                     <Tooltip title="Edit">
                       <FiEdit
                         size={14}
-                        className="cursor-pointer text-slate-500 hover:text-slate-800"
+                        className="cursor-pointer text-slate-500 hover:text-slate-800 mb-2"
                         onClick={() => setIsEditingNote(true)}
                       />
                     </Tooltip>
@@ -237,13 +293,7 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
                 <div className="ml-8">
                   {isEditingNote ? (
                     <div className="space-y-2">
-                      <Input.TextArea
-                        rows={3}
-                        value={noteValue}
-                        onChange={(e) => setNoteValue(e.target.value)}
-                        placeholder="Add a note..."
-                        autoFocus
-                      />
+                      <Input.TextArea rows={3} value={noteValue} onChange={(e) => setNoteValue(e.target.value)} autoFocus />
                       <div className="flex gap-2">
                         <Button type="primary" size="small" onClick={handleSaveNote}>
                           Save
@@ -275,39 +325,51 @@ const TaskDetailModal = ({ task, open, onClose, columnId, onUpdateTask, onMoveTa
           </div>
         </div>
 
-        {/* CỘT PHẢI (SIDEBAR & ACTIVITY) */}
+        {/* CỘT PHẢI (SIDEBAR) */}
         <div className="w-full space-y-6 flex-shrink-0 border-l border-slate-200 pl-4 lg:pl-6">
+          {/* <div>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Actions</h4>
+            {canEdit && (
+              <Popconfirm
+                title="Delete the task"
+                description="Are you sure to delete this task?"
+                onConfirm={() => onDeleteTask(task.id, columnId)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Tooltip title={' Delete Task'}>
+                  <Button block danger icon={<DeleteOutlined />} className="text-left justify-start"></Button>
+                </Tooltip>
+              </Popconfirm>
+            )}
+          </div> */}
+
+          {/* <Divider /> */}
+
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <AlignLeftOutlined className="text-lg text-slate-600" />
-                <h3 className="text-base font-semibold text-slate-700">Activity</h3>
-              </div>
+            <div className="flex items-center gap-2 mb-4">
+              <HistoryOutlined className="text-lg text-slate-600" />
+              <h3 className="text-base font-semibold text-slate-700">Activity</h3>
             </div>
-
-            <div className="flex gap-2 mb-4">
-              <Avatar>{user?.username?.charAt(0) || 'U'}</Avatar>
-              <div className="flex-1 bg-white border border-slate-200 rounded-md shadow-sm p-2 hover:shadow-md transition-shadow">
-                <Input.TextArea placeholder="Write a comment..." autoSize={{ minRows: 1, maxRows: 4 }} variant="borderless" />
-              </div>
-            </div>
-
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {task.comments?.map((cmt, idx) => (
-                <div key={idx} className="flex gap-3">
-                  <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
-                    {cmt.user.charAt(0)}
-                  </Avatar>
-                  <div>
-                    <div className="text-sm">
-                      <span className="font-bold text-slate-700 mr-2">{cmt.user}</span>
-                      <span className="text-xs text-slate-400">{cmt.time}</span>
+              {task.activities?.length > 0 ? (
+                task.activities.map((act, idx) => (
+                  <div key={idx} className="flex gap-3 text-sm">
+                    <Avatar size="small" style={{ backgroundColor: '#ccc' }}>
+                      {act.user.charAt(0)}
+                    </Avatar>
+                    <div>
+                      <div>
+                        <span className="font-bold text-slate-700 mr-1">{act.user}</span>
+                        <span className="text-slate-600">{act.action}</span>
+                      </div>
+                      <div className="text-xs text-slate-400">{act.time}</div>
                     </div>
-                    <div className="text-sm bg-white p-2 rounded shadow-sm border border-slate-100 inline-block mt-1">{cmt.text}</div>
                   </div>
-                </div>
-              ))}
-              <div className="text-xs text-slate-400 italic ml-10">Use Activity to track changes...</div>
+                ))
+              ) : (
+                <div className="text-xs text-slate-400 italic">No activity recorded.</div>
+              )}
             </div>
           </div>
         </div>

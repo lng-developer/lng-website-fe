@@ -1,6 +1,8 @@
 import React from 'react';
 import { ShoppingCartOutlined, DollarOutlined, FallOutlined, RiseOutlined } from '@ant-design/icons';
 
+export const ALL_MEMBERS = ['Nguyễn Đức Sơn', 'Trần Thị Thu', 'Nguyễn Thùy Linh', 'Ngỗ Chí Huy', 'Nguyễn Thị Như Quỳnh'];
+
 export const COLUMN_CONFIG = {
   todo: { title: 'To Do', bg: 'bg-[#f1f2f4]', collapsedBg: 'bg-slate-200', border: 'border-l-4 border-slate-400', headerColor: '#f1f2f4' },
   inProgress: {
@@ -76,7 +78,7 @@ export const MOCK_TASKS = {
     {
       id: 't1',
       title: 'Design Banner Black Friday',
-      assignee: 'Nguyen Van A',
+      assignees: ['Nguyễn Đức Sơn', 'Trần Thị Thu'],
       priority: 'High',
       due: '2025-10-24',
       tag: 'Design',
@@ -87,12 +89,16 @@ export const MOCK_TASKS = {
         'https://i.pinimg.com/736x/71/28/a2/7128a2ffa8eeff9218a76a98e81622e4.jpg',
         'https://i.pinimg.com/736x/50/ea/24/50ea240cdd57ff88f8adb58eb50b801a.jpg',
       ],
-      comments: [{ user: 'Tran Thi B', text: 'Nhớ check guideline brand nhé!', time: '2 hours ago' }],
+      activities: [
+        // Đổi comments thành activities
+        { user: 'System', action: 'created this task', time: 'Oct 20 at 9:00 AM' },
+        { user: 'Nguyễn Đức Sơn', action: 'added an attachment', time: 'Oct 20 at 10:30 AM' },
+      ],
     },
     {
       id: 't2',
       title: 'Fix bug checkout flow',
-      assignee: 'Tran Thi B',
+      assignees: ['Tran Thi B'],
       priority: 'Medium',
       due: '2025-10-25',
       tag: 'Dev',
@@ -100,14 +106,14 @@ export const MOCK_TASKS = {
       note: '',
       isCompleted: false,
       attachments: ['https://i.pinimg.com/1200x/3a/1f/d4/3a1fd4ad04a00d556856dc1a803f7c71.jpg'],
-      comments: [],
+      activities: [],
     },
   ],
   inProgress: [
     {
       id: 't3',
       title: 'Setup Facebook Ads Campaign',
-      assignee: 'Le Van C',
+      assignees: ['Le Van C'],
       priority: 'High',
       due: '2025-10-23',
       tag: 'Seller',
@@ -115,14 +121,14 @@ export const MOCK_TASKS = {
       note: '',
       isCompleted: false,
       attachments: [],
-      comments: [],
+      activities: [],
     },
   ],
   review: [
     {
       id: 't4',
       title: 'Content for Landing Page',
-      assignee: 'Pham Van D',
+      assignees: ['Pham Van D'],
       priority: 'Low',
       due: '2025-10-22',
       tag: 'Content',
@@ -130,14 +136,14 @@ export const MOCK_TASKS = {
       note: '',
       isCompleted: false,
       attachments: [],
-      comments: [],
+      activities: [],
     },
   ],
   done: [
     {
       id: 't5',
       title: 'Meeting with Partner',
-      assignee: 'Nguyen Van A',
+      assignees: ['Nguyen Van A', 'Hoang Thi E'],
       priority: 'Medium',
       due: '2025-10-20',
       tag: 'Meeting',
@@ -145,7 +151,7 @@ export const MOCK_TASKS = {
       note: '',
       isCompleted: true,
       attachments: [],
-      comments: [],
+      activities: [],
     },
   ],
   rejected: [],
@@ -153,7 +159,7 @@ export const MOCK_TASKS = {
     {
       id: 't6',
       title: 'Update layout home page',
-      assignee: 'Nguyen Van A',
+      assignees: ['Nguyen Van A'],
       priority: 'Medium',
       due: '2025-10-15',
       tag: 'Meeting',
@@ -161,7 +167,7 @@ export const MOCK_TASKS = {
       note: 'Xem lại phần font chữ và kích thước hỉnh ảnh.',
       isCompleted: false,
       attachments: ['https://i.pinimg.com/736x/cf/02/94/cf02945414e5106249f55a8e1eac61d9.jpg'],
-      comments: [],
+      activities: [],
     },
   ],
 };

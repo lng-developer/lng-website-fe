@@ -6,7 +6,7 @@ import TaskCard from './TaskCard';
 import { COLUMN_CONFIG } from '../mockData';
 
 const KanbanColumn = React.memo(
-  ({ columnId, items, collapsedCols, toggleColumn, canEditBoard, onTaskClick, onToggleComplete, onQuickAdd }) => {
+  ({ columnId, items, collapsedCols, toggleColumn, canEditBoard, onTaskClick, onToggleComplete, onQuickAdd, onDeleteTask }) => {
     const isCollapsed = collapsedCols[columnId];
     const config = COLUMN_CONFIG[columnId];
 
@@ -46,7 +46,6 @@ const KanbanColumn = React.memo(
           onClick={() => toggleColumn(columnId)}
           className={`
           flex-shrink-0 w-12 py-4 rounded-2xl cursor-pointer 
-          transition-all duration-0 ease-in-out 
           flex flex-col items-center gap-6 select-none 
           hover:brightness-95 shadow-sm
           ${config.collapsedBg}
@@ -68,7 +67,7 @@ const KanbanColumn = React.memo(
     }
 
     return (
-      <div className={`flex-shrink-0 w-64 flex flex-col max-h-full rounded-xl transition-all duration-0 border-gray-200 border-1`}>
+      <div className={`flex-shrink-0 w-64 flex flex-col max-h-full rounded-xl border-gray-200 border-1`}>
         <div className="flex justify-between items-center p-3 pb-2 cursor-grab active:cursor-grabbing">
           <h3 className="font-semibold text-slate-700 text-sm px-1">
             {config.title} <span className="ml-1 text-slate-500 font-normal">{items.length}</span>
@@ -93,20 +92,24 @@ const KanbanColumn = React.memo(
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={`
-      flex-1 overflow-y-auto px-2 min-h-[50px]
-      ${snapshot.isDraggingOver ? 'bg-slate-100/50' : ''} 
-      scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
-    `}
+              flex-1 overflow-y-auto px-2 min-h-[50px]
+              ${snapshot.isDraggingOver ? 'bg-black/5 rounded-lg' : ''} 
+              scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
+            `}
             >
               {items.map((task, index) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  columnId={columnId}
-                  onTaskClick={onTaskClick}
-                  onToggleComplete={onToggleComplete}
-                />
+                <div key={task.id}>
+                  <TaskCard
+                    task={task}
+                    index={index}
+                    columnId={columnId}
+                    onTaskClick={onTaskClick}
+                    onToggleComplete={onToggleComplete}
+                    onDeleteTask={onDeleteTask} // Truyền hàm xóa xuống
+                    canEditBoard={canEditBoard}
+                  />
+                  <div className="h-2"></div>
+                </div>
               ))}
               {provided.placeholder}
 
