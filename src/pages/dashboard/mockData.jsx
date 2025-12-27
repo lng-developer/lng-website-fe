@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShoppingCartOutlined, DollarOutlined, FallOutlined, RiseOutlined } from '@ant-design/icons';
 
-export const ALL_MEMBERS = ['Nguyễn Đức Sơn', 'Trần Thị Thu', 'Nguyễn Thùy Linh', 'Ngỗ Chí Huy', 'Nguyễn Thị Như Quỳnh'];
+export const ALL_MEMBERS = ['Nguyễn Đức Sơn', 'Trần Thị Thu', 'Nguyễn Thùy Linh', 'Ngô Chí Huy', 'Nguyễn Thị Như Quỳnh'];
 
 export const COLUMN_CONFIG = {
   todo: { title: 'To Do', bg: 'bg-[#f1f2f4]', collapsedBg: 'bg-slate-200', border: 'border-l-4 border-slate-400', headerColor: '#f1f2f4' },

@@ -31,6 +31,7 @@ import SkuMapping from './pages/sku_mapping/SkuMapping';
 import User from './pages/user/User';
 import ConfirmShip from './pages/extension/ConfirmShip';
 import Dashboard from './pages/dashboard/DashboardPage';
+import TestSaleReport from './pages/test_sale_chart/SaleReport';
 
 function App() {
   return (
@@ -88,6 +89,7 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route path={routes.test_sale} element={<TestSaleReport />} />
         </Route>
 
         <Route path={routes.login} element={<Login />} />

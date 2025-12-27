@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import DateRangePicker from '../../components/DateRangePicker';
-import { Table, Tooltip } from 'antd';
+import { Segmented, Table, Tooltip } from 'antd';
 import { LuBoxes, LuImport } from 'react-icons/lu';
 import { FaMoneyBillWave } from 'react-icons/fa6';
 import { BiSolidFileExport } from 'react-icons/bi';
@@ -18,7 +18,12 @@ import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { FaDollarSign, FaUser, FaPercentage, FaBuysellads } from 'react-icons/fa';
+import { MoonOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
+
 import { saveAs } from 'file-saver';
+
+// NEW: charts
+import SaleReportCharts from './SaleReportCharts';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -44,6 +49,10 @@ const SaleReport = () => {
   const [openModalImportAds, setOpenModalImportAds] = useState(false);
   const [sellers, setSellers] = useState([]);
   const [selectSeller, setSelectSeller] = useState();
+
+  // NEW: toggle view
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'chart'
+
   const [filters, setFilters] = useState({
     from: defaultFrom,
     to: defaultTo,
@@ -327,7 +336,6 @@ const SaleReport = () => {
         icon: <FaDollarSign className="text-white" />,
         iconBg: 'bg-amber-500',
       },
-      // Diff = tổng item_promotion_discount (theo backend bạn yêu cầu)
       {
         key: 'diff',
         label: 'Discount',
@@ -721,21 +729,37 @@ const SaleReport = () => {
                   <MdOutlineRefresh size={20} />
                 </button>
               </Tooltip>
+              {/* NEW: Toggle Table / Charts (giữ phong cách button đang dùng) */}
+              {user?.role === 'Admin' && (
+                <Segmented
+                  size={'middle'}
+                  shape="round"
+                  options={[
+                    { value: 'table', icon: <TableOutlined /> },
+                    { value: 'chart', icon: <BarChartOutlined /> },
+                  ]}
+                  onChange={(value) => setViewMode(value)}
+                />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table / Charts */}
         <div className="mt-4">
-          <Table
-            columns={columns}
-            dataSource={dataSource}
-            rowKey="key"
-            bordered
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-            loading={loading}
-          />
+          {viewMode === 'table' ? (
+            <Table
+              columns={columns}
+              dataSource={dataSource}
+              rowKey="key"
+              bordered
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              loading={loading}
+            />
+          ) : (
+            <SaleReportCharts days={days} normalized={normalized} sellerFilter={filters.seller} loading={loading} />
+          )}
         </div>
       </div>
 
