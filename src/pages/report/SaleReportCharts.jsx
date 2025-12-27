@@ -10,6 +10,7 @@ import {
   pickTickValues,
   numberSafe,
 } from './saleReport.chartAdapters';
+import { AntDesignOutlined, LoadingOutlined } from '@ant-design/icons';
 
 const money = (n) => {
   const v = numberSafe(n);
@@ -69,7 +70,12 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
   const hasData = normalized && Object.keys(normalized).length > 0;
 
   if (loading) {
-    return <div className="rounded-md border border-slate-200 bg-white px-3 py-3 shadow-sm">Loading charts...</div>;
+    return (
+      <div className=" px-3 py-3  flex flex-row items-center justify-center gap-2">
+        <LoadingOutlined />
+        Loading ...
+      </div>
+    );
   }
 
   if (!hasDays || !hasData) {
