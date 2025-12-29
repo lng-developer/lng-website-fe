@@ -6,8 +6,7 @@ import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { LuImport, LuArchiveRestore, LuArrowDownNarrowWide } from 'react-icons/lu';
-import { AiOutlineLoading } from 'react-icons/ai';
+import { LuImport, LuArrowDownNarrowWide } from 'react-icons/lu';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { TbHistory, TbReplace } from 'react-icons/tb';
 import { BiRefresh } from 'react-icons/bi';
@@ -37,49 +36,6 @@ import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
-
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Order',
-    actorName: '',
-    at: '2025-07-23T07:42:12.000Z',
-    status: 'SUCCESS',
-    meta: { orderId: '112-6460110-1390647' },
-  },
-  {
-    id: '2',
-    title: 'Fulfill Order',
-    actorName: 'Trần Thị Thu Trang',
-    at: '2025-07-23T09:26:07.000Z',
-    status: 'SUCCESS',
-    changes: [{ field: 'Order Fulfill', to: '#f35af31-d676-4f92-9f5d-c9673214c5e6' }],
-  },
-  {
-    id: '3',
-    title: 'Update Item',
-    actorName: 'Vũ Thị Uyên',
-    at: '2025-07-23T11:16:33.000Z',
-    status: 'SUCCESS',
-    changes: [{ field: 'PrintSide', to: 'back' }],
-  },
-  {
-    id: '4',
-    title: 'Update Item',
-    actorName: 'Vũ Thị Uyên',
-    at: '2025-07-23T11:16:37.000Z',
-    status: 'SUCCESS',
-    changes: [{ field: 'PrintSide', to: 'front' }],
-  },
-  {
-    id: '5',
-    title: 'Update Item',
-    actorName: 'Vũ Thị Uyên',
-    at: '2025-07-23T16:21:36.000Z',
-    status: 'SUCCESS',
-    changes: [{ field: 'Status', from: 'New', to: 'CANCELLED' }],
-  },
-];
 
 const Home = () => {
   const [orders, setOrders] = useState([]);
@@ -188,7 +144,7 @@ const Home = () => {
 
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getAllCountStatus({ ...filters, openCase: false });
+      const response = await getAllCountStatus({ ...filters, openCase: false, noPsd: false });
       if (response.status === 200) {
         const resultTabFilter = dataFilterStatus.map(({ key, title, status }) => ({
           key,
@@ -303,11 +259,17 @@ const Home = () => {
 
   const handleFilterForStatus = useCallback(
     (status) => {
-      if (status === 'All') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false });
-      if (status === 'NoCostCenter') return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false });
-      if (status === 'openCase') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false });
-      if (status === 'invalidAddress') return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true });
-      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false });
+      if (status === 'All')
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
+      if (status === 'NoCostCenter')
+        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false });
+      if (status === 'openCase')
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false, noPsd: false });
+      if (status === 'invalidAddress')
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true, noPsd: false });
+      if (status === 'noPsd')
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true });
+      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
     },
     [updateFilter]
   );

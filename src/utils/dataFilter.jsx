@@ -15,6 +15,11 @@ const dataFilterStatus = [
     status: 'NoCostCenter',
   },
   {
+    key: 'noPsd',
+    title: 'No PSD',
+    status: 'noPsd',
+  },
+  {
     key: 'paymentPending',
     title: 'Payment Pending',
     status: 'paymentPending',
