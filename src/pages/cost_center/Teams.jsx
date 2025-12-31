@@ -394,48 +394,43 @@ const Teams = () => {
             allowClear
           />
         </div>
-        {loading ? (
-          <div className="flex justify-center items-center h-screen">
-            <Spin size="large" />
-          </div>
-        ) : (
-          <div className="mt-4">
-            <Table
-              className="no-indent-table "
-              bordered
-              columns={teamColumns}
-              dataSource={formattedTeamData}
-              pagination={false}
-              rowKey="_id"
-              expandable={{
-                expandedRowRender: (teamRecord) => (
-                  <Table
-                    className="no-indent-table"
-                    bordered
-                    columns={getMemColumns(teamRecord)}
-                    dataSource={teamRecord.members}
-                    pagination={false}
-                    rowKey={(record, index) => (record._id ? record._id.toString() : `member-${index}`)}
-                    style={{ padding: 10 }}
-                  />
+        <div className="mt-4">
+          <Table
+            className="no-indent-table "
+            bordered
+            columns={teamColumns}
+            dataSource={formattedTeamData}
+            pagination={false}
+            rowKey="_id"
+            loading={loading}
+            expandable={{
+              expandedRowRender: (teamRecord) => (
+                <Table
+                  className="no-indent-table"
+                  bordered
+                  columns={getMemColumns(teamRecord)}
+                  dataSource={teamRecord.members}
+                  pagination={false}
+                  rowKey={(record, index) => (record._id ? record._id.toString() : `member-${index}`)}
+                  style={{ padding: 10 }}
+                />
+              ),
+              expandedRowKeys: expandedKeys,
+              onExpandedRowsChange: (keys) => setExpandedKeys(keys),
+              expandIcon: ({ expanded, onExpand, record }) =>
+                expanded ? (
+                  <IoIosArrowUp style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
+                ) : (
+                  <IoIosArrowDown style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
                 ),
-                expandedRowKeys: expandedKeys,
-                onExpandedRowsChange: (keys) => setExpandedKeys(keys),
-                expandIcon: ({ expanded, onExpand, record }) =>
-                  expanded ? (
-                    <IoIosArrowUp style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
-                  ) : (
-                    <IoIosArrowDown style={{ fontSize: 15, cursor: 'pointer' }} onClick={(e) => onExpand(record, e)} />
-                  ),
-                columnTitle: (
-                  <div style={{ cursor: 'pointer' }} onClick={handleToggleAll}>
-                    {areAllExpanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
-                  </div>
-                ),
-              }}
-            />
-          </div>
-        )}
+              columnTitle: (
+                <div style={{ cursor: 'pointer' }} onClick={handleToggleAll}>
+                  {areAllExpanded ? <IoIosArrowUp style={{ fontSize: 15 }} /> : <IoIosArrowDown style={{ fontSize: 15 }} />}
+                </div>
+              ),
+            }}
+          />
+        </div>
       </div>
 
       <AddTeamModal open={isAddTeamModal} onCancel={cancelAllModals} onOk={handleCreateTeam} loading={isAddingTeam} allUsers={allUsers} />

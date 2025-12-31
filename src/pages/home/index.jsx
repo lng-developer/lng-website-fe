@@ -34,10 +34,12 @@ import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
+import { useAuth } from '../../context/AuthContext';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 
 const Home = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
@@ -276,6 +278,10 @@ const Home = () => {
 
   const handleRetest = useCallback(
     async (id) => {
+      if (!(user?.role === 'Admin')) {
+        toast.error('Access denied: insufficient permissions');
+        return;
+      }
       try {
         const response = await retestBasecode({ orderId: id });
         if (response.status === 200) {
@@ -289,7 +295,7 @@ const Home = () => {
         fetchCountStatus();
       }
     },
-    [fetchAllOrder, fetchCountStatus, filters]
+    [fetchAllOrder, fetchCountStatus, filters, user?.role]
   );
 
   const handleReplace = useCallback(async () => {
