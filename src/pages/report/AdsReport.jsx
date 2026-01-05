@@ -5,7 +5,7 @@ import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
 import { FcCalendar } from 'react-icons/fc';
-import { getAds } from '../../apis/report';
+import { exportAds, getAds } from '../../apis/report';
 import SelectSeller from '../../components/SelectSeller';
 import { getAllSellers } from '../../apis/user';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { HiMiniUserGroup } from 'react-icons/hi2';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { FcShop } from 'react-icons/fc';
+import { BiSolidFileExport } from 'react-icons/bi';
 
 const $ = (n) => (n >= 0 ? `$${Number(n).toFixed(2)}` : `-$${Math.abs(Number(n)).toFixed(2)}`);
 
@@ -82,6 +83,35 @@ const AdsReport = () => {
     });
   };
 
+  const handleExport = async () => {
+    try {
+      const res = await exportAds({
+        from: filters.from,
+        to: filters.to,
+      });
+
+      // ✅ lấy filename từ header nếu backend có set Content-Disposition
+      const disposition = res.headers?.['content-disposition'] || '';
+      const match = disposition.match(/filename="(.+?)"/);
+      const filename = match?.[1] || 'report_ads.xlsx';
+
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'Admin') {
       fetchAllSellers();
@@ -100,6 +130,17 @@ const AdsReport = () => {
             Amazon Ads Report
           </h1>
           <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={handleExport}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Export Ads
+              </span>
+              <div style={{ color: 'black' }}>
+                <BiSolidFileExport size={15} />
+              </div>
+            </button>
             <DateRangePicker
               mode="range"
               showOutsideDays

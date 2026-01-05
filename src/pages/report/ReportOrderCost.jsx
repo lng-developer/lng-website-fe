@@ -13,9 +13,10 @@ import { getALlOrder, getALlShop } from '../../apis/order';
 import { toast } from 'sonner';
 import { RiLinkM } from 'react-icons/ri';
 import { debounce } from 'lodash';
-import { getOrderCostStatistics } from '../../apis/report';
+import { exportReportCost, getOrderCostStatistics } from '../../apis/report';
 import NoImage from '../../assets/NoImage.jpg';
 import { MdOutlineRefresh } from 'react-icons/md';
+import { BiSolidFileExport } from 'react-icons/bi';
 
 const PAGE_SIZE = 10;
 
@@ -213,13 +214,6 @@ const ReportOrderCost = () => {
       width: 90,
     },
     {
-      title: <span style={{ color: dataColors.title }}>LNG Cost</span>,
-      dataIndex: 'lng_cost',
-      key: 'lng_cost',
-      align: 'center',
-      width: 90,
-    },
-    {
       title: <span style={{ color: dataColors.title }}>Cost</span>,
       dataIndex: 'base_cost',
       key: 'base_cost',
@@ -248,7 +242,6 @@ const ReportOrderCost = () => {
       const feeVal = num(aft.fee ?? item?.fee);
       const baseVal = num(item?.base_cost);
       const refundVal = num(aft.refund);
-      const opCostVal = num(aft.opCost); // LNG cost
       const itemTax = num(aft.item_tax);
       const shippingTax = num(aft.shipping_tax);
       const promoVal = num(aft.item_promotion_discount); // Diff
@@ -284,8 +277,7 @@ const ReportOrderCost = () => {
           <span className="font-medium" style={{ color: profit1Val < 0 ? dataColors.cancelled : dataColors.success }}>
             {profit1Val < 0 ? `-$${Math.abs(profit1Val).toFixed(2)}` : fmtMoney(profit1Val)}
           </span>
-        ), // Profit = profit1
-        lng_cost: <span className="font-medium">{opCostVal === 0 ? 0 : fmtMoney(opCostVal)}</span>,
+        ),
         base_cost: <span className="font-medium">{fmtMoney(baseVal)}</span>,
         diff: <span className="font-medium">{fmtMoney(promoVal)}</span>,
         shipping_tax: <span className="font-medium">{fmtMoney(shippingTax)}</span>,
@@ -445,6 +437,35 @@ const ReportOrderCost = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const res = await exportReportCost({
+        from: filters.from,
+        to: filters.to,
+      });
+
+      // ✅ lấy filename từ header nếu backend có set Content-Disposition
+      const disposition = res.headers?.['content-disposition'] || '';
+      const match = disposition.match(/filename="(.+?)"/);
+      const filename = match?.[1] || 'report_cost.xlsx';
+
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const headerHeight = 320;
@@ -480,7 +501,18 @@ const ReportOrderCost = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Orders Cost
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-2">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={handleExport}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Export Report
+              </span>
+              <div style={{ color: 'black' }}>
+                <BiSolidFileExport size={15} />
+              </div>
+            </button>
             <DateRangePicker
               mode="range"
               showOutsideDays

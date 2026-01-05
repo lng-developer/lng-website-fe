@@ -36,4 +36,12 @@ const getAds = (params) => {
   return instance.get('/ads', { params });
 };
 
-export { getAllReport, importReport, importAds, getOrderCostStatistics, getAds, importRefund };
+const exportReportCost = (params) => {
+  return instance.get('/report/order_cost/export', { params, responseType: 'blob' });
+};
+
+const exportAds = (params) => {
+  return instance.get('/report/ads/export', { params, responseType: 'blob' });
+};
+
+export { getAllReport, importReport, importAds, getOrderCostStatistics, getAds, importRefund, exportReportCost, exportAds };

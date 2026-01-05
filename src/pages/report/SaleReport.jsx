@@ -117,10 +117,12 @@ const SaleReport = () => {
     const rows = [];
 
     Object.entries(normalized).forEach(([seller, r]) => {
-      // Profit1 = revenue - baseCost - fee (giữ logic cũ nếu backend chưa trả)
+      const taxArr = r.revenue.map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
+
+      // Profit1 = revenue - baseCost - fee
       const profit1 = r.profit1 ?? r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.fee[i])).toFixed(2));
 
-      // Profit2 = Profit1 - ads - opCost - refund (giữ logic cũ nếu backend chưa trả)
+      // Profit2 = Profit1 - ads - opCost - refund
       const profit2 =
         r.profit2 ??
         r.revenue.map(
@@ -147,7 +149,8 @@ const SaleReport = () => {
         refund: r.totals?.refund ?? sum(r.refund),
         profit1: r.totals?.profit1 ?? sum(profit1),
         profit2: r.totals?.profit2 ?? sum(profit2),
-        itemPromotionDiscount: r.totals?.itemPromotionDiscount ?? sum(r.itemPromotionDiscount || []), // <-- tổng Discount nếu có
+        itemPromotionDiscount: r.totals?.itemPromotionDiscount ?? sum(r.itemPromotionDiscount || []),
+        tax: sum(taxArr),
       };
 
       // ROI tổng: dùng totals.profit2 / totals.ads
@@ -160,14 +163,13 @@ const SaleReport = () => {
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
         { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
-        // --- Discount (chỉ hiển thị, KHÔNG ảnh hưởng công thức profit hiện tại) ---
+        { type: 'Tax', values: taxArr, money: true, totalVal: totals.tax },
         {
           type: 'Discount',
           values: r.itemPromotionDiscount || [],
           money: true,
           totalVal: totals.itemPromotionDiscount,
         },
-        // hai hàng Profit có bật signAware để tô màu theo âm/dương
         { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
         { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
@@ -557,13 +559,21 @@ const SaleReport = () => {
       let rIdx = startRow + 1;
 
       Object.entries(normalized).forEach(([seller, r], sIdx) => {
+        const taxArr = (r.itemTax || []).map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
+        const taxTotalSeller = sumArr(taxArr);
         const group = [
           { label: 'Total Orders', values: r.items || [], total: r.totals?.items, money: false },
           { label: 'Revenue', values: r.revenue || [], total: r.totals?.revenue, money: true },
           { label: 'Base cost', values: r.baseCost || [], total: r.totals?.baseCost, money: true },
           { label: 'Ads spend', values: r.ads || [], total: r.totals?.ads, money: true },
           { label: 'Fee', values: r.fee || [], total: r.totals?.fee, money: true },
-          { label: 'Discount', values: r.itemPromotionDiscount || [], total: r.totals?.itemPromotionDiscount ?? 0, money: true },
+          { label: 'Tax', values: taxArr, total: taxTotalSeller, money: true },
+          {
+            label: 'Discount',
+            values: r.itemPromotionDiscount || [],
+            total: sumArr(r.itemPromotionDiscount || []),
+            money: true,
+          },
           { label: 'Profit 1', values: r.profit1 || [], total: r.totals?.profit1, money: true, signAware: true },
           { label: 'Operation Cost', values: r.opCost || [], total: r.totals?.opCost, money: true },
           { label: 'Refund', values: r.refund || [], total: r.totals?.refund, money: true },
