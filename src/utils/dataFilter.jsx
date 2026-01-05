@@ -248,6 +248,11 @@ const dataFilterDesignTasks = [
     status: 'all',
   },
   {
+    key: 'New',
+    title: 'New',
+    status: 'New',
+  },
+  {
     key: 'Assigned',
     title: 'Assigned',
     status: 'Assigned',

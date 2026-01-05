@@ -252,7 +252,7 @@ const ReportOrderCost = () => {
       const itemTax = num(aft.item_tax);
       const shippingTax = num(aft.shipping_tax);
       const promoVal = num(aft.item_promotion_discount); // Diff
-      const profit1Val = num(revenueVal - (baseVal + feeVal + shippingTax + itemTax + promoVal));
+      const profit1Val = num(revenueVal - (baseVal + feeVal + shippingTax + itemTax + promoVal + refundVal));
 
       return {
         key: item?.orderId,
@@ -281,8 +281,8 @@ const ReportOrderCost = () => {
         fee: <span className="font-medium">{fmtMoney(feeVal)}</span>,
         refund: <span className="font-medium">{refundVal === 0 ? 0 : fmtMoney(refundVal)}</span>,
         profit: (
-          <span className="font-medium" style={{ color: dataColors.success }}>
-            {profit1Val < 0 ? 0 : fmtMoney(profit1Val)}
+          <span className="font-medium" style={{ color: profit1Val < 0 ? dataColors.cancelled : dataColors.success }}>
+            {profit1Val < 0 ? `-$${Math.abs(profit1Val).toFixed(2)}` : fmtMoney(profit1Val)}
           </span>
         ), // Profit = profit1
         lng_cost: <span className="font-medium">{opCostVal === 0 ? 0 : fmtMoney(opCostVal)}</span>,

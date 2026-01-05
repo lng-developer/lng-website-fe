@@ -24,6 +24,7 @@ import { saveAs } from 'file-saver';
 
 // NEW: charts
 import SaleReportCharts from './SaleReportCharts';
+import ModalRefund from './ModalRefund';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -47,6 +48,7 @@ const SaleReport = () => {
   const [days, setDays] = useState([]);
   const [openModalImportReport, setOpenModalImportReport] = useState(false);
   const [openModalImportAds, setOpenModalImportAds] = useState(false);
+  const [openModalImportRefund, setOpenModalImportRefund] = useState(false);
   const [sellers, setSellers] = useState([]);
   const [selectSeller, setSelectSeller] = useState();
 
@@ -662,6 +664,17 @@ const SaleReport = () => {
             </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => setOpenModalImportRefund(true)}
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Import Refund
+              </span>
+              <div style={{ color: 'black' }}>
+                <LuImport size={15} />
+              </div>
+            </button>
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setOpenModalImportReport(true)}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
@@ -766,6 +779,12 @@ const SaleReport = () => {
       <ModalReport
         isModalOpen={openModalImportReport}
         setIsModalOpen={setOpenModalImportReport}
+        fetchAllReport={fetchAllReport}
+        filters={filters}
+      />
+      <ModalRefund
+        isModalOpen={openModalImportRefund}
+        setIsModalOpen={setOpenModalImportRefund}
         fetchAllReport={fetchAllReport}
         filters={filters}
       />
