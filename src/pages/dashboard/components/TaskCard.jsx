@@ -1,38 +1,25 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { Tag, Tooltip, Avatar, Checkbox, Dropdown } from 'antd'; // Thêm Dropdown
+import { Tag, Tooltip, Avatar, Checkbox, Dropdown } from 'antd';
 import { CalendarOutlined, PaperClipOutlined, DeleteOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleComplete, onDeleteTask, canEditBoard }) => {
-  const priorityColor = task.priority === 'High' ? 'red' : task.priority === 'Medium' ? 'orange' : 'green';
+const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleComplete, onDeleteTask, canEditBoard, allMembers = [] }) => {
+  const priorityColor = task.priority === 'high' ? 'red' : task.priority === 'medium' ? 'orange' : 'green';
 
-  // Yêu cầu 2: Menu Context (Chuột phải)
   const menuItems = [
-    {
-      key: 'open',
-      label: 'Open card',
-      icon: <ExpandAltOutlined />,
-      onClick: () => onTaskClick(task, columnId),
-    },
-    {
-      key: 'edit',
-      label: 'Edit details',
-      onClick: () => onTaskClick(task, columnId),
-    },
+    { key: 'open', label: 'Open card', icon: <ExpandAltOutlined />, onClick: () => onTaskClick(task, columnId) },
+    { key: 'edit', label: 'Edit details', onClick: () => onTaskClick(task, columnId) },
   ];
 
-  // Chỉ hiện nút xóa nếu có quyền
   if (canEditBoard) {
-    menuItems.push({
-      type: 'divider',
-    });
+    menuItems.push({ type: 'divider' });
     menuItems.push({
       key: 'delete',
       label: 'Delete',
       icon: <DeleteOutlined />,
       danger: true,
-      onClick: () => onDeleteTask(task.id, columnId), // Gọi hàm xóa trực tiếp
+      onClick: () => onDeleteTask(task.id, columnId),
     });
   }
 
@@ -45,20 +32,14 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
           {...provided.dragHandleProps}
           style={{ ...provided.draggableProps.style, opacity: snapshot.isDragging ? 0.8 : 1 }}
         >
-          {/* Bọc nội dung Card bằng Dropdown trigger contextMenu */}
           <Dropdown menu={{ items: menuItems }} trigger={['contextMenu']} placement="right">
             <div
               onClick={(e) => {
-                if (!e.target.closest('.ant-checkbox-wrapper')) {
-                  onTaskClick(task, columnId);
-                }
+                if (!e.target.closest('.ant-checkbox-wrapper')) onTaskClick(task, columnId);
               }}
-              className={`
-                    bg-white p-3 rounded-lg shadow-sm border border-slate-200 group 
-                    hover:border-blue-400 cursor-pointer hover:shadow-md 
-                    transition-colors duration-100
-                    ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : ''}
-                `}
+              className={`bg-white p-3 rounded-lg shadow-sm border border-slate-200 group hover:border-blue-400 cursor-grab hover:shadow-md transition-colors duration-100 ${
+                snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : ''
+              }`}
             >
               {task.attachments && task.attachments.length > 0 && (
                 <div className="h-32 w-full mb-2 rounded-md overflow-hidden bg-slate-100">
@@ -68,12 +49,16 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
 
               <div className="flex justify-between items-start mb-2">
                 <div className="w-full flex gap-1 flex-wrap">
-                  <Tag color="blue" className="!mr-1 text-[10px] !px-1">
-                    {task.tag}
-                  </Tag>
-                  <Tag color={priorityColor} className="!mr-0 text-[10px] !px-1">
-                    {task.priority}
-                  </Tag>
+                  {task.tag && (
+                    <Tag color="blue" className="!mr-1 text-[10px] !px-1">
+                      {task.tag}
+                    </Tag>
+                  )}
+                  {task.priority && (
+                    <Tag color={priorityColor} className="!mr-0 !text-[10px] !px-1 ">
+                      {task.priority}
+                    </Tag>
+                  )}
                 </div>
               </div>
 
@@ -99,12 +84,17 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Avatar.Group maxCount={3} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '10px' }}>
-                    {task.assignees?.map((member, idx) => (
-                      <Tooltip title={member} key={idx}>
-                        <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{member.charAt(0)}</Avatar>
-                      </Tooltip>
-                    ))}
+                  <Avatar.Group maxCount={2} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '10px' }}>
+                    {/* Hiển thị Avatar dựa trên User ID */}
+                    {task.assignees?.map((userId, idx) => {
+                      const member = allMembers.find((u) => u._id === userId);
+                      const name = member?.full_name || 'Unknown';
+                      return (
+                        <Tooltip title={name} key={idx}>
+                          <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{name.charAt(0)}</Avatar>
+                        </Tooltip>
+                      );
+                    })}
                   </Avatar.Group>
                 </div>
               </div>

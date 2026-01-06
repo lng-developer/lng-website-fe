@@ -5,6 +5,7 @@ import {
   buildDailyAggregate,
   buildLineSeries,
   buildRoiLineSeries,
+  buildRoaLineSeries,
   buildCostStackByDay,
   buildSellerTotals,
   pickTickValues,
@@ -61,6 +62,8 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
     return arr;
   }, [trendSeries]);
   const roiSeries = useMemo(() => buildRoiLineSeries({ days, dailyAgg }), [days, dailyAgg]);
+
+  const roaSeries = useMemo(() => buildRoaLineSeries({ days, dailyAgg }), [days, dailyAgg]);
 
   const costStack = useMemo(() => buildCostStackByDay({ days, dailyAgg }), [days, dailyAgg]);
 
@@ -232,8 +235,75 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
           </div>
         </ChartCard>
       </div>
+
       <div className="col-span-6">
-        <ChartCard title="Seller Comparison (Totals: Revenue / Profit2 / Ads)">
+        <ChartCard title="ROI Trend (Profit / Ads * 100)">
+          <div style={{ height: 300 }}>
+            <ResponsiveLine
+              data={roiSeries}
+              colors={'#10b981'}
+              margin={{ top: 10, right: 20, bottom: 55, left: 60 }}
+              xScale={{ type: 'point' }}
+              yScale={{ type: 'linear', stacked: false, min: 'auto', max: 'auto' }}
+              axisBottom={{
+                tickValues,
+                tickSize: 0,
+                tickPadding: 6,
+                // tickRotation: -30,
+                legend: 'Date',
+                legendOffset: 45,
+                legendPosition: 'middle',
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                // legend: 'ROI (%)',
+                legendOffset: -45,
+                legendPosition: 'middle',
+                format: (v) => `${Number(v).toFixed(0)}%`,
+              }}
+              enablePoints={true}
+              enableGridX={false}
+              enableGridY={true}
+              useMesh
+            />
+          </div>
+        </ChartCard>
+      </div>
+      <div className="col-span-6">
+        <ChartCard title="ROA Trend (Revenue / Ads * 100)">
+          <div style={{ height: 300 }}>
+            <ResponsiveLine
+              data={roaSeries}
+              colors={'#3b82f6'}
+              margin={{ top: 10, right: 20, bottom: 55, left: 60 }}
+              xScale={{ type: 'point' }}
+              yScale={{ type: 'linear', stacked: false, min: 'auto', max: 'auto' }}
+              axisBottom={{
+                tickValues,
+                tickSize: 0,
+                tickPadding: 6,
+                legend: 'Date',
+                legendOffset: 45,
+                legendPosition: 'middle',
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                legendOffset: -45,
+                legendPosition: 'middle',
+                format: (v) => `${Number(v).toFixed(0)}%`,
+              }}
+              enablePoints={true}
+              enableGridX={false}
+              enableGridY={true}
+              useMesh
+            />
+          </div>
+        </ChartCard>
+      </div>
+      <div className="col-span-12">
+        <ChartCard title="Seller Comparison (Totals: Profit2 / Ads)">
           <div style={{ height: 300 }}>
             <ResponsiveBar
               data={sellerTotals}
@@ -289,39 +359,6 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
                   translateY: -100,
                 },
               ]}
-            />
-          </div>
-        </ChartCard>
-      </div>
-      <div className="col-span-6">
-        <ChartCard title="ROI Trend (Profit2 / Ads * 100)">
-          <div style={{ height: 300 }}>
-            <ResponsiveLine
-              data={roiSeries}
-              margin={{ top: 10, right: 20, bottom: 55, left: 60 }}
-              xScale={{ type: 'point' }}
-              yScale={{ type: 'linear', stacked: false, min: 'auto', max: 'auto' }}
-              axisBottom={{
-                tickValues,
-                tickSize: 0,
-                tickPadding: 6,
-                // tickRotation: -30,
-                legend: 'Date',
-                legendOffset: 45,
-                legendPosition: 'middle',
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 6,
-                // legend: 'ROI (%)',
-                legendOffset: -45,
-                legendPosition: 'middle',
-                format: (v) => `${Number(v).toFixed(0)}%`,
-              }}
-              enablePoints={false}
-              enableGridX={false}
-              enableGridY={true}
-              useMesh
             />
           </div>
         </ChartCard>

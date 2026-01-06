@@ -1,45 +1,65 @@
 import React from 'react';
 import { ShoppingCartOutlined, DollarOutlined, FallOutlined, RiseOutlined } from '@ant-design/icons';
 
+// Danh sách thành viên (Dùng cho Select Assignee)
 export const ALL_MEMBERS = ['Nguyễn Đức Sơn', 'Trần Thị Thu', 'Nguyễn Thùy Linh', 'Ngô Chí Huy', 'Nguyễn Thị Như Quỳnh'];
 
-export const COLUMN_CONFIG = {
-  todo: { title: 'To Do', bg: 'bg-[#f1f2f4]', collapsedBg: 'bg-slate-200', border: 'border-l-4 border-slate-400', headerColor: '#f1f2f4' },
-  inProgress: {
-    title: 'In Progress',
-    bg: 'bg-[#f1f2f4]',
-    collapsedBg: 'bg-blue-200',
-    border: 'border-l-4 border-blue-400',
-    headerColor: '#669df1',
-  },
-  review: {
-    title: 'Review',
-    bg: 'bg-[#f1f2f4]',
-    collapsedBg: 'bg-purple-200',
-    border: 'border-l-4 border-purple-400',
-    headerColor: '#c97cf4',
-  },
-  done: {
-    title: 'Done',
-    bg: 'bg-[#f1f2f4]',
-    collapsedBg: 'bg-green-200',
-    border: 'border-l-4 border-green-400',
-    headerColor: '#10b981',
-  },
-  rejected: {
-    title: 'Rejected',
-    bg: 'bg-[#f1f2f4]',
-    collapsedBg: 'bg-red-200',
-    border: 'border-l-4 border-red-400',
-    headerColor: '#f87168',
-  },
-  late: {
-    title: 'Late',
-    bg: 'bg-[#fff1f0]',
-    collapsedBg: 'bg-orange-200',
-    border: 'border-l-4 border-orange-400',
-    headerColor: '#ffd6a7',
-  },
+// --- HELPER MAP MÀU SẮC DỰA TRÊN TYPE CỦA API ---
+// Hàm này sẽ được KanbanColumn gọi để lấy style
+export const getColumnConfig = (type) => {
+  switch (type) {
+    case 'todo':
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-slate-200',
+        border: 'border-l-4 border-slate-400',
+        headerColor: '#f1f2f4',
+      };
+    case 'inprocess':
+    case 'inProgress':
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-blue-200',
+        border: 'border-l-4 border-blue-400',
+        headerColor: '#669df1',
+      };
+    case 'review':
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-purple-200',
+        border: 'border-l-4 border-purple-400',
+        headerColor: '#c97cf4',
+      };
+    case 'done':
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-green-200',
+        border: 'border-l-4 border-green-400',
+        headerColor: '#10b981',
+      };
+    case 'rejected':
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-red-200',
+        border: 'border-l-4 border-red-400',
+        headerColor: '#f87168',
+      };
+    case 'late':
+      return {
+        bg: 'bg-[#fff1f0]',
+        collapsedBg: 'bg-orange-200',
+        border: 'border-l-4 border-orange-400',
+        headerColor: '#ffd6a7',
+      };
+    default:
+      // Mặc định cho các cột custom hoặc chưa định nghĩa
+      return {
+        bg: 'bg-[#f1f2f4]',
+        collapsedBg: 'bg-gray-200',
+        border: 'border-l-4 border-gray-400',
+        headerColor: '#e5e7eb',
+      };
+  }
 };
 
 export const MOCK_STATS = [
@@ -61,7 +81,15 @@ export const MOCK_STATS = [
     textColor: 'text-blue-600',
     icon: <DollarOutlined />,
   },
-  { title: 'Ad Spends', value: 3200, prefix: '$', suffix: '', iconBg: 'bg-red-500', textColor: 'text-red-500', icon: <FallOutlined /> },
+  {
+    title: 'Ad Spends',
+    value: 3200,
+    prefix: '$',
+    suffix: '',
+    iconBg: 'bg-red-500',
+    textColor: 'text-red-500',
+    icon: <FallOutlined />,
+  },
   {
     title: 'Profit Today',
     value: 9300,

@@ -59,6 +59,7 @@ export function buildDailyAggregate({ normalized, days, sellerFilter }) {
     profit1: initArr(len, 0),
     profit2: initArr(len, 0),
     roi: initArr(len, null),
+    roa: initArr(len, null),
   };
 
   const selected = pickEntries(normalized, sellerFilter);
@@ -92,6 +93,7 @@ export function buildDailyAggregate({ normalized, days, sellerFilter }) {
   for (let i = 0; i < len; i++) {
     const a = numberSafe(agg.ads[i]);
     agg.roi[i] = a > 0 ? +((numberSafe(agg.profit2[i]) / a) * 100).toFixed(2) : null;
+    agg.roa[i] = a > 0 ? +((numberSafe(agg.revenue[i]) / a) * 100).toFixed(2) : null;
   }
 
   return agg;
@@ -111,6 +113,16 @@ export function buildRoiLineSeries({ days, dailyAgg, id = 'ROI (%)' }) {
     {
       id,
       data: safeDays.map((d, i) => ({ x: d, y: dailyAgg?.roi?.[i] ?? null })),
+    },
+  ];
+}
+
+export function buildRoaLineSeries({ days, dailyAgg, id = 'ROA (%)' }) {
+  const safeDays = Array.isArray(days) ? days : [];
+  return [
+    {
+      id,
+      data: safeDays.map((d, i) => ({ x: d, y: dailyAgg?.roa?.[i] ?? null })),
     },
   ];
 }

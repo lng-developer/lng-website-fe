@@ -1,25 +1,51 @@
 import React, { useState } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
-import { Button, Tooltip, Input } from 'antd';
-import { DoubleRightOutlined, DoubleLeftOutlined, MoreOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Input, Dropdown, Menu } from 'antd';
+import {
+  DoubleRightOutlined,
+  DoubleLeftOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  CloseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
 import TaskCard from './TaskCard';
-import { COLUMN_CONFIG } from '../mockData';
 
 const KanbanColumn = React.memo(
-  ({ columnId, items, collapsedCols, toggleColumn, canEditBoard, onTaskClick, onToggleComplete, onQuickAdd, onDeleteTask }) => {
+  ({
+    columnId,
+    title,
+    config,
+    items,
+    collapsedCols,
+    toggleColumn,
+    canEditBoard,
+    onTaskClick,
+    onToggleComplete,
+    onQuickAdd,
+    onDeleteTask,
+    allMembers,
+    onUpdateCategory,
+    onRequestArchiveCategory, // Đổi tên prop từ onArchiveCategory thành onRequestArchiveCategory để rõ nghĩa
+  }) => {
     const isCollapsed = collapsedCols[columnId];
-    const config = COLUMN_CONFIG[columnId];
+    const { collapsedBg } = config || { collapsedBg: 'bg-gray-200' };
 
     const [isAdding, setIsAdding] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [titleValue, setTitleValue] = useState(title);
+
     const [newTitle, setNewTitle] = useState('');
     const [pastedImage, setPastedImage] = useState(null);
 
+    // --- QUICK ADD LOGIC ---
     const handleQuickSubmit = () => {
       if (!newTitle.trim()) {
         setIsAdding(false);
         return;
       }
-      onQuickAdd(newTitle, pastedImage);
+      onQuickAdd(columnId, newTitle, pastedImage);
       setNewTitle('');
       setPastedImage(null);
       setIsAdding(false);
@@ -31,33 +57,45 @@ const KanbanColumn = React.memo(
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
           const reader = new FileReader();
-          reader.onload = (event) => {
-            setPastedImage(event.target.result);
-          };
+          reader.onload = (event) => setPastedImage(event.target.result);
           reader.readAsDataURL(blob);
           e.preventDefault();
         }
       }
     };
 
+    // --- COLUMN ACTIONS ---
+    const handleSaveTitle = () => {
+      if (titleValue !== title) {
+        onUpdateCategory(columnId, titleValue);
+      }
+      setIsEditingTitle(false);
+    };
+
+    const columnMenu = (
+      <Menu>
+        <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => setIsEditingTitle(true)}>
+          Edit Name
+        </Menu.Item>
+        <Menu.Item key="archive" icon={<DeleteOutlined />} danger onClick={() => onRequestArchiveCategory(columnId)}>
+          Archive
+        </Menu.Item>
+      </Menu>
+    );
+
     if (isCollapsed) {
       return (
         <div
           onClick={() => toggleColumn(columnId)}
-          className={`
-          flex-shrink-0 w-12 py-4 rounded-2xl cursor-pointer 
-          flex flex-col items-center gap-6 select-none 
-          hover:brightness-95 shadow-sm
-          ${config.collapsedBg}
-        `}
+          className={`flex-shrink-0 w-12 py-4 rounded-2xl cursor-pointer flex flex-col items-center gap-6 select-none hover:brightness-95 shadow-sm ${collapsedBg}`}
         >
           <Tooltip title="Expand" placement="right">
-            <div className="px-3 rounded-xl  hover:bg-white/50 transition-colors">
+            <div className="px-3 rounded-xl hover:bg-white/50 transition-colors">
               <DoubleRightOutlined className="text-slate-600 font-bold" style={{ fontSize: '12px' }} />
             </div>
           </Tooltip>
           <div className="flex-1 flex items-center justify-center py-4" style={{ writingMode: 'vertical-rl' }}>
-            <h3 className="font-medium text-slate-700 text-sm tracking-widest whitespace-nowrap">{config.title}</h3>
+            <h3 className="font-medium text-slate-700 text-sm tracking-widest whitespace-nowrap">{title}</h3>
           </div>
           <div className="bg-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-700 shadow-sm mb-2">
             {items.length}
@@ -68,10 +106,27 @@ const KanbanColumn = React.memo(
 
     return (
       <div className={`flex-shrink-0 w-64 flex flex-col max-h-full rounded-xl border-gray-200 border-1`}>
-        <div className="flex justify-between items-center p-3 pb-2 cursor-grab active:cursor-grabbing">
-          <h3 className="font-semibold text-slate-700 text-sm px-1">
-            {config.title} <span className="ml-1 text-slate-500 font-normal">{items.length}</span>
-          </h3>
+        <div className="flex justify-between items-center p-3 pb-2 ">
+          {/* EDIT TITLE MODE */}
+          {isEditingTitle ? (
+            <Input
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={handleSaveTitle}
+              onPressEnter={handleSaveTitle}
+              autoFocus
+              size="small"
+              className="font-semibold text-sm"
+            />
+          ) : (
+            <h3
+              className="font-semibold text-slate-700 text-sm px-1 cursor-pointer"
+              onClick={() => canEditBoard && setIsEditingTitle(true)}
+            >
+              {title} <span className="ml-1 text-slate-500 font-normal">{items.length}</span>
+            </h3>
+          )}
+
           <div className="flex gap-1">
             <Tooltip title="Collapse">
               <Button
@@ -82,7 +137,11 @@ const KanbanColumn = React.memo(
                 className="text-slate-500 hover:bg-slate-200"
               />
             </Tooltip>
-            {canEditBoard && <Button type="text" size="small" icon={<MoreOutlined />} className="text-slate-500 hover:bg-slate-200" />}
+            {canEditBoard && (
+              <Dropdown overlay={columnMenu} trigger={['click']}>
+                <Button type="text" size="small" icon={<MoreOutlined />} className="text-slate-500 hover:bg-slate-200" />
+              </Dropdown>
+            )}
           </div>
         </div>
 
@@ -91,11 +150,9 @@ const KanbanColumn = React.memo(
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`
-              flex-1 overflow-y-auto px-2 min-h-[50px]
-              ${snapshot.isDraggingOver ? 'bg-black/5 rounded-lg' : ''} 
-              scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
-            `}
+              className={`flex-1 overflow-y-auto px-2 min-h-[50px] ${
+                snapshot.isDraggingOver ? 'bg-black/5 rounded-lg' : ''
+              } scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent`}
             >
               {items.map((task, index) => (
                 <div key={task.id}>
@@ -105,8 +162,9 @@ const KanbanColumn = React.memo(
                     columnId={columnId}
                     onTaskClick={onTaskClick}
                     onToggleComplete={onToggleComplete}
-                    onDeleteTask={onDeleteTask} // Truyền hàm xóa xuống
+                    onDeleteTask={onDeleteTask}
                     canEditBoard={canEditBoard}
+                    allMembers={allMembers}
                   />
                   <div className="h-2"></div>
                 </div>
@@ -129,7 +187,7 @@ const KanbanColumn = React.memo(
                   )}
                   <Input.TextArea
                     autoFocus
-                    placeholder="Enter title (or paste image)..."
+                    placeholder="Enter title..."
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     onKeyDown={(e) => {
@@ -161,19 +219,16 @@ const KanbanColumn = React.memo(
 
         {canEditBoard && !isAdding && (
           <div className="p-2 pt-1">
-            {columnId === 'todo' ? (
-              <Button
-                type="text"
-                block
-                icon={<PlusOutlined />}
-                className="text-slate-500 hover:bg-slate-200 hover:text-slate-700 text-left justify-start"
-                onClick={() => setIsAdding(true)}
-              >
-                Add a card
-              </Button>
-            ) : (
-              <div className="h-0"></div>
-            )}
+            <div className="border-t-1 rounded-2xl border-slate-200"></div>
+            <Button
+              type="text"
+              block
+              icon={<PlusOutlined />}
+              className="text-slate-500 hover:bg-slate-200 hover:text-slate-700 text-left justify-start"
+              onClick={() => setIsAdding(true)}
+            >
+              Add a card
+            </Button>
           </div>
         )}
       </div>
