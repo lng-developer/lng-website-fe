@@ -561,7 +561,7 @@ const Dashboard = () => {
                   bordered={false}
                   size="small"
                   className="font-medium"
-                  loading={projects.length === 0}
+                  loading={false}
                 >
                   {projects.map((p) => (
                     <Select.Option key={p._id} value={p._id}>
@@ -646,33 +646,27 @@ const Dashboard = () => {
 
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex-1 overflow-x-auto overflow-y-hidden">
-              {loading ? (
-                <div className="flex justify-center items-center h-full">
-                  <Spin size="large" />
-                </div>
-              ) : (
-                <div className="flex h-full gap-4 pb-4 min-w-max items-start">
-                  {categories.map((cat) => (
-                    <KanbanColumn
-                      key={cat._id}
-                      columnId={cat._id}
-                      title={cat.name}
-                      config={getColumnConfig(cat.type)}
-                      items={filteredTasks[cat._id] || []}
-                      collapsedCols={collapsedCols}
-                      toggleColumn={toggleColumn}
-                      canEditBoard={canEditBoard}
-                      onTaskClick={handleTaskClick}
-                      onToggleComplete={handleToggleComplete}
-                      onQuickAdd={handleQuickAdd}
-                      onDeleteTask={handleDeleteTask}
-                      allMembers={projectMembers}
-                      onUpdateCategory={handleUpdateCategory}
-                      onRequestArchiveCategory={handleRequestArchiveCategory}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="flex h-full gap-4 pb-4 min-w-max items-start">
+                {categories.map((cat) => (
+                  <KanbanColumn
+                    key={cat._id}
+                    columnId={cat._id}
+                    title={cat.name}
+                    config={getColumnConfig(cat.type)}
+                    items={filteredTasks[cat._id] || []}
+                    collapsedCols={collapsedCols}
+                    toggleColumn={toggleColumn}
+                    canEditBoard={canEditBoard}
+                    onTaskClick={handleTaskClick}
+                    onToggleComplete={handleToggleComplete}
+                    onQuickAdd={handleQuickAdd}
+                    onDeleteTask={handleDeleteTask}
+                    allMembers={projectMembers}
+                    onUpdateCategory={handleUpdateCategory}
+                    onRequestArchiveCategory={handleRequestArchiveCategory}
+                  />
+                ))}
+              </div>
             </div>
           </DragDropContext>
         </div>
@@ -846,6 +840,7 @@ const Dashboard = () => {
         onUpdateTask={handleUpdateTask}
         onMoveTask={handleMoveTask}
         onDeleteTask={handleDeleteTask}
+        onToggleComplete={handleToggleComplete}
         allMembers={projectMembers}
       />
     </div>

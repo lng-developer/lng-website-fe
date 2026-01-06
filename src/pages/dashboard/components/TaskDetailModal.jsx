@@ -334,8 +334,46 @@ const TaskDetailModal = ({
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1 space-y-6">
               <div className="flex flex-wrap gap-6">
+                {/* <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Labels</h4>
+                  <div className="flex gap-2">
+                    <Tag color="blue" className="px-3 py-1 text-sm rounded cursor-pointer hover:opacity-80 m-0">
+                      {task.tag}
+                    </Tag>
+                  </div>
+                </div> */}
+
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Priority</h4>
+                  <Select
+                    size="small"
+                    value={task.priority}
+                    onChange={handleChangePriority}
+                    disabled={!canEdit}
+                    style={{ width: 106 }}
+                    bordered={false}
+                    className="font-medium"
+                  >
+                    <Select.Option value="high">
+                      <Tag color="red" className="mr-0">
+                        High
+                      </Tag>
+                    </Select.Option>
+                    <Select.Option value="medium">
+                      <Tag color="orange" className="mr-0">
+                        Medium
+                      </Tag>
+                    </Select.Option>
+                    <Select.Option value="low">
+                      <Tag color="green" className="mr-0">
+                        Low
+                      </Tag>
+                    </Select.Option>
+                  </Select>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 ">
                     <h4 className="text-xs font-semibold text-slate-500 uppercase m-0">Members</h4>
                     {canEdit && !isManagingMembers && (
                       <Tooltip title="Manage members">
@@ -379,44 +417,6 @@ const TaskDetailModal = ({
                       )}
                     </div>
                   )}
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Labels</h4>
-                  <div className="flex gap-2">
-                    <Tag color="blue" className="px-3 py-1 text-sm rounded cursor-pointer hover:opacity-80 m-0">
-                      {task.tag}
-                    </Tag>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Priority</h4>
-                  <Select
-                    size="small"
-                    value={task.priority}
-                    onChange={handleChangePriority}
-                    disabled={!canEdit}
-                    style={{ width: 100 }}
-                    bordered={false}
-                    className="font-medium"
-                  >
-                    <Select.Option value="high">
-                      <Tag color="red" className="mr-0">
-                        High
-                      </Tag>
-                    </Select.Option>
-                    <Select.Option value="medium">
-                      <Tag color="orange" className="mr-0">
-                        Medium
-                      </Tag>
-                    </Select.Option>
-                    <Select.Option value="low">
-                      <Tag color="green" className="mr-0">
-                        Low
-                      </Tag>
-                    </Select.Option>
-                  </Select>
                 </div>
               </div>
 
