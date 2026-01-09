@@ -4,8 +4,6 @@ import { ShoppingCartOutlined, DollarOutlined, FallOutlined, RiseOutlined } from
 // Danh sách thành viên (Dùng cho Select Assignee)
 export const ALL_MEMBERS = ['Nguyễn Đức Sơn', 'Trần Thị Thu', 'Nguyễn Thùy Linh', 'Ngô Chí Huy', 'Nguyễn Thị Như Quỳnh'];
 
-// --- HELPER MAP MÀU SẮC DỰA TRÊN TYPE CỦA API ---
-// Hàm này sẽ được KanbanColumn gọi để lấy style
 export const getColumnConfig = (type) => {
   switch (type) {
     case 'todo':

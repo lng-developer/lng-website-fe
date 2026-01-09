@@ -84,7 +84,7 @@ const TaskDetailModal = ({
   const canEdit = useMemo(() => ['Admin', 'Leader'].includes(user?.role), [user]);
 
   if (!task) return null;
-
+  // console.log(task);
   const headerColor = getColumnConfig(columnType)?.headerColor || '#ccc';
 
   // --- LOGIC THỜI GIAN ---
@@ -220,7 +220,7 @@ const TaskDetailModal = ({
       </div>
     );
   };
-
+  console.log(task);
   return (
     <Modal
       open={open}
@@ -400,9 +400,9 @@ const TaskDetailModal = ({
                   ) : (
                     <div className="flex gap-2 items-center">
                       <Avatar.Group maxCount={5}>
-                        {task.assignees?.map((userId, idx) => {
-                          const member = allMembers.find((u) => u._id === userId);
-                          const name = member?.full_name || 'Unknown';
+                        {task.assignees?.map((user, idx) => {
+                          // const member = allMembers.find((u) => u._id === userId);
+                          const name = user?.full_name || 'Unknown';
                           return (
                             <Tooltip title={name} key={idx}>
                               <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{name.charAt(0)}</Avatar>
@@ -565,7 +565,7 @@ const TaskDetailModal = ({
                         <span className="text-slate-600">{act.type}</span>
                       </div>
                       <div className="text-xs text-slate-400">
-                        {act.time ? dayjs(act.time).format('MMM D, YYYY h:mm A') : dayjs().format('MMM D, YYYY h:mm A')}
+                        {act.at ? dayjs(act.at).format('MMM D, YYYY h:mm A') : dayjs().format('MMM D, YYYY h:mm A')}
                       </div>
                     </div>
                   </div>

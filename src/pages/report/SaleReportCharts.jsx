@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsiveBar } from '@nivo/bar';
+import { Tabs } from 'antd';
+
 import {
   buildDailyAggregate,
   buildLineSeries,
@@ -69,6 +71,51 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
 
   const sellerTotals = useMemo(() => buildSellerTotals(normalized), [normalized]);
 
+  const metricTabs = useMemo(
+    () => [
+      { key: 'profit', label: 'Profit', field: 'Profit', format: 'money', posColor: '#10b981', negColor: '#ef4444' },
+      { key: 'ads', label: 'Ads', field: 'Ads', format: 'money', posColor: '#f97316', negColor: '#ef4444' },
+      { key: 'revenue', label: 'Revenue', field: 'Revenue', format: 'money', posColor: '#3b82f6', negColor: '#ef4444' },
+      { key: 'roi', label: 'ROI', field: 'roi', format: 'percent', posColor: '#8ed7d7', negColor: '#ef4444' },
+      { key: 'roa', label: 'ROA', field: 'roa', format: 'percent', posColor: '#0ea5e9', negColor: '#ef4444' },
+    ],
+    []
+  );
+
+  const formatSigned = (raw, format) => {
+    if (raw == null) return 'N/A';
+    if (format === 'percent') return `${Number(raw).toFixed(2)}%`;
+    return money(raw);
+  };
+
+  const buildRankData = (field) => {
+    const arr = (sellerTotals || []).map((r) => {
+      const raw = r?.[field];
+      const rawNum = raw == null ? null : numberSafe(raw);
+      return {
+        seller: r.seller,
+        rawValue: rawNum, // giữ giá trị thật để tooltip show âm/dương
+        value: rawNum == null ? 0 : Math.abs(rawNum), // bar luôn dương để vẽ sang phải
+      };
+    });
+
+    // Sort cao -> thấp (theo rawValue), NULL xuống cuối
+    arr.sort((a, b) => {
+      const av = a.rawValue == null ? -Infinity : a.rawValue;
+      const bv = b.rawValue == null ? -Infinity : b.rawValue;
+      return bv - av;
+    });
+
+    return arr;
+  };
+
+  const maxAbsValue = (data) => Math.max(0, ...(data || []).map((d) => numberSafe(d.value)));
+
+  const formatValue = (val, format) => {
+    if (format === 'percent') return val == null ? 'N/A' : `${Number(val).toFixed(2)}%`;
+    return money(val);
+  };
+
   const hasDays = Array.isArray(days) && days.length > 0;
   const hasData = normalized && Object.keys(normalized).length > 0;
 
@@ -95,20 +142,21 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
               margin={{ top: 10, right: 20, bottom: 55, left: 70 }}
               xScale={{ type: 'point' }}
               yScale={{ type: 'linear', stacked: false, min: 'auto', max: 'auto' }}
-              gridYValues={gridYValuesChart1}
+              // gridYValues={gridYValuesChart1}
               axisBottom={{
                 tickValues,
                 tickSize: 0,
                 tickPadding: 6,
                 // tickRotation: -30,
                 // legend: 'Date',
+
                 legendOffset: 45,
                 legendPosition: 'middle',
               }}
               axisLeft={{
                 tickSize: 0,
                 tickPadding: 9,
-                tickValues: gridYValuesChart1,
+                // tickValues: gridYValuesChart1,
                 // legend: 'USD',
                 legendOffset: -55,
                 legendPosition: 'middle',
@@ -173,7 +221,7 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
         </ChartCard>
       </div>
 
-      <div className="col-span-12">
+      {/* <div className="col-span-12">
         <ChartCard title="Daily Cost Breakdown">
           <div style={{ height: 360 }}>
             <ResponsiveBar
@@ -234,7 +282,7 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
             />
           </div>
         </ChartCard>
-      </div>
+      </div> */}
 
       <div className="col-span-6">
         <ChartCard title="ROI Trend (Profit / Ads * 100)">
@@ -302,63 +350,58 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
           </div>
         </ChartCard>
       </div>
+
       <div className="col-span-12">
-        <ChartCard title="Seller Comparison (Totals: Profit2 / Ads)">
-          <div style={{ height: 300 }}>
-            <ResponsiveBar
-              data={sellerTotals}
-              keys={['Profit', 'Ads']}
-              colors={({ id }) => {
-                const map = {
-                  Revenue: '#3b82f6',
-                  Profit: '#10b981',
-                  Ads: '#f97316',
-                  Orders: '#a855f7',
-                  'ROI (%)': '#ef4444',
+        <ChartCard title="Seller Comparison">
+          <div style={{ height: 400 }}>
+            <Tabs
+              defaultActiveKey="profit"
+              items={metricTabs.map((t) => {
+                const rankData = buildRankData(t.field);
+                const chartData = [...rankData].reverse();
+                const maxV = maxAbsValue(chartData);
+
+                return {
+                  key: t.key,
+                  label: <span className="font-medium">{t.label}</span>,
+                  children: (
+                    <div style={{ height: 340 }}>
+                      <ResponsiveBar
+                        data={chartData}
+                        keys={['value']}
+                        indexBy="seller"
+                        layout="horizontal"
+                        margin={{ top: 10, right: 20, bottom: 30, left: 150 }}
+                        padding={0.25}
+                        enableLabel={false}
+                        minValue={0}
+                        maxValue={maxV || 'auto'}
+                        valueScale={{ type: 'linear' }}
+                        indexScale={{ type: 'band', round: true }}
+                        enableGridY={false}
+                        enableGridX={true}
+                        // Màu: âm -> đỏ, dương -> màu tab
+                        colors={({ data }) => (numberSafe(data.rawValue) < 0 ? '#ef4444' : t.posColor)}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 10,
+                        }}
+                        axisBottom={{
+                          tickSize: 0,
+                          tickPadding: 6,
+                          format: (v) => (t.format === 'percent' ? `${Number(v).toFixed(0)}%` : money(v)),
+                        }}
+                        tooltip={({ indexValue, data }) => (
+                          <div className="min-w-36 bg-white border border-slate-200 rounded px-3 py-2 text-xs shadow">
+                            <div className="font-semibold text-slate-800">{String(indexValue)}</div>
+                            <div className="mt-1 text-slate-900">{formatSigned(data.rawValue, t.format)}</div>
+                          </div>
+                        )}
+                      />
+                    </div>
+                  ),
                 };
-                return map[id] || '#64748b';
-              }}
-              indexBy="seller"
-              margin={{ top: 10, right: 20, bottom: 70, left: 50 }}
-              padding={0.25}
-              groupMode="grouped"
-              valueScale={{ type: 'linear' }}
-              indexScale={{ type: 'band', round: true }}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: -25,
-                // legend: 'Seller',
-                legendOffset: 60,
-                legendPosition: 'middle',
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 6,
-                // legend: 'USD',
-                legendOffset: -55,
-                legendPosition: 'middle',
-                format: (v) => money(v),
-              }}
-              enableLabel={false}
-              // tooltip={({ id, value, indexValue, data }) => (
-              //   <div className="bg-white border border-slate-200 rounded px-3 py-2 text-xs shadow">
-              //     <div className="font-semibold text-slate-800">{String(indexValue)}</div>
-              //     <div className="text-slate-600">{String(id)}</div>
-              //     <div className="mt-1 text-slate-900">{money(value)}</div>
-              //     <div className="mt-1 text-slate-600">ROI: {data?.roi == null ? 'N/A' : `${Number(data.roi).toFixed(2)}%`}</div>
-              //   </div>
-              // )}
-              legends={[
-                {
-                  anchor: 'right',
-                  direction: 'column',
-                  itemHeight: 20,
-                  itemWidth: 80,
-                  toggleSerie: true,
-                  translateY: -100,
-                },
-              ]}
+              })}
             />
           </div>
         </ChartCard>

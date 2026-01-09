@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 
 const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleComplete, onDeleteTask, canEditBoard, allMembers = [] }) => {
   const priorityColor = task.priority === 'high' ? 'red' : task.priority === 'medium' ? 'orange' : 'green';
-
+  console.log(task);
   const menuItems = [
     { key: 'open', label: 'Open card', icon: <ExpandAltOutlined />, onClick: () => onTaskClick(task, columnId) },
     { key: 'edit', label: 'Edit details', onClick: () => onTaskClick(task, columnId) },
@@ -86,9 +86,9 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
                 <div onClick={(e) => e.stopPropagation()}>
                   <Avatar.Group maxCount={2} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '10px' }}>
                     {/* Hiển thị Avatar dựa trên User ID */}
-                    {task.assignees?.map((userId, idx) => {
-                      const member = allMembers.find((u) => u._id === userId);
-                      const name = member?.full_name || 'Unknown';
+                    {task.assignees?.map((user, idx) => {
+                      // const member = allMembers.find((u) => u._id === userId);
+                      const name = user?.full_name || 'Unknown';
                       return (
                         <Tooltip title={name} key={idx}>
                           <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{name.charAt(0)}</Avatar>

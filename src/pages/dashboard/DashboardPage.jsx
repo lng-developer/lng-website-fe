@@ -93,6 +93,7 @@ const Dashboard = () => {
 
         const projectsRes = await getListProjects();
         if (projectsRes.data?.data) {
+          console.log(projectsRes.data?.data);
           const allProjects = projectsRes.data.data;
           setProjects(allProjects);
 
@@ -143,7 +144,7 @@ const Dashboard = () => {
           tasksMap[cat._id] = (cat.issues || []).map((issue) => ({
             ...issue,
             id: issue._id,
-            assignees: issue.assigneeIds || [],
+            assignees: issue.assignees || [],
             due: issue.dueAt,
             startAt: issue.startAt,
             status: issue.status,
@@ -496,6 +497,7 @@ const Dashboard = () => {
 
   const toggleColumn = useCallback((colId) => setCollapsedCols((prev) => ({ ...prev, [colId]: !prev[colId] })), []);
   const handleTaskClick = useCallback((task, colId) => {
+    // console.log(task);
     setSelectedTask(task);
     setSelectedColumnId(colId);
   }, []);

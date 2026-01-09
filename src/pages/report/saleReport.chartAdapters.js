@@ -161,6 +161,7 @@ export function buildSellerTotals(normalized) {
     const profit_2 = numberSafe(r?.totals?.profit2 ?? sum(profit2));
 
     const roi = Ads > 0 ? +((profit_2 / Ads) * 100).toFixed(2) : null;
+    const roa = Ads > 0 ? +((Revenue / Ads) * 100).toFixed(2) : null; // NEW
 
     return {
       seller,
@@ -170,6 +171,7 @@ export function buildSellerTotals(normalized) {
       profit1: numberSafe(r?.totals?.profit1 ?? sum(profit1)),
       Profit: profit_2,
       roi,
+      roa, // NEW
     };
   });
 }
