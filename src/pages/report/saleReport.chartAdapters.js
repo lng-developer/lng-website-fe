@@ -176,6 +176,7 @@ export function buildSellerTotals(normalized) {
   });
 }
 
+
 export function pickTickValues(days, maxTicks = 10) {
   const safeDays = Array.isArray(days) ? days : [];
   const len = safeDays.length;

@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 
 const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleComplete, onDeleteTask, canEditBoard, allMembers = [] }) => {
   const priorityColor = task.priority === 'high' ? 'red' : task.priority === 'medium' ? 'orange' : 'green';
-  console.log(task);
+
   const menuItems = [
     { key: 'open', label: 'Open card', icon: <ExpandAltOutlined />, onClick: () => onTaskClick(task, columnId) },
     { key: 'edit', label: 'Edit details', onClick: () => onTaskClick(task, columnId) },
@@ -23,6 +23,15 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
     });
   }
 
+  // Logic tìm ảnh cover
+  const coverImage = task.attachments?.find((att) => {
+    if (att.type === 'file' && att.mime?.startsWith('image/')) return true;
+    if (typeof att.url === 'string') {
+      return /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i.test(att.url);
+    }
+    return false;
+  });
+
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
@@ -37,13 +46,17 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
               onClick={(e) => {
                 if (!e.target.closest('.ant-checkbox-wrapper')) onTaskClick(task, columnId);
               }}
-              className={`bg-white p-3 rounded-lg shadow-sm border border-slate-200 group hover:border-blue-400 cursor-grab hover:shadow-md transition-colors duration-100 ${
+              className={`bg-white p-2 rounded-lg shadow-sm border border-slate-200 group hover:border-blue-400 cursor-grab hover:shadow-md transition-colors duration-100 ${
                 snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : ''
               }`}
             >
-              {task.attachments && task.attachments.length > 0 && (
-                <div className="h-32 w-full mb-2 rounded-md overflow-hidden bg-slate-100">
-                  <img src={task.attachments[0]} alt="cover" className="w-full h-full object-cover" />
+              {coverImage && (
+                <div className="h-32 w-full mb-2 rounded-md overflow-hidden bg-slate-100 border border-slate-100">
+                  <img
+                    src={coverImage.url}
+                    alt="cover"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
                 </div>
               )}
 
@@ -56,20 +69,20 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
                   )}
                   {task.priority && (
                     <Tag color={priorityColor} className="!mr-0 !text-[10px] !px-1 ">
-                      {task.priority}
+                      <span className="font-medium">{task.priority}</span>
                     </Tag>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 mb-2.5">
+              <div className="flex items-start gap-2">
                 <Checkbox checked={task.isCompleted} onChange={(e) => onToggleComplete(task.id, columnId, e.target.checked)} />
                 <h4 className={`text-sm font-medium text-slate-700 leading-snug ${task.isCompleted ? 'line-through text-slate-400' : ''}`}>
                   {task.title}
                 </h4>
               </div>
 
-              <div className="flex justify-between items-center pt-2 border-t border-slate-50 mt-1">
+              <div className="flex justify-between items-center border-t border-slate-50">
                 <div className="flex items-center text-xs text-slate-400 gap-2">
                   {task.due && (
                     <div className="flex items-center gap-1 hover:text-slate-600">
@@ -84,11 +97,12 @@ const TaskCard = React.memo(({ task, index, columnId, onTaskClick, onToggleCompl
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Avatar.Group maxCount={2} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '10px' }}>
-                    {/* Hiển thị Avatar dựa trên User ID */}
-                    {task.assignees?.map((user, idx) => {
-                      // const member = allMembers.find((u) => u._id === userId);
-                      const name = user?.full_name || 'Unknown';
+                  <Avatar.Group maxCount={3} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '10px' }}>
+                    {task.assignees?.map((userOrId, idx) => {
+                      // [FIX] Kiểm tra nếu là object hay string ID
+                      const member = typeof userOrId === 'object' ? userOrId : allMembers.find((u) => u._id === userOrId);
+                      const name = member?.full_name || 'Unknown';
+
                       return (
                         <Tooltip title={name} key={idx}>
                           <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{name.charAt(0)}</Avatar>

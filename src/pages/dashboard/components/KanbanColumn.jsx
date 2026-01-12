@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
-import { Button, Tooltip, Input, Dropdown, Menu } from 'antd';
+import { Button, Tooltip, Input, Dropdown, Menu, Image } from 'antd'; // Thêm Image từ antd nếu cần, hoặc dùng thẻ img thường
 import {
   DoubleRightOutlined,
   DoubleLeftOutlined,
@@ -27,7 +27,7 @@ const KanbanColumn = React.memo(
     onDeleteTask,
     allMembers,
     onUpdateCategory,
-    onRequestArchiveCategory, // Đổi tên prop từ onArchiveCategory thành onRequestArchiveCategory để rõ nghĩa
+    onRequestArchiveCategory,
   }) => {
     const isCollapsed = collapsedCols[columnId];
     const { collapsedBg } = config || { collapsedBg: 'bg-gray-200' };
@@ -41,9 +41,12 @@ const KanbanColumn = React.memo(
 
     // --- QUICK ADD LOGIC ---
     const handleQuickSubmit = () => {
-      if (!newTitle.trim()) {
-        setIsAdding(false);
-        return;
+      // Cho phép tạo nếu có title HOẶC có ảnh
+      if (!newTitle.trim() && !pastedImage) {
+        if (!pastedImage) {
+          setIsAdding(false);
+          return;
+        }
       }
       onQuickAdd(columnId, newTitle, pastedImage);
       setNewTitle('');
@@ -55,11 +58,11 @@ const KanbanColumn = React.memo(
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          const reader = new FileReader();
-          reader.onload = (event) => setPastedImage(event.target.result);
-          reader.readAsDataURL(blob);
+          const file = items[i].getAsFile();
+          // [FIX] Lưu trực tiếp File object, không đọc thành Base64
+          setPastedImage(file);
           e.preventDefault();
+          return; // Chỉ lấy 1 ảnh
         }
       }
     };
@@ -175,12 +178,17 @@ const KanbanColumn = React.memo(
                 <div className="bg-white p-2 rounded shadow-sm border border-blue-200 mb-2">
                   {pastedImage && (
                     <div className="mb-2 relative">
-                      <img src={pastedImage} alt="pasted" className="w-full h-20 object-cover rounded" />
+                      {/* [FIX] Dùng URL.createObjectURL để hiển thị File object */}
+                      <img
+                        src={URL.createObjectURL(pastedImage)}
+                        alt="pasted"
+                        className="w-full h-20 object-cover rounded border border-slate-200"
+                      />
                       <Button
                         size="small"
                         shape="circle"
                         icon={<CloseOutlined />}
-                        className="absolute top-1 right-1 bg-white/80"
+                        className="absolute top-1 right-1 bg-white/80 hover:bg-red-50 hover:text-red-500"
                         onClick={() => setPastedImage(null)}
                       />
                     </div>

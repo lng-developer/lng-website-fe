@@ -93,7 +93,6 @@ const Dashboard = () => {
 
         const projectsRes = await getListProjects();
         if (projectsRes.data?.data) {
-          console.log(projectsRes.data?.data);
           const allProjects = projectsRes.data.data;
           setProjects(allProjects);
 
@@ -144,12 +143,13 @@ const Dashboard = () => {
           tasksMap[cat._id] = (cat.issues || []).map((issue) => ({
             ...issue,
             id: issue._id,
-            assignees: issue.assignees || [],
+            assignees: issue.assignees || [], // Sử dụng assignees (Object) để hiển thị tên đầy đủ ngay
             due: issue.dueAt,
             startAt: issue.startAt,
             status: issue.status,
             isCompleted: issue.status === 'done',
             activities: issue.activity || [],
+            attachments: issue.attachments || [],
           }));
         });
         setTasks(tasksMap);
@@ -167,9 +167,7 @@ const Dashboard = () => {
     }
   }, [selectedProjectId, fetchBoard]);
 
-  // --- HANDLERS ---
-  // ... (Các hàm handleProject, handleCategory, handleTask giữ nguyên logic) ...
-
+  // --- HANDLERS PROJECT ---
   const handleCreateProject = async (values) => {
     setCreateProjectLoading(true);
     try {
@@ -189,7 +187,7 @@ const Dashboard = () => {
         } catch (catErr) {
           console.error('Failed to init categories', catErr);
         }
-        toast.success('Project created successfully');
+        // toast.success('Project created successfully');
         setIsProjectModalOpen(false);
         projectForm.resetFields();
         setProjects((prev) => [newProject, ...prev]);
@@ -206,7 +204,7 @@ const Dashboard = () => {
     if (!selectedProjectId) return;
     try {
       await archiveProject(selectedProjectId);
-      toast.success('Project deleted');
+      // toast.success('Project deleted');
       const newProjects = projects.filter((p) => p._id !== selectedProjectId);
       setProjects(newProjects);
       if (newProjects.length > 0) {
@@ -243,7 +241,7 @@ const Dashboard = () => {
       });
       if (res.data?.data) {
         const updated = res.data.data;
-        toast.success('Project updated');
+        // toast.success('Project updated');
         setProjects((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
         setIsEditProjectModalOpen(false);
       }
@@ -254,11 +252,12 @@ const Dashboard = () => {
     }
   };
 
+  // --- HANDLERS CATEGORY ---
   const handleAddCategory = async (values) => {
     if (!selectedProjectId) return;
     try {
       await createCategory(selectedProjectId, { name: values.name, type: values.type || 'custom' });
-      toast.success('Category created!');
+      // toast.success('Category created!');
       setIsCategoryModalOpen(false);
       categoryForm.resetFields();
       fetchBoard(selectedProjectId);
@@ -271,7 +270,7 @@ const Dashboard = () => {
     async (categoryId, newName) => {
       try {
         await updateCategory(selectedProjectId, categoryId, { name: newName });
-        toast.success('Category updated');
+        // toast.success('Category updated');
         fetchBoard(selectedProjectId);
       } catch (error) {
         toast.error('Update failed');
@@ -289,7 +288,7 @@ const Dashboard = () => {
     if (!categoryToArchive) return;
     try {
       await archiveCategory(selectedProjectId, categoryToArchive);
-      toast.success('Category archived');
+      // toast.success('Category archived');
       fetchBoard(selectedProjectId);
       setIsArchiveCategoryModalOpen(false);
       setCategoryToArchive(null);
@@ -313,6 +312,7 @@ const Dashboard = () => {
     }
   };
 
+  // --- HANDLERS TASK ---
   const onDragEnd = async (result) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
@@ -346,6 +346,49 @@ const Dashboard = () => {
     }
   };
 
+  const handleQuickAdd = useCallback(
+    async (columnId, title, imageFile) => {
+      // Validate: Nếu không có title và không có ảnh thì không tạo
+      if (!title?.trim() && !imageFile) return;
+
+      try {
+        const startAt = dayjs().toISOString();
+
+        // TRƯỜNG HỢP 1: CÓ ẢNH (Gửi FormData)
+        if (imageFile) {
+          const formData = new FormData();
+          formData.append('categoryId', columnId);
+          formData.append('title', title || 'New Image Task'); // Fallback title nếu chỉ paste ảnh
+          formData.append('startAt', startAt);
+          formData.append('status', 'open');
+
+          // 'files' phải khớp với cấu hình multer bên backend: upload.array("files")
+          formData.append('files', imageFile);
+
+          // Gọi API createIssue
+          // Lưu ý: createIssue trong apis/dashboard.js chỉ cần truyền formData, axios sẽ tự detect header
+          await createIssue(selectedProjectId, formData);
+        }
+        // TRƯỜNG HỢP 2: KHÔNG CÓ ẢNH (Gửi JSON)
+        else {
+          await createIssue(selectedProjectId, {
+            categoryId: columnId,
+            title: title,
+            startAt: startAt,
+            status: 'open',
+          });
+        }
+
+        // toast.success('Task created successfully');
+        fetchBoard(selectedProjectId);
+      } catch (error) {
+        console.error('Quick add failed', error);
+        toast.error('Failed to create task');
+      }
+    },
+    [selectedProjectId, fetchBoard]
+  );
+
   const handleAddTask = async (values) => {
     if (!selectedProjectId) return;
     setCreateTaskLoading(true);
@@ -359,7 +402,6 @@ const Dashboard = () => {
       finalAssignees = projectMembers.map((m) => m._id);
     }
     try {
-      const newAttachments = fileList.map((file) => URL.createObjectURL(file.originFileObj));
       const payload = {
         categoryId: todoCategory._id,
         title: values.title,
@@ -369,10 +411,31 @@ const Dashboard = () => {
         dueAt: values.dueDate ? values.dueDate.toISOString() : null,
         startAt: values.startDate ? values.startDate.toISOString() : dayjs().toISOString(),
         status: 'open',
+        tag: values.tag,
       };
-      const res = await createIssue(selectedProjectId, payload);
+
+      let res;
+      if (fileList.length > 0) {
+        const formData = new FormData();
+        Object.keys(payload).forEach((key) => {
+          if (payload[key] !== null && payload[key] !== undefined) {
+            if (Array.isArray(payload[key])) {
+              payload[key].forEach((val) => formData.append(key, val));
+            } else {
+              formData.append(key, payload[key]);
+            }
+          }
+        });
+        fileList.forEach((file) => {
+          formData.append('files', file.originFileObj);
+        });
+        res = await createIssue(selectedProjectId, formData);
+      } else {
+        res = await createIssue(selectedProjectId, payload);
+      }
+
       if (res.data?.data) {
-        toast.success('Task created successfully');
+        // toast.success('Task created successfully');
         setIsModalOpen(false);
         form.resetFields();
         setFileList([]);
@@ -385,29 +448,11 @@ const Dashboard = () => {
     }
   };
 
-  const handleQuickAdd = useCallback(
-    async (columnId, title, imageSrc) => {
-      try {
-        await createIssue(selectedProjectId, {
-          categoryId: columnId,
-          title: title,
-          startAt: dayjs().toISOString(),
-          status: 'open',
-        });
-        toast.success('Task created');
-        fetchBoard(selectedProjectId);
-      } catch (error) {
-        toast.error('Failed to create task');
-      }
-    },
-    [selectedProjectId, fetchBoard]
-  );
-
   const handleDeleteTask = async (taskId, colId) => {
     try {
       setTasks((prev) => ({ ...prev, [colId]: prev[colId].filter((t) => t.id !== taskId) }));
       await archiveIssue(selectedProjectId, taskId);
-      toast.success('Task deleted');
+      // toast.success('Task deleted');
       setSelectedTask(null);
     } catch (error) {
       toast.error('Failed to delete task');
@@ -415,25 +460,72 @@ const Dashboard = () => {
     }
   };
 
+  const transformTaskData = (item) => ({
+    ...item,
+    id: item._id,
+    assignees: item.assigneeIds || [],
+    due: item.dueAt,
+    isCompleted: item.status === 'done',
+    activities: item.activity || [],
+    attachments: item.attachments || [],
+  });
+
   const handleUpdateTask = async (updatedTask) => {
     setSelectedTask(updatedTask);
+
+    if (updatedTask.isUploadFile || updatedTask.newLinkAttachment) {
+      setTasks((prev) => {
+        const colTasks = prev[selectedColumnId].map((t) => (t.id === updatedTask.id ? updatedTask : t));
+        return { ...prev, [selectedColumnId]: colTasks };
+      });
+
+      if (updatedTask.newLinkAttachment) {
+        try {
+          const res = await updateIssue(selectedProjectId, updatedTask.id, { newLinkAttachment: updatedTask.newLinkAttachment });
+          if (res.data?.data) {
+            const serverTask = transformTaskData(res.data.data);
+            setSelectedTask(serverTask);
+            setTasks((prev) => ({
+              ...prev,
+              [selectedColumnId]: prev[selectedColumnId].map((t) => (t.id === serverTask.id ? serverTask : t)),
+            }));
+          }
+        } catch (e) {
+          toast.error('Failed to add link');
+        }
+      }
+      return;
+    }
+
     setTasks((prev) => {
       const colTasks = prev[selectedColumnId].map((t) => (t.id === updatedTask.id ? updatedTask : t));
       return { ...prev, [selectedColumnId]: colTasks };
     });
+
     try {
-      await updateIssue(selectedProjectId, updatedTask.id, {
+      const sanitizedAssignees = (updatedTask.assignees || []).map((member) => {
+        if (member && typeof member === 'object' && member._id) {
+          return member._id;
+        }
+        return member;
+      });
+
+      const payload = {
         title: updatedTask.title,
         description: updatedTask.description,
         priority: updatedTask.priority,
-        assigneeIds: updatedTask.assignees,
+        assigneeIds: sanitizedAssignees,
         note: updatedTask.note,
         status: updatedTask.status,
         dueAt: updatedTask.due,
         startAt: updatedTask.startAt,
-      });
+        attachments: updatedTask.attachments,
+      };
+
+      await updateIssue(selectedProjectId, updatedTask.id, payload);
     } catch (error) {
       console.error('Update failed', error);
+      toast.error('Update failed');
     }
   };
 
@@ -473,7 +565,7 @@ const Dashboard = () => {
     try {
       await moveIssue(selectedProjectId, taskId, { toCategoryId: doneCategory._id, toIndex: 0 });
       await updateIssue(selectedProjectId, taskId, { status: 'done' });
-      toast.success('Task completed & moved to Done');
+      // toast.success('Task completed & moved to Done');
     } catch (error) {
       toast.error('Failed to complete task');
       fetchBoard(selectedProjectId);
@@ -487,7 +579,7 @@ const Dashboard = () => {
     try {
       await moveIssue(selectedProjectId, taskId, { toCategoryId: targetCat._id, toIndex: 0 });
       await updateIssue(selectedProjectId, taskId, { status: newStatus });
-      toast.success(`Task moved to ${targetCat.name}`);
+      // toast.success(`Task moved to ${targetCat.name}`);
       fetchBoard(selectedProjectId);
       setSelectedTask(null);
     } catch (error) {
@@ -497,7 +589,6 @@ const Dashboard = () => {
 
   const toggleColumn = useCallback((colId) => setCollapsedCols((prev) => ({ ...prev, [colId]: !prev[colId] })), []);
   const handleTaskClick = useCallback((task, colId) => {
-    // console.log(task);
     setSelectedTask(task);
     setSelectedColumnId(colId);
   }, []);
@@ -518,16 +609,12 @@ const Dashboard = () => {
       });
     return Array.from(allTags);
   }, [tasks]);
-  const assigneeOptions = useMemo(() => {
-    const opts = allMembers.map((m) => ({ label: m.full_name, value: m._id }));
-    if (canEditBoard) opts.unshift({ label: 'Select All Team', value: 'ALL', className: 'font-bold text-blue-600' });
-    return opts;
-  }, [allMembers, canEditBoard]);
+
+  // Định nghĩa selectedCategory
   const selectedCategory = useMemo(() => categories.find((c) => c._id === selectedColumnId), [categories, selectedColumnId]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* ... (Header & Stats giữ nguyên) ... */}
       <div
         className={`fixed top-0 ${
           collapsed ? 'left-64' : 'left-13.5'
@@ -540,15 +627,14 @@ const Dashboard = () => {
       </div>
 
       <div className="mt-[60px] p-4 h-[calc(100vh-60px)] flex flex-col gap-6 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
           {MOCK_STATS.map((stat, index) => (
             <StatCard key={index} item={stat} />
           ))}
-        </div>
+        </div> */}
 
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4">
-            {/* ... (Phần Filter & Toolbar giữ nguyên) ... */}
             <div className="flex items-center gap-4">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <CheckCircleOutlined className="text-blue-500" /> Team Tasks
@@ -637,10 +723,10 @@ const Dashboard = () => {
             {canEditBoard && (
               <div className="flex gap-2">
                 <Button icon={<PlusOutlined />} onClick={() => setIsCategoryModalOpen(true)}>
-                  Add Category
+                  <span className="font-medium">Add Category</span>
                 </Button>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-                  New Task
+                  <span className="font-medium">New Task</span>
                 </Button>
               </div>
             )}
@@ -674,7 +760,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Modal Archive */}
       <Modal
         title={
           <div className="flex items-center gap-2 text-red-600">
@@ -690,13 +775,12 @@ const Dashboard = () => {
         <p>Are you sure you want to archive this category? </p>
       </Modal>
 
-      {/* Modal Create Task - ĐÃ RESET FORM & DÙNG TASK ASSIGNEES */}
       <Modal
         title="Create New Task"
         open={isModalOpen}
         onCancel={() => {
           setIsModalOpen(false);
-          form.resetFields(); // Reset dữ liệu khi đóng
+          form.resetFields();
           setFileList([]);
         }}
         onOk={() => form.submit()}
@@ -712,7 +796,6 @@ const Dashboard = () => {
           </Form.Item>
           <div className="grid grid-cols-2 gap-4">
             <Form.Item name="assignees" label="Assign To">
-              {/* Sử dụng taskAssigneeOptions để chỉ hiện thành viên dự án */}
               <Select placeholder="Select members" mode="multiple" allowClear options={taskAssigneeOptions} />
             </Form.Item>
             <Form.Item name="priority" label="Priority" initialValue="medium">
@@ -761,7 +844,6 @@ const Dashboard = () => {
         </Form>
       </Modal>
 
-      {/* Modal Add Category */}
       <Modal
         title="Add New Category"
         open={isCategoryModalOpen}
@@ -787,7 +869,6 @@ const Dashboard = () => {
         </Form>
       </Modal>
 
-      {/* Modal Create Project */}
       <Modal
         title="Create New Project"
         open={isProjectModalOpen}
@@ -811,7 +892,6 @@ const Dashboard = () => {
         </Form>
       </Modal>
 
-      {/* Modal Edit Project */}
       <Modal
         title="Edit Project"
         open={isEditProjectModalOpen}

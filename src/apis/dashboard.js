@@ -26,3 +26,8 @@ export const createIssue = (projectId, data) => instance.post(`/to-do/projects/$
 export const updateIssue = (projectId, issueId, data) => instance.patch(`/to-do/projects/${projectId}/issues/${issueId}`, data);
 export const moveIssue = (projectId, issueId, data) => instance.post(`/to-do/projects/${projectId}/issues/${issueId}/move`, data);
 export const archiveIssue = (projectId, issueId) => instance.post(`/to-do/projects/${projectId}/issues/${issueId}/archive`);
+
+export const uploadIssueAttachment = (projectId, issueId, formData) =>
+  instance.post(`/to-do/projects/${projectId}/issues/${issueId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
