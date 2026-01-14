@@ -33,9 +33,7 @@ const TaskCard = React.memo(
       return false;
     });
 
-    // [NEW] Logic Overdue: Quá hạn và chưa hoàn thành
-    const isOverdue = task.due && dayjs().isAfter(dayjs(task.due)) && !task.isCompleted;
-
+    const isOverdue = task.due && dayjs().isAfter(dayjs(task.due).endOf('day')) && !task.isCompleted;
     // Logic kiểm tra assign to me
     const isAssignedToMe = React.useMemo(() => {
       if (!currentUserId || !task.assignees) return false;
@@ -59,7 +57,7 @@ const TaskCard = React.memo(
                 onClick={(e) => {
                   if (!e.target.closest('.ant-checkbox-wrapper')) onTaskClick(task, columnId);
                 }}
-                className={`bg-white p-3 rounded-lg shadow-sm border group cursor-grab hover:shadow-md transition-all duration-200 ${
+                className={`bg-white p-2 rounded-lg shadow-sm border group cursor-grab hover:shadow-md transition-all duration-200 ${
                   snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-200' : ''
                 } ${isAssignedToMe ? 'border-blue-400 ring-1 ring-blue-100 shadow-blue-100' : 'border-slate-200 hover:border-blue-300'}`}
               >
