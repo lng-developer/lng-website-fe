@@ -94,7 +94,7 @@ const TaskCard = React.memo(
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2 mb-2.5">
+                <div className="flex items-start gap-2">
                   <Checkbox checked={task.isCompleted} onChange={(e) => onToggleComplete(task.id, columnId, e.target.checked)} />
                   <h4
                     className={`text-sm font-medium text-slate-700 leading-snug ${task.isCompleted ? 'line-through text-slate-400' : ''}`}
@@ -103,7 +103,7 @@ const TaskCard = React.memo(
                   </h4>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-slate-50 mt-1">
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50 ">
                   <div className="flex items-center text-xs text-slate-400 gap-2">
                     {task.due && (
                       <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-500 font-bold' : 'hover:text-slate-600'}`}>

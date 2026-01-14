@@ -24,6 +24,7 @@ const TITLES = {
   '/sku_mapping': 'SKU Mapping',
   '/vendor/list-vendor': 'Manage Vendor',
   '/vendor/vendor-products': 'Vendor Products',
+  '/team-tasks': 'Team Tasks',
 };
 
 const TitlePages = () => {

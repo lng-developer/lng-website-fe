@@ -9,7 +9,8 @@ import {
   ExclamationCircleOutlined,
   EditOutlined,
 } from '@ant-design/icons';
-import { Button, Modal, Form, Input, Select, DatePicker, Tag, Upload, message, Spin, Tooltip, Popconfirm } from 'antd';
+import { MdOutlineRefresh } from 'react-icons/md';
+import { Button, Modal, Form, Input, Select, DatePicker, Tag, Upload, Spin, Tooltip, Popconfirm } from 'antd';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
@@ -40,11 +41,10 @@ const Dashboard = () => {
   const { collapsed } = useOutletContext();
   const { user } = useAuth();
 
+  const [lastUpdated, setLastUpdated] = useState(null);
+
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-
-  // [CHANGE] Xóa state allMembers vì dùng trực tiếp từ project
-  // const [allMembers, setAllMembers] = useState([]);
 
   const [categories, setCategories] = useState([]);
   const [tasks, setTasks] = useState({});
@@ -140,6 +140,7 @@ const Dashboard = () => {
           }));
         });
         setTasks(tasksMap);
+        setLastUpdated(dayjs());
       }
     } catch (error) {
       console.error('Err fetch board:', error);
@@ -597,7 +598,12 @@ const Dashboard = () => {
         } right-0 z-50 bg-white transition-all duration-300 border-b border-gray-200`}
       >
         <div className="h-[60px] px-8 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-800 !mb-0">System Dashboard</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-xl font-bold text-slate-800 !mb-0">My Team Tasks</h1>
+            {lastUpdated && (
+              <span className="text-[12px] text-slate-400 font-medium font-style: italic">Last update: {lastUpdated.format('HH:mm')}</span>
+            )}
+          </div>
           <div className="text-sm text-slate-500">Today: {dayjs().format('DD MMM, YYYY')}</div>
         </div>
       </div>
@@ -611,8 +617,8 @@ const Dashboard = () => {
 
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-800 ">
                 <CheckCircleOutlined className="text-blue-500" /> Team Tasks
               </h2>
               <div className="flex items-center gap-2 ml-4 bg-white p-1 rounded-md border border-slate-200">
@@ -695,6 +701,17 @@ const Dashboard = () => {
                   </Select>
                 </div>
               )}
+              <Tooltip title="Refresh">
+                <button
+                  className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                  onClick={() => {
+                    fetchBoard(selectedProjectId);
+                    toast.success('Refresh success!');
+                  }}
+                >
+                  <MdOutlineRefresh size={20} />
+                </button>
+              </Tooltip>
             </div>
             {canEditBoard && (
               <div className="flex gap-2">

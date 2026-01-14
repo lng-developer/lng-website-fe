@@ -48,8 +48,8 @@ export const topMenus = [
 export const detailMenus = {
   sales: [
     {
-      key: routes.dashboard,
-      label: 'Dashboard',
+      key: routes.team_task,
+      label: 'Team Tasks',
       icon: <BiHomeAlt size={20} />,
     },
     {

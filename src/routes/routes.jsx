@@ -1,5 +1,5 @@
 const routes = {
-  dashboard: '/dashboard',
+  team_task: '/team-tasks',
   home: '/',
   order: '/order',
   sale_listing: '/sales/listing',

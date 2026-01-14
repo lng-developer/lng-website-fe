@@ -48,7 +48,7 @@ function App() {
           }
         >
           <Route index path={routes.order_amazon} element={<Home />} />
-          <Route path={routes.dashboard} element={<Dashboard />} />
+          <Route path={routes.team_task} element={<Dashboard />} />
           <Route path={routes.sale_listing} element={<Listing />} />
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
