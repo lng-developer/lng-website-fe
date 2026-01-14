@@ -75,7 +75,7 @@ const Dashboard = () => {
   const [projectForm] = Form.useForm();
   const [editProjectForm] = Form.useForm();
 
-  const canEditBoard = useMemo(() => ['Admin', 'Leader'].includes(user?.role?.name || user?.role), [user]);
+  const canEditBoard = useMemo(() => ['Admin', 'Leader', 'Seller'].includes(user?.role?.name || user?.role), [user]);
   const isAdmin = useMemo(() => user?.role?.name === 'Admin' || user?.role === 'Admin', [user]);
 
   // --- FETCH DATA ---
@@ -636,7 +636,7 @@ const Dashboard = () => {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 !mb-0">
                 <CheckCircleOutlined className="text-blue-500" /> Team Tasks
               </h2>
               <div className="flex items-center gap-2 ml-4 bg-white p-1 rounded-md border border-slate-200">

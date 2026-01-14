@@ -88,7 +88,7 @@ const TaskDetailModal = ({
     }
   }, [task]);
 
-  const canEdit = useMemo(() => ['Admin', 'Leader'].includes(user?.role?.name || user?.role), [user]);
+  const canEdit = useMemo(() => ['Admin', 'Leader', 'Seller'].includes(user?.role?.name || user?.role), [user]);
 
   if (!task) return null;
   const headerColor = getColumnConfig(columnType)?.headerColor || '#ccc';
