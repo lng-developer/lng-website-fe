@@ -58,7 +58,6 @@ const TaskDetailModal = ({
 }) => {
   const { user } = useAuth();
 
-  // ... (States giữ nguyên)
   const [titleValue, setTitleValue] = useState('');
   const [descValue, setDescValue] = useState('');
   const [noteValue, setNoteValue] = useState('');
@@ -315,7 +314,8 @@ const TaskDetailModal = ({
 
       <div className="p-4 grid grid-cols-1 lg:grid-cols-3 max-h-[700px] overflow-y-auto custom-scrollbar">
         <div className="col-span-2 pr-2">
-          <div className="flex gap-3 items-start relative">
+          {/* Header Title + Checkbox + Date */}
+          <div className="flex gap-3 mb-5 items-start relative">
             <div className="mt-1.5">
               <Checkbox checked={task.isCompleted} onChange={(e) => onToggleComplete(task.id, columnId, e.target.checked)} />
             </div>
@@ -414,7 +414,6 @@ const TaskDetailModal = ({
                   autoFocus
                   style={{ width: '100%' }}
                   placeholder="Members"
-                  // [FIX] Convert Object -> ID để Select hiển thị đúng defaultValue
                   defaultValue={task.assignees.map((u) => (typeof u === 'object' ? u._id : u))}
                   onChange={handleManageMembers}
                   onBlur={() => setIsManagingMembers(false)}
@@ -425,9 +424,10 @@ const TaskDetailModal = ({
               ) : (
                 <div className="flex gap-1 items-center flex-wrap">
                   <Avatar.Group maxCount={3} size="small">
-                    {/* [FIX] Handle mixed Object/ID */}
+                    {/* [UPDATED] Check object or ID */}
                     {task.assignees?.map((userOrId, idx) => {
-                      const member = typeof userOrId === 'object' ? userOrId : allMembers.find((u) => u._id === userOrId);
+                      let member = userOrId;
+                      if (typeof userOrId !== 'object') member = allMembers.find((u) => u._id === userOrId);
                       const name = member?.full_name || 'Unknown';
                       return (
                         <Tooltip title={name} key={idx}>
@@ -448,7 +448,12 @@ const TaskDetailModal = ({
                 </div>
               )}
             </div>
-            {/* Priority */}
+            {/* <div>
+              <div className="text-xs font-semibold text-slate-500 uppercase mb-1.5">Label</div>
+              <Tag color="blue" className="px-2 py-0.5 text-xs rounded m-0">
+                {task.tag || 'None'}
+              </Tag>
+            </div> */}
             <div>
               <div className="text-xs font-semibold text-slate-500 uppercase mb-1.5">Priority</div>
               <Select
@@ -473,7 +478,6 @@ const TaskDetailModal = ({
             </div>
           </div>
 
-          {/* Description & Note (Giữ nguyên) */}
           <div className="mb-6 ml-9">
             <div className="flex items-center gap-2 mb-1.5 text-slate-700">
               <AlignLeftOutlined />
@@ -521,6 +525,52 @@ const TaskDetailModal = ({
               </div>
             )}
           </div>
+
+          {/* <div className="mb-6 ml-9">
+            <div className="flex items-center gap-2 mb-1.5 text-slate-700">
+              <PaperClipOutlined />
+              <h3 className="text-sm font-semibold m-0">Note</h3>
+              {canEdit && !isEditingNote && (
+                <FiEdit className="cursor-pointer text-slate-400 hover:text-slate-600 ml-1" onClick={() => setIsEditingNote(true)} />
+              )}
+            </div>
+            {isEditingNote ? (
+              <div>
+                <Input.TextArea
+                  rows={2}
+                  value={noteValue}
+                  onChange={(e) => setNoteValue(e.target.value)}
+                  autoFocus
+                  onBlur={handleSaveNote}
+                  className="mb-2"
+                />
+                <div className="flex gap-2">
+                  <Button type="primary" size="small" onMouseDown={(e) => e.preventDefault()} onClick={handleSaveNote}>
+                    Save
+                  </Button>
+                  <Button
+                    size="small"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setIsEditingNote(false);
+                      setNoteValue(task.note);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => canEdit && setIsEditingNote(true)}
+                className={`text-sm text-slate-600 whitespace-pre-line min-h-[30px] ${
+                  canEdit ? 'cursor-pointer hover:bg-slate-50 p-2 -ml-2 rounded' : ''
+                }`}
+              >
+                {task.note || <span className="italic text-slate-400">Add a note...</span>}
+              </div>
+            )}
+          </div> */}
         </div>
 
         {/* Right Column */}
@@ -547,13 +597,20 @@ const TaskDetailModal = ({
                   .slice()
                   .reverse()
                   .map((act, idx) => {
-                    // [FIX] Sử dụng act.user.full_name từ API nếu có
+                    // [UPDATED] Check logic hiển thị user
                     let userName = 'System';
-                    if (act.user && act.user.full_name) userName = act.user.full_name;
-                    else if (act.userId) {
+                    if (act.user && act.user.full_name) {
+                      userName = act.user.full_name;
+                    } else if (act.userId) {
                       const u = allMembers.find((m) => m._id === act.userId);
                       if (u) userName = u.full_name;
                     }
+
+                    const timeStr = act.createdAt
+                      ? dayjs(act.createdAt).format('MMM D, h:mm A')
+                      : act.at
+                      ? dayjs(act.at).format('MMM D, h:mm A')
+                      : '';
 
                     return (
                       <div key={idx} className="flex gap-3 text-sm">
@@ -577,9 +634,7 @@ const TaskDetailModal = ({
                                 : act.type}
                             </span>
                           </div>
-                          <div className="text-xs text-slate-400">
-                            {act.at ? dayjs(act.at).format('MMM D, YYYY h:mm A') : dayjs().format('MMM D, YYYY h:mm A')}
-                          </div>
+                          <div className="text-[10px] text-slate-400">{timeStr}</div>
                         </div>
                       </div>
                     );

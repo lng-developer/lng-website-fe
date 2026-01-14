@@ -15,7 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
 
 // Imports
-import { MOCK_STATS, getColumnConfig, ALL_MEMBERS } from './mockData';
+import { MOCK_STATS, getColumnConfig } from './mockData';
 import StatCard from './components/StatCard';
 import KanbanColumn from './components/KanbanColumn';
 import TaskDetailModal from './components/TaskDetailModal';
@@ -28,7 +28,6 @@ import {
   moveIssue,
   updateIssue,
   archiveIssue,
-  getAllUsers,
   updateCategory,
   archiveCategory,
   createProject,
@@ -43,7 +42,9 @@ const Dashboard = () => {
 
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-  const [allMembers, setAllMembers] = useState([]);
+
+  // [CHANGE] Xóa state allMembers vì dùng trực tiếp từ project
+  // const [allMembers, setAllMembers] = useState([]);
 
   const [categories, setCategories] = useState([]);
   const [tasks, setTasks] = useState({});
@@ -82,15 +83,6 @@ const Dashboard = () => {
   useEffect(() => {
     const initData = async () => {
       try {
-        if (canEditBoard || isAdmin) {
-          try {
-            const usersRes = await getAllUsers();
-            if (usersRes.data) setAllMembers(usersRes.data);
-          } catch (err) {
-            console.warn('Cannot fetch users list', err);
-          }
-        }
-
         const projectsRes = await getListProjects();
         if (projectsRes.data?.data) {
           const allProjects = projectsRes.data.data;
@@ -105,29 +97,24 @@ const Dashboard = () => {
       }
     };
     initData();
-  }, [user, isAdmin, canEditBoard]);
+  }, [user, isAdmin]);
 
-  // --- LOGIC LỌC MEMBER ---
   const currentProject = useMemo(() => projects.find((p) => p._id === selectedProjectId), [projects, selectedProjectId]);
 
   const projectMembers = useMemo(() => {
-    if (!currentProject || !allMembers.length) return [];
-    const memberIds = currentProject.memberIds || [];
-    const ownerId = currentProject.ownerId;
-    return allMembers.filter((u) => memberIds.includes(u._id) || u._id === ownerId);
-  }, [currentProject, allMembers]);
+    if (!currentProject || !currentProject.members) return [];
+    return currentProject.members;
+  }, [currentProject]);
 
-  // Option chỉ hiện member trong project (Dùng cho Create Task)
   const taskAssigneeOptions = useMemo(() => {
     const opts = projectMembers.map((m) => ({ label: m.full_name, value: m._id }));
     if (canEditBoard) opts.unshift({ label: 'Select All Project Members', value: 'ALL', className: 'font-bold text-blue-600' });
     return opts;
   }, [projectMembers, canEditBoard]);
 
-  // Option hiện tất cả user (Dùng cho Edit/Create Project)
-  const allUserOptions = useMemo(() => {
-    return allMembers.map((m) => ({ label: m.full_name, value: m._id }));
-  }, [allMembers]);
+  const projectMemberOptions = useMemo(() => {
+    return projectMembers.map((m) => ({ label: m.full_name, value: m._id }));
+  }, [projectMembers]);
 
   const fetchBoard = useCallback(async (projId) => {
     if (!projId) return;
@@ -143,7 +130,7 @@ const Dashboard = () => {
           tasksMap[cat._id] = (cat.issues || []).map((issue) => ({
             ...issue,
             id: issue._id,
-            assignees: issue.assignees || [], // Sử dụng assignees (Object) để hiển thị tên đầy đủ ngay
+            assignees: issue.assignees || [],
             due: issue.dueAt,
             startAt: issue.startAt,
             status: issue.status,
@@ -167,7 +154,6 @@ const Dashboard = () => {
     }
   }, [selectedProjectId, fetchBoard]);
 
-  // --- HANDLERS PROJECT ---
   const handleCreateProject = async (values) => {
     setCreateProjectLoading(true);
     try {
@@ -224,7 +210,8 @@ const Dashboard = () => {
       editProjectForm.setFieldsValue({
         name: currentProject.name,
         description: currentProject.description,
-        members: currentProject.memberIds,
+        // Map members object -> ID
+        members: currentProject.members?.map((m) => m._id) || [],
       });
       setIsEditProjectModalOpen(true);
     }
@@ -252,7 +239,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- HANDLERS CATEGORY ---
   const handleAddCategory = async (values) => {
     if (!selectedProjectId) return;
     try {
@@ -312,7 +298,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- HANDLERS TASK ---
   const onDragEnd = async (result) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
@@ -348,29 +333,21 @@ const Dashboard = () => {
 
   const handleQuickAdd = useCallback(
     async (columnId, title, imageFile) => {
-      // Validate: Nếu không có title và không có ảnh thì không tạo
       if (!title?.trim() && !imageFile) return;
 
       try {
         const startAt = dayjs().toISOString();
 
-        // TRƯỜNG HỢP 1: CÓ ẢNH (Gửi FormData)
         if (imageFile) {
           const formData = new FormData();
           formData.append('categoryId', columnId);
-          formData.append('title', title || 'New Image Task'); // Fallback title nếu chỉ paste ảnh
+          formData.append('title', title || 'Image Task');
           formData.append('startAt', startAt);
           formData.append('status', 'open');
-
-          // 'files' phải khớp với cấu hình multer bên backend: upload.array("files")
           formData.append('files', imageFile);
 
-          // Gọi API createIssue
-          // Lưu ý: createIssue trong apis/dashboard.js chỉ cần truyền formData, axios sẽ tự detect header
           await createIssue(selectedProjectId, formData);
-        }
-        // TRƯỜNG HỢP 2: KHÔNG CÓ ẢNH (Gửi JSON)
-        else {
+        } else {
           await createIssue(selectedProjectId, {
             categoryId: columnId,
             title: title,
@@ -379,7 +356,7 @@ const Dashboard = () => {
           });
         }
 
-        // toast.success('Task created successfully');
+        // toast.success('Task created');
         fetchBoard(selectedProjectId);
       } catch (error) {
         console.error('Quick add failed', error);
@@ -610,7 +587,6 @@ const Dashboard = () => {
     return Array.from(allTags);
   }, [tasks]);
 
-  // Định nghĩa selectedCategory
   const selectedCategory = useMemo(() => categories.find((c) => c._id === selectedColumnId), [categories, selectedColumnId]);
 
   return (
@@ -636,7 +612,7 @@ const Dashboard = () => {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 !mb-0">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <CheckCircleOutlined className="text-blue-500" /> Team Tasks
               </h2>
               <div className="flex items-center gap-2 ml-4 bg-white p-1 rounded-md border border-slate-200">
@@ -749,9 +725,11 @@ const Dashboard = () => {
                     onToggleComplete={handleToggleComplete}
                     onQuickAdd={handleQuickAdd}
                     onDeleteTask={handleDeleteTask}
+                    // [UPDATED] Truyền projectMembers (lấy trực tiếp từ project)
                     allMembers={projectMembers}
                     onUpdateCategory={handleUpdateCategory}
                     onRequestArchiveCategory={handleRequestArchiveCategory}
+                    currentUserId={user?.id}
                   />
                 ))}
               </div>
@@ -887,7 +865,7 @@ const Dashboard = () => {
             <Input.TextArea rows={2} placeholder="Project goals..." />
           </Form.Item>
           <Form.Item name="members" label="Members">
-            <Select mode="multiple" placeholder="Select members to join this project" options={allUserOptions} allowClear />
+            <Select mode="multiple" placeholder="Select members to join this project" options={projectMemberOptions} allowClear />
           </Form.Item>
         </Form>
       </Modal>
@@ -907,7 +885,7 @@ const Dashboard = () => {
             <Input.TextArea rows={2} />
           </Form.Item>
           <Form.Item name="members" label="Members">
-            <Select mode="multiple" placeholder="Select members" options={allUserOptions} allowClear />
+            <Select mode="multiple" placeholder="Select members" options={projectMemberOptions} allowClear />
           </Form.Item>
         </Form>
       </Modal>

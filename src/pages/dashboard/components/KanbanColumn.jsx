@@ -28,6 +28,7 @@ const KanbanColumn = React.memo(
     allMembers,
     onUpdateCategory,
     onRequestArchiveCategory,
+    currentUserId,
   }) => {
     const isCollapsed = collapsedCols[columnId];
     const { collapsedBg } = config || { collapsedBg: 'bg-gray-200' };
@@ -38,7 +39,7 @@ const KanbanColumn = React.memo(
 
     const [newTitle, setNewTitle] = useState('');
     const [pastedImage, setPastedImage] = useState(null);
-
+    console.log('kanban', currentUserId);
     // --- QUICK ADD LOGIC ---
     const handleQuickSubmit = () => {
       // Cho phép tạo nếu có title HOẶC có ảnh
@@ -168,6 +169,7 @@ const KanbanColumn = React.memo(
                     onDeleteTask={onDeleteTask}
                     canEditBoard={canEditBoard}
                     allMembers={allMembers}
+                    currentUserId={currentUserId}
                   />
                   <div className="h-2"></div>
                 </div>
