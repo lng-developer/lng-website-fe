@@ -815,14 +815,14 @@ const Dashboard = () => {
               <DatePicker className="w-full" format="YYYY-MM-DD" />
             </Form.Item>
           </div>
-          <Form.Item name="tag" label="Tag" initialValue="General">
+          {/* <Form.Item name="tag" label="Tag" initialValue="General">
             <Select>
               <Select.Option value="Design">Design</Select.Option>
               <Select.Option value="Dev">Dev</Select.Option>
               <Select.Option value="Marketing">Marketing</Select.Option>
               <Select.Option value="Seller">Seller</Select.Option>
             </Select>
-          </Form.Item>
+          </Form.Item> */}
           <Form.Item label="Attachments">
             <Upload
               listType="picture-card"
