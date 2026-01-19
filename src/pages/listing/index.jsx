@@ -187,13 +187,6 @@ const Listing = () => {
       render: (data) => <StatusComponent title={data?.name} color={dataColors.pending} />,
     },
     {
-      title: <span style={{ color: dataColors.title }}>Platform</span>,
-      dataIndex: 'platform',
-      key: 'platform',
-      align: 'center',
-      render: (data) => <StatusComponent title={data} color={dataColors.success} />,
-    },
-    {
       title: <span style={{ color: dataColors.title }}>Seller</span>,
       dataIndex: 'seller',
       key: 'seller',
