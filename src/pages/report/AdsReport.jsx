@@ -847,9 +847,8 @@ const AdsReport = () => {
             </div>
           </div>
         </div>
-
-        <div className="flex gap-2 items-center" style={{ marginTop: 20 }}>
-          {user?.role === 'Admin' && (
+        {user?.role === 'Admin' && (
+          <div className="flex gap-2 items-center" style={{ marginTop: 20 }}>
             <SelectSeller
               title="Report By Seller"
               ListData={sellers}
@@ -859,20 +858,20 @@ const AdsReport = () => {
                 updateFilter({ seller: val });
               }}
             />
-          )}
-          <Tooltip title="Refresh">
-            <button
-              className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
-              onClick={() => {
-                getAllAds(filters);
-                toast.success('Refresh success!');
-              }}
-            >
-              <MdOutlineRefresh size={20} />
-            </button>
-          </Tooltip>
-        </div>
 
+            <Tooltip title="Refresh">
+              <button
+                className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                onClick={() => {
+                  getAllAds(filters);
+                  toast.success('Refresh success!');
+                }}
+              >
+                <MdOutlineRefresh size={20} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
         {/* View Tabs (keep existing layout, only add a small switcher) */}
         <div className="flex gap-2 items-center" style={{ marginTop: 16 }}>
           <button
@@ -897,6 +896,21 @@ const AdsReport = () => {
           >
             Accounts View
           </button>
+          {user.role == 'Seller' ? (
+            <Tooltip title="Refresh">
+              <button
+                className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
+                onClick={() => {
+                  getAllAds(filters);
+                  toast.success('Refresh success!');
+                }}
+              >
+                <MdOutlineRefresh size={20} />
+              </button>
+            </Tooltip>
+          ) : (
+            <></>
+          )}
         </div>
 
         {viewMode === 'daily' ? renderDailyList() : renderAccountsView()}
