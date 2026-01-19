@@ -1,5 +1,5 @@
 // Feather, Lucide, Remix...
-import { LuBox, LuLayoutList, LuStar, LuBrain } from 'react-icons/lu';
+import { LuBox, LuLayoutList, LuStar, LuBrain, LuListTodo, LuNotebook } from 'react-icons/lu';
 import { LiaReact } from 'react-icons/lia';
 import {
   RiPaletteLine,
@@ -48,11 +48,6 @@ export const topMenus = [
 export const detailMenus = {
   sales: [
     {
-      key: routes.team_task,
-      label: 'Team Tasks',
-      icon: <BiHomeAlt size={20} />,
-    },
-    {
       key: routes.order_amazon,
       label: 'Orders',
       icon: <LuBox size={20} />,
@@ -60,6 +55,11 @@ export const detailMenus = {
       //   { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
       //   // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
       // ],
+    },
+    {
+      key: routes.team_task,
+      label: 'Team Tasks',
+      icon: <LuNotebook size={20} />,
     },
     {
       key: routes.sale_listing,

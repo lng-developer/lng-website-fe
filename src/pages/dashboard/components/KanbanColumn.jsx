@@ -39,7 +39,6 @@ const KanbanColumn = React.memo(
 
     const [newTitle, setNewTitle] = useState('');
     const [pastedImage, setPastedImage] = useState(null);
-    console.log('kanban', currentUserId);
     // --- QUICK ADD LOGIC ---
     const handleQuickSubmit = () => {
       // Cho phép tạo nếu có title HOẶC có ảnh

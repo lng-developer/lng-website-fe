@@ -34,6 +34,7 @@ import {
   createProject,
   archiveProject,
   updateProject,
+  getAllUsers,
 } from '../../apis/dashboard';
 import { toast } from 'sonner';
 
@@ -45,6 +46,7 @@ const Dashboard = () => {
 
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [allMembers, setAllMembers] = useState([]);
 
   const [categories, setCategories] = useState([]);
   const [tasks, setTasks] = useState({});
@@ -83,6 +85,14 @@ const Dashboard = () => {
   useEffect(() => {
     const initData = async () => {
       try {
+        if (canEditBoard || isAdmin) {
+          try {
+            const usersRes = await getAllUsers();
+            if (usersRes.data) setAllMembers(usersRes.data);
+          } catch (err) {
+            console.warn('Cannot fetch users list', err);
+          }
+        }
         const projectsRes = await getListProjects();
         if (projectsRes.data?.data) {
           const allProjects = projectsRes.data.data;
@@ -115,7 +125,9 @@ const Dashboard = () => {
   const projectMemberOptions = useMemo(() => {
     return projectMembers.map((m) => ({ label: m.full_name, value: m._id }));
   }, [projectMembers]);
-
+  const allUserOptions = useMemo(() => {
+    return allMembers.map((m) => ({ label: m.full_name, value: m._id }));
+  }, [allMembers]);
   const fetchBoard = useCallback(async (projId) => {
     if (!projId) return;
     setLoading(true);
@@ -599,7 +611,7 @@ const Dashboard = () => {
       >
         <div className="h-[60px] px-8 flex items-center justify-between">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-xl font-bold text-slate-800 !mb-0">My Team Tasks</h1>
+            <h1 className="text-2xl font-bold text-slate-800 !mb-0">My Team Tasks</h1>
             {lastUpdated && (
               <span className="text-[12px] text-slate-400 font-medium font-style: italic">Last update: {lastUpdated.format('HH:mm')}</span>
             )}
@@ -882,7 +894,7 @@ const Dashboard = () => {
             <Input.TextArea rows={2} placeholder="Project goals..." />
           </Form.Item>
           <Form.Item name="members" label="Members">
-            <Select mode="multiple" placeholder="Select members to join this project" options={projectMemberOptions} allowClear />
+            <Select mode="multiple" placeholder="Select members to join this project" options={allUserOptions} allowClear />
           </Form.Item>
         </Form>
       </Modal>
@@ -902,7 +914,7 @@ const Dashboard = () => {
             <Input.TextArea rows={2} />
           </Form.Item>
           <Form.Item name="members" label="Members">
-            <Select mode="multiple" placeholder="Select members" options={projectMemberOptions} allowClear />
+            <Select mode="multiple" placeholder="Select members" options={allUserOptions} allowClear />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
@@ -22,6 +22,9 @@ const AdsReport = () => {
   const { collapsed } = useOutletContext();
   const { user } = useAuth();
   const [expandedDay, setExpandedDay] = useState(null);
+  const [viewMode, setViewMode] = useState('daily'); // daily | accounts
+  const [expandedShop, setExpandedShop] = useState(null);
+  const [expandedShopDay, setExpandedShopDay] = useState(null); // `${shopId}__${dayIso}`
   const [dataSource, setDataSource] = useState([]);
   const [summary, setSummary] = useState({});
   const [sellers, setSellers] = useState([]);
@@ -122,6 +125,638 @@ const AdsReport = () => {
     getAllAds(filters);
   }, [filters]);
 
+  useEffect(() => {
+    // reset expand states when switching view
+    setExpandedDay(null);
+    setExpandedShop(null);
+    setExpandedShopDay(null);
+  }, [viewMode]);
+
+  // Build Accounts (Shop) Aggregates: total days in range, detail each day, seller detail per day.
+  const accountsData = useMemo(() => {
+    const shopMap = new Map();
+
+    (dataSource || []).forEach((dayData) => {
+      const dayIso = dayData?.day?.iso;
+
+      (dayData?.by_seller || []).forEach((sellerData) => {
+        const sellerId = sellerData?.seller?._id;
+        const sellerName = sellerData?.seller?.full_name || 'Unknown Seller';
+
+        (sellerData?.by_shop || []).forEach((shopItem) => {
+          const shopId = shopItem?.shop_id || shopItem?.shop?._id;
+          const shopName = shopItem?.shop?.name || 'Unknown';
+          const spend = Number(shopItem?.spend || 0);
+          if (!shopId) return;
+
+          if (!shopMap.has(shopId)) {
+            shopMap.set(shopId, {
+              shop_id: shopId,
+              shop_name: shopName,
+              total_spend: 0,
+              sellersSet: new Set(), // unique sellers in range
+              daysMap: new Map(), // dayIso -> { day, total_spend, sellersMap }
+            });
+          }
+
+          const shopAgg = shopMap.get(shopId);
+          shopAgg.total_spend += spend;
+          if (sellerId) shopAgg.sellersSet.add(sellerId);
+
+          const dayAgg = shopAgg.daysMap.get(dayIso) || {
+            day: dayData?.day,
+            total_spend: 0,
+            sellersMap: new Map(), // sellerId -> { seller_id, seller_name, spend }
+          };
+          dayAgg.total_spend += spend;
+
+          const sellerAgg = dayAgg.sellersMap.get(sellerId) || {
+            seller_id: sellerId,
+            seller_name: sellerName,
+            spend: 0,
+          };
+          sellerAgg.spend += spend;
+          dayAgg.sellersMap.set(sellerId, sellerAgg);
+
+          shopAgg.daysMap.set(dayIso, dayAgg);
+        });
+      });
+    });
+
+    const rangeDays = Number(summary?.days || dataSource?.length || 0);
+
+    return Array.from(shopMap.values())
+      .map((shop) => {
+        const daysArr = Array.from(shop.daysMap.values())
+          .map((d) => {
+            const sellersArr = Array.from(d.sellersMap.values()).sort((a, b) => b.spend - a.spend);
+            return {
+              day: d.day,
+              total_spend: d.total_spend,
+              seller_count: sellersArr.length,
+              sellers: sellersArr,
+            };
+          })
+          .sort((a, b) => new Date(b?.day?.iso || 0).getTime() - new Date(a?.day?.iso || 0).getTime());
+
+        const activeDays = daysArr.filter((d) => Number(d.total_spend) > 0).length;
+
+        return {
+          shop_id: shop.shop_id,
+          shop_name: shop.shop_name,
+          total_spend: shop.total_spend,
+          range_days: rangeDays,
+          active_days: activeDays,
+          total_sellers: shop.sellersSet.size,
+          days: daysArr,
+        };
+      })
+      .sort((a, b) => b.total_spend - a.total_spend);
+  }, [dataSource, summary?.days]);
+
+  const renderDailyList = () => {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: 20,
+        }}
+      >
+        {dataSource.length > 0 ? (
+          dataSource.map((dayData) => {
+            const isExpanded = expandedDay === dayData.day?.iso;
+
+            return (
+              <div
+                key={dayData.day?.iso}
+                style={{
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                }}
+              >
+                {/* Day Header */}
+                <div
+                  style={{
+                    padding: '10px 20px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setExpandedDay(isExpanded ? null : dayData.day?.iso)}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '24px',
+                        }}
+                      >
+                        <FcCalendar size={35} />
+                      </div>
+                      <div>
+                        <div className="font-medium">{dayData.day?.convert1}</div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            color: dataColors.title,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {dayData.day?.convert2}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '24px',
+                      }}
+                    >
+                      <div style={{ textAlign: 'right' }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            marginBottom: '4px',
+                            color: dataColors.title,
+                            fontWeight: '600',
+                          }}
+                        >
+                          Total spending
+                        </span>
+                        <div className="text-xl font-bold" style={{ color: dataColors.success }}>
+                          {$(dayData?.total_spend)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                          }}
+                        >
+                          <span>{dayData.seller_count}</span> <span style={{ color: dataColors.title }}> sellers</span>
+                        </div>
+                        <div
+                          style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                          }}
+                        >
+                          <span>{dayData.shop_count}</span>
+                          <span style={{ color: dataColors.title }}> shops</span>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '20px',
+                          transition: 'transform 0.3s',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          marginRight: 10,
+                        }}
+                      >
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded - Sellers and Shops */}
+                {isExpanded && (
+                  <div style={{ padding: '20px', paddingTop: '5px' }} className="grid grid-cols-2 gap-5">
+                    {dayData.by_seller.map((sellerData) => (
+                      <div
+                        key={sellerData.seller._id}
+                        style={{
+                          padding: '15px 20px',
+                          borderRadius: '8px',
+                          boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                        }}
+                      >
+                        {/* Seller Info */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {sellerData.seller.full_name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">{sellerData.seller.full_name}</div>
+                              <div
+                                style={{
+                                  fontSize: '12px',
+                                  color: '#94a3b8',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                ID: {sellerData.seller._id}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              Daily ads spend
+                            </div>
+                            <Popover trigger={'click'} placement="rightTop" content={content(sellerData.by_shop)}>
+                              <div className="text-xl font-bold cursor-pointer hover:underline" style={{ color: dataColors.success }}>
+                                {$(sellerData?.spend)}
+                              </div>
+                            </Popover>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div style={{ marginTop: 20 }}>
+            <Empty />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderAccountsView = () => {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          marginTop: 20,
+        }}
+      >
+        {accountsData?.length ? (
+          accountsData.map((acc) => {
+            const isExpanded = expandedShop === acc.shop_id;
+
+            return (
+              <div
+                key={acc.shop_id}
+                style={{
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                }}
+              >
+                {/* Account Header */}
+                <div
+                  style={{
+                    padding: '12px 20px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setExpandedShop(isExpanded ? null : acc.shop_id)}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <FcShop size={35} />
+                      </div>
+                      <div>
+                        <div className="font-medium">{acc.shop_name}</div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            color: dataColors.title,
+                            fontWeight: 500,
+                          }}
+                        >
+                          Range: {acc.range_days} day(s) • Active: {acc.active_days} day(s) • Sellers: {acc.total_sellers}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '24px',
+                      }}
+                    >
+                      <div style={{ textAlign: 'right' }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            marginBottom: '4px',
+                            color: dataColors.title,
+                            fontWeight: '600',
+                          }}
+                        >
+                          Total spend
+                        </span>
+                        <div className="text-xl font-bold" style={{ color: dataColors.success }}>
+                          {$(acc.total_spend)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '20px',
+                          transition: 'transform 0.3s',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          marginRight: 10,
+                        }}
+                      >
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded - Days (and sellers per day) */}
+                {isExpanded && (
+                  <div
+                    style={{
+                      padding: '20px',
+                      paddingTop: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    {acc.days?.length ? (
+                      acc.days.map((d) => {
+                        const dayIso = d?.day?.iso;
+                        const dayKey = `${acc.shop_id}__${dayIso}`;
+                        const isDayExpanded = expandedShopDay === dayKey;
+
+                        return (
+                          <div
+                            key={dayKey}
+                            style={{
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              boxShadow: 'rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                padding: '10px 16px',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => setExpandedShopDay(isDayExpanded ? null : dayKey)}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                  }}
+                                >
+                                  <FcCalendar size={26} />
+                                  <div>
+                                    <div className="font-medium">{d?.day?.convert1}</div>
+                                    <div
+                                      style={{
+                                        fontSize: '13px',
+                                        color: dataColors.title,
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {d?.day?.convert2}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '18px',
+                                  }}
+                                >
+                                  <div style={{ textAlign: 'right' }}>
+                                    <div
+                                      style={{
+                                        fontSize: '12px',
+                                        color: dataColors.title,
+                                        fontWeight: '600',
+                                      }}
+                                    >
+                                      Spend
+                                    </div>
+                                    <div className="font-bold" style={{ color: dataColors.success }}>
+                                      {$(d.total_spend)}
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      background: 'rgba(255,255,255,0.2)',
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      fontSize: '13px',
+                                      fontWeight: '600',
+                                    }}
+                                  >
+                                    <span>{d.seller_count}</span> <span style={{ color: dataColors.title }}> sellers</span>
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      fontSize: '18px',
+                                      transition: 'transform 0.3s',
+                                      transform: isDayExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    }}
+                                  >
+                                    ▼
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {isDayExpanded && (
+                              <div style={{ padding: '16px', paddingTop: '6px' }} className="grid grid-cols-2 gap-5">
+                                {(d.sellers || []).length ? (
+                                  d.sellers.map((s) => (
+                                    <div
+                                      key={`${dayKey}__${s.seller_id}`}
+                                      style={{
+                                        padding: '12px 16px',
+                                        borderRadius: '8px',
+                                        boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: '30px',
+                                              height: '30px',
+                                              borderRadius: '50%',
+                                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              color: 'white',
+                                              fontWeight: 'bold',
+                                            }}
+                                          >
+                                            {(s.seller_name || '?').charAt(0)}
+                                          </div>
+                                          <div>
+                                            <div className="font-medium text-sm">{s.seller_name}</div>
+                                            <div
+                                              style={{
+                                                fontSize: '12px',
+                                                color: '#94a3b8',
+                                                fontFamily: 'monospace',
+                                              }}
+                                            >
+                                              ID: {s.seller_id}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                          <div
+                                            style={{
+                                              fontSize: '12px',
+                                              color: '#94a3b8',
+                                              marginBottom: '4px',
+                                            }}
+                                          >
+                                            Spend
+                                          </div>
+                                          <div
+                                            className="text-xl font-bold"
+                                            style={{
+                                              color: dataColors.success,
+                                            }}
+                                          >
+                                            {$(s.spend)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div style={{ gridColumn: '1 / -1' }}>
+                                    <Empty />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <Empty />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div style={{ marginTop: 20 }}>
+            <Empty />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -163,7 +798,9 @@ const AdsReport = () => {
         <div className="w-[60%] flex justify-between items-center">
           <div
             className="w-[32%] p-4 rounded-lg"
-            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+            style={{
+              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+            }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -178,7 +815,9 @@ const AdsReport = () => {
 
           <div
             className="w-[32%] p-4 rounded-lg"
-            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+            style={{
+              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+            }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -193,7 +832,9 @@ const AdsReport = () => {
 
           <div
             className="w-[32%] p-4 rounded-lg"
-            style={{ boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' }}
+            style={{
+              boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
+            }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -232,215 +873,33 @@ const AdsReport = () => {
           </Tooltip>
         </div>
 
-        {/* Daily List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: 20 }}>
-          {dataSource.length > 0 ? (
-            dataSource.map((dayData) => {
-              const isExpanded = expandedDay === dayData.day?.iso;
-
-              return (
-                <div
-                  key={dayData.day?.iso}
-                  style={{
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s ease',
-                    boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-                  }}
-                >
-                  {/* Day Header */}
-                  <div
-                    style={{
-                      padding: '10px 20px',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setExpandedDay(isExpanded ? null : dayData.day?.iso)}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div
-                          style={{
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '24px',
-                          }}
-                        >
-                          <FcCalendar size={35} />
-                        </div>
-                        <div>
-                          <div className="font-medium">{dayData.day?.convert1}</div>
-                          <div style={{ fontSize: '14px', color: dataColors.title, fontWeight: 500 }}>{dayData.day?.convert2}</div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: '12px', marginBottom: '4px', color: dataColors.title, fontWeight: '600' }}>
-                            Total spending
-                          </span>
-                          <div className="text-xl font-bold" style={{ color: dataColors.success }}>
-                            {$(dayData?.total_spend)}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: '8px',
-                          }}
-                        >
-                          <div
-                            style={{
-                              background: 'rgba(255,255,255,0.2)',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                            }}
-                          >
-                            <span>{dayData.seller_count}</span> <span style={{ color: dataColors.title }}> sellers</span>
-                          </div>
-                          <div
-                            style={{
-                              background: 'rgba(255,255,255,0.2)',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                            }}
-                          >
-                            <span>{dayData.shop_count}</span>
-                            <span style={{ color: dataColors.title }}> shops</span>
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '20px',
-                            transition: 'transform 0.3s',
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                            marginRight: 10,
-                          }}
-                        >
-                          ▼
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expanded - Sellers and Shops */}
-                  {isExpanded && (
-                    <div style={{ padding: '20px', paddingTop: '5px' }} class="grid grid-cols-2 gap-5">
-                      {dayData.by_seller.map((sellerData) => (
-                        <div
-                          key={sellerData.seller._id}
-                          style={{
-                            padding: '15px 20px',
-                            borderRadius: '8px',
-                            boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-                          }}
-                        >
-                          {/* Seller Info */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <div
-                                style={{
-                                  width: '30px',
-                                  height: '30px',
-                                  borderRadius: '50%',
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontWeight: 'bold',
-                                }}
-                              >
-                                {sellerData.seller.full_name.charAt(0)}
-                              </div>
-                              <div>
-                                <div className="font-medium text-sm">{sellerData.seller.full_name}</div>
-                                <div style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                                  ID: {sellerData.seller._id}
-                                </div>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Daily ads spend</div>
-                              <Popover trigger={'click'} placement="rightTop" content={content(sellerData.by_shop)}>
-                                <div className="text-xl font-bold cursor-pointer hover:underline" style={{ color: dataColors.success }}>
-                                  {$(sellerData?.spend)}
-                                </div>
-                              </Popover>
-                            </div>
-                          </div>
-
-                          {/* Shops Grid */}
-                          {/* <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                              gap: '12px',
-                            }}
-                          >
-                            {sellerData.by_shop.map((shop) => (
-                              <div
-                                key={shop.shop_id}
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  padding: '10px',
-                                  borderRadius: '8px',
-                                  boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
-                                  transition: 'all 0.2s',
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <span style={{ fontSize: '20px' }}>
-                                    <FcShop />
-                                  </span>
-                                  <span
-                                    style={{
-                                      color: dataColors.title,
-                                      fontSize: '14px',
-                                      fontWeight: '500',
-                                    }}
-                                  >
-                                    {shop.shop?.name}
-                                  </span>
-                                </div>
-                                <div
-                                  style={{
-                                    color: dataColors.success,
-                                    fontWeight: 'bold',
-                                  }}
-                                  className="font-medium"
-                                >
-                                  {$(shop?.spend)}
-                                </div>
-                              </div>
-                            ))}
-                          </div> */}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <div style={{ marginTop: 20 }}>
-              <Empty />
-            </div>
-          )}
+        {/* View Tabs (keep existing layout, only add a small switcher) */}
+        <div className="flex gap-2 items-center" style={{ marginTop: 16 }}>
+          <button
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-9 px-4 border-[#e2e8f0] cursor-pointer"
+            style={{
+              background: viewMode === 'daily' ? '#ffffff' : '#f1f5f9',
+              boxShadow: viewMode === 'daily' ? 'rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' : 'none',
+              color: 'black',
+            }}
+            onClick={() => setViewMode('daily')}
+          >
+            Daily List
+          </button>
+          <button
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input h-9 px-4 border-[#e2e8f0] cursor-pointer"
+            style={{
+              background: viewMode === 'accounts' ? '#ffffff' : '#f1f5f9',
+              boxShadow: viewMode === 'accounts' ? 'rgba(9, 30, 66, 0.08) 0px 0px 0px 1px' : 'none',
+              color: 'black',
+            }}
+            onClick={() => setViewMode('accounts')}
+          >
+            Accounts View
+          </button>
         </div>
+
+        {viewMode === 'daily' ? renderDailyList() : renderAccountsView()}
       </div>
     </div>
   );
