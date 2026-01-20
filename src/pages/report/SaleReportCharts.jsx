@@ -135,6 +135,61 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
   return (
     <div className="grid grid-cols-12 gap-3">
       <div className="col-span-12">
+        <ChartCard title="Seller Comparison">
+          <div style={{ height: 400 }}>
+            <Tabs
+              defaultActiveKey="profit"
+              items={metricTabs.map((t) => {
+                const rankData = buildRankData(t.field);
+                const chartData = [...rankData].reverse();
+                const maxV = maxAbsValue(chartData);
+
+                return {
+                  key: t.key,
+                  label: <span className="font-medium">{t.label}</span>,
+                  children: (
+                    <div style={{ height: 340 }}>
+                      <ResponsiveBar
+                        data={chartData}
+                        keys={['value']}
+                        indexBy="seller"
+                        layout="horizontal"
+                        margin={{ top: 10, right: 20, bottom: 30, left: 150 }}
+                        padding={0.25}
+                        enableLabel={false}
+                        minValue={0}
+                        maxValue={maxV || 'auto'}
+                        valueScale={{ type: 'linear' }}
+                        indexScale={{ type: 'band', round: true }}
+                        enableGridY={false}
+                        enableGridX={true}
+                        // Màu: âm -> đỏ, dương -> màu tab
+                        colors={({ data }) => (numberSafe(data.rawValue) < 0 ? '#ef4444' : t.posColor)}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 10,
+                        }}
+                        axisBottom={{
+                          tickSize: 0,
+                          tickPadding: 6,
+                          format: (v) => (t.format === 'percent' ? `${Number(v).toFixed(0)}%` : money(v)),
+                        }}
+                        tooltip={({ indexValue, data }) => (
+                          <div className="min-w-36 bg-white border border-slate-200 rounded px-3 py-2 text-xs shadow">
+                            <div className="font-semibold text-slate-800">{String(indexValue)}</div>
+                            <div className="mt-1 text-slate-900">{formatSigned(data.rawValue, t.format)}</div>
+                          </div>
+                        )}
+                      />
+                    </div>
+                  ),
+                };
+              })}
+            />
+          </div>
+        </ChartCard>
+      </div>
+      <div className="col-span-12">
         <ChartCard title="Revenue / Profit 2 / Ads">
           <div style={{ height: 340 }}>
             <ResponsiveLine
@@ -346,62 +401,6 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
               enableGridX={false}
               enableGridY={true}
               useMesh
-            />
-          </div>
-        </ChartCard>
-      </div>
-
-      <div className="col-span-12">
-        <ChartCard title="Seller Comparison">
-          <div style={{ height: 400 }}>
-            <Tabs
-              defaultActiveKey="profit"
-              items={metricTabs.map((t) => {
-                const rankData = buildRankData(t.field);
-                const chartData = [...rankData].reverse();
-                const maxV = maxAbsValue(chartData);
-
-                return {
-                  key: t.key,
-                  label: <span className="font-medium">{t.label}</span>,
-                  children: (
-                    <div style={{ height: 340 }}>
-                      <ResponsiveBar
-                        data={chartData}
-                        keys={['value']}
-                        indexBy="seller"
-                        layout="horizontal"
-                        margin={{ top: 10, right: 20, bottom: 30, left: 150 }}
-                        padding={0.25}
-                        enableLabel={false}
-                        minValue={0}
-                        maxValue={maxV || 'auto'}
-                        valueScale={{ type: 'linear' }}
-                        indexScale={{ type: 'band', round: true }}
-                        enableGridY={false}
-                        enableGridX={true}
-                        // Màu: âm -> đỏ, dương -> màu tab
-                        colors={({ data }) => (numberSafe(data.rawValue) < 0 ? '#ef4444' : t.posColor)}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 10,
-                        }}
-                        axisBottom={{
-                          tickSize: 0,
-                          tickPadding: 6,
-                          format: (v) => (t.format === 'percent' ? `${Number(v).toFixed(0)}%` : money(v)),
-                        }}
-                        tooltip={({ indexValue, data }) => (
-                          <div className="min-w-36 bg-white border border-slate-200 rounded px-3 py-2 text-xs shadow">
-                            <div className="font-semibold text-slate-800">{String(indexValue)}</div>
-                            <div className="mt-1 text-slate-900">{formatSigned(data.rawValue, t.format)}</div>
-                          </div>
-                        )}
-                      />
-                    </div>
-                  ),
-                };
-              })}
             />
           </div>
         </ChartCard>
