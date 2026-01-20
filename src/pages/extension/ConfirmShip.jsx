@@ -77,7 +77,7 @@ const ConfirmShip = () => {
 
   const fetchBatchs = async () => {
     try {
-      const res = await getShippingBatch();
+      const res = await getShippingBatch(selectedClient?.shopId);
       if (res.status === 200) {
         setBatches(res.data?.batches);
       }
@@ -88,7 +88,7 @@ const ConfirmShip = () => {
 
   useEffect(() => {
     fetchBatchs();
-  }, []);
+  }, [selectedClient]);
 
   useEffect(() => {
     if (!selectedClient?.machineId) return;

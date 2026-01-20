@@ -50,7 +50,7 @@ export default function RealtimeLogViewer({ logs, isConfirmShip = false }) {
                 <span className="text-teal-400">[{`${l?.machineId}/${l?.label} (${l?.shop?.shopName})`}]:</span>
               </>
             )}
-            <span>{l.message}</span>
+            <span className="whitespace-nowrap">{l.message}</span>
           </div>
         );
       }),
@@ -60,7 +60,7 @@ export default function RealtimeLogViewer({ logs, isConfirmShip = false }) {
   return (
     <div
       ref={boxRef}
-      className={`p-3 bg-slate-900 text-slate-200 rounded-xl ${
+      className={`p-3 bg-slate-900 text-slate-200 whitespace-nowrap rounded-xl ${
         isConfirmShip ? 'min-h-50 max-h-120' : 'h-96'
       } overflow-auto font-mono text-sm leading-6`}
     >

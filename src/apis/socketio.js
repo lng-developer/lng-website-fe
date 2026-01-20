@@ -24,8 +24,8 @@ const createFileConfirmShip = (payload) => {
   });
 };
 
-const getShippingBatch = () => {
-  return instance.get('/shipping-batches');
+const getShippingBatch = (machineId) => {
+  return instance.get(`/shipping-batches?machineId=${machineId}`);
 };
 
 const updateTrackingFake = (batchId) => {
