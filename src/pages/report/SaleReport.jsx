@@ -18,13 +18,13 @@ import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { FaDollarSign, FaUser, FaPercentage, FaBuysellads } from 'react-icons/fa';
-import { MoonOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
+import { TableOutlined, BarChartOutlined } from '@ant-design/icons';
 
 import { saveAs } from 'file-saver';
 
-// NEW: charts
 import SaleReportCharts from './SaleReportCharts';
 import ModalRefund from './ModalRefund';
+import { getAllTeam } from '../../apis/teams';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -40,6 +40,96 @@ const fitToLen = (arr = [], len) => {
   return clipped;
 };
 
+// ---------- NEW helpers: aggregate report ----------
+const sumArraysByIndex = (arrs = [], len = 0) => {
+  const out = Array(len).fill(0);
+  for (const a of arrs) {
+    const safe = Array.isArray(a) ? a : [];
+    for (let i = 0; i < len; i++) out[i] += numberSafe(safe[i]);
+  }
+  return out.map((n) => +Number(n).toFixed(2));
+};
+
+// gộp tất cả seller thành 1 object report duy nhất (giữ format giống backend)
+const buildAggregateReport = (normalizedObj = {}, dayLen = 0) => {
+  const entries = Object.values(normalizedObj || {});
+  if (!entries.length) return {};
+
+  const agg = {
+    fee: sumArraysByIndex(
+      entries.map((r) => r.fee),
+      dayLen
+    ),
+    itemTax: sumArraysByIndex(
+      entries.map((r) => r.itemTax),
+      dayLen
+    ),
+    shippingTax: sumArraysByIndex(
+      entries.map((r) => r.shippingTax),
+      dayLen
+    ),
+    itemPromotionDiscount: sumArraysByIndex(
+      entries.map((r) => r.itemPromotionDiscount),
+      dayLen
+    ),
+    opCost: sumArraysByIndex(
+      entries.map((r) => r.opCost),
+      dayLen
+    ),
+    refund: sumArraysByIndex(
+      entries.map((r) => r.refund),
+      dayLen
+    ),
+    items: sumArraysByIndex(
+      entries.map((r) => r.items),
+      dayLen
+    ),
+    revenue: sumArraysByIndex(
+      entries.map((r) => r.revenue),
+      dayLen
+    ),
+    baseCost: sumArraysByIndex(
+      entries.map((r) => r.baseCost),
+      dayLen
+    ),
+    ads: sumArraysByIndex(
+      entries.map((r) => r.ads),
+      dayLen
+    ),
+  };
+
+  const hasProfit1 = entries.some((r) => Array.isArray(r.profit1));
+  const hasProfit2 = entries.some((r) => Array.isArray(r.profit2));
+  if (hasProfit1)
+    agg.profit1 = sumArraysByIndex(
+      entries.map((r) => r.profit1 || []),
+      dayLen
+    );
+  if (hasProfit2)
+    agg.profit2 = sumArraysByIndex(
+      entries.map((r) => r.profit2 || []),
+      dayLen
+    );
+
+  const totals = entries.map((r) => r.totals).filter(Boolean);
+  const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
+
+  agg.totals = {
+    items: get('items') || sum(agg.items),
+    revenue: get('revenue') || sum(agg.revenue),
+    baseCost: get('baseCost') || sum(agg.baseCost),
+    ads: get('ads') || sum(agg.ads),
+    fee: get('fee') || sum(agg.fee),
+    opCost: get('opCost') || sum(agg.opCost),
+    refund: get('refund') || sum(agg.refund),
+    profit1: get('profit1') || 0,
+    profit2: get('profit2') || 0,
+    itemPromotionDiscount: get('itemPromotionDiscount') || sum(agg.itemPromotionDiscount),
+  };
+
+  return agg;
+};
+
 const SaleReport = () => {
   const { collapsed } = useOutletContext();
   const { user } = useAuth();
@@ -50,15 +140,21 @@ const SaleReport = () => {
   const [openModalImportAds, setOpenModalImportAds] = useState(false);
   const [openModalImportRefund, setOpenModalImportRefund] = useState(false);
   const [sellers, setSellers] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [selectSeller, setSelectSeller] = useState();
+  const [selectTeam, setSelectTeam] = useState();
 
   // NEW: toggle view
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'chart'
 
+  // NEW: tab report scope
+  const [reportScope, setReportScope] = useState('seller'); // 'seller' | 'total'
+
   const [filters, setFilters] = useState({
     from: defaultFrom,
     to: defaultTo,
-    seller: '', // '' = all
+    seller: '',
+    team: '',
   });
 
   const updateFilter = (newValues) => {
@@ -69,10 +165,20 @@ const SaleReport = () => {
     }));
   };
 
+  const handleChangeScope = (val) => {
+    setReportScope(val);
+
+    // Total Report => clear seller filter để tránh hiểu nhầm
+    if (val === 'total') {
+      setSelectSeller(undefined);
+      updateFilter({ seller: '' });
+    }
+  };
+
   const fetchAllReport = async (params) => {
     setLoading(true);
     try {
-      const res = await getAllReport(params); // backend phải nhận {from,to,seller}
+      const res = await getAllReport(params); // backend nhận {from,to,seller,team}
       if (res.status === 200) {
         setReportBySeller(res.data?.data || {});
         setDays(res.data?.date || []);
@@ -112,11 +218,21 @@ const SaleReport = () => {
     return out;
   }, [reportBySeller, dayKeys.length]);
 
+  // NEW: dữ liệu hiển thị theo tab (Seller / Total)
+  const normalizedView = useMemo(() => {
+    const len = dayKeys.length;
+    if (reportScope === 'total') {
+      const agg = buildAggregateReport(normalized, len);
+      return Object.keys(agg).length ? { 'All Sellers': agg } : {};
+    }
+    return normalized;
+  }, [normalized, dayKeys.length, reportScope]);
+
   // ----- build data cho bảng -----
   const dataSource = useMemo(() => {
     const rows = [];
 
-    Object.entries(normalized).forEach(([seller, r]) => {
+    Object.entries(normalizedView).forEach(([seller, r]) => {
       const taxArr = r.revenue.map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
 
       // Profit1 = revenue - baseCost - fee
@@ -199,7 +315,7 @@ const SaleReport = () => {
     });
 
     return rows;
-  }, [normalized, dayKeys]);
+  }, [normalizedView, dayKeys]);
 
   const sepStyle = (row) => (row._groupStart ? { borderTop: '1px solid #e5e9eeff' } : undefined);
 
@@ -300,7 +416,7 @@ const SaleReport = () => {
 
   // ----- KPIs tổng trên đầu -----
   const kpis = useMemo(() => {
-    const entries = Object.values(normalized);
+    const entries = Object.values(normalizedView);
     const totals = entries.map((r) => r.totals).filter(Boolean);
     const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
 
@@ -366,7 +482,7 @@ const SaleReport = () => {
         iconBg: 'bg-emerald-500',
       },
     ];
-  }, [normalized]);
+  }, [normalizedView]);
 
   const formatNumber = (n) =>
     typeof n === 'number' ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : n;
@@ -381,26 +497,22 @@ const SaleReport = () => {
     const isMoney = item.prefix === '$';
     const valNum = typeof item.value === 'number' ? item.value : Number(item.value) || 0;
 
-    // Giá trị hiển thị
     let display;
     if (isMoney) {
-      display = isProfit
-        ? formatMoneySigned(valNum) // Profit: -$xx.xx hoặc $xx.xx
-        : `$${formatNumber(valNum)}`; // các KPI tiền khác giữ nguyên $xx.xx
+      display = isProfit ? formatMoneySigned(valNum) : `$${formatNumber(valNum)}`;
     } else {
       display = item.label === 'Orders' ? valNum : formatNumber(valNum);
     }
 
-    // Màu chữ
     const color = isProfit
       ? valNum > 0
         ? dataColors.success
         : valNum < 0
-        ? dataColors.cancelled
-        : '#64748b'
+          ? dataColors.cancelled
+          : '#64748b'
       : item.key === 'revenue'
-      ? dataColors.success
-      : undefined;
+        ? dataColors.success
+        : undefined;
 
     return (
       <div className="group flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md">
@@ -437,7 +549,7 @@ const SaleReport = () => {
   // ====== EXPORT EXCEL (giữ nguyên logic hiện tại) ======
   const handleExportWeeklyExcel = async () => {
     try {
-      const entries = Object.values(normalized);
+      const entries = Object.values(normalizedView);
       const sumArr = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
       const getTotal = (k) => entries.reduce((acc, r) => acc + numberSafe(r.totals?.[k]), 0);
 
@@ -558,7 +670,7 @@ const SaleReport = () => {
 
       let rIdx = startRow + 1;
 
-      Object.entries(normalized).forEach(([seller, r], sIdx) => {
+      Object.entries(normalizedView).forEach(([seller, r], sIdx) => {
         const taxArr = (r.itemTax || []).map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
         const taxTotalSeller = sumArr(taxArr);
         const group = [
@@ -628,7 +740,7 @@ const SaleReport = () => {
           rIdx++;
         });
 
-        if (sIdx < Object.keys(normalized).length - 1) {
+        if (sIdx < Object.keys(normalizedView).length - 1) {
           ws.getRow(rIdx).height = 6;
           rIdx++;
         }
@@ -643,6 +755,27 @@ const SaleReport = () => {
     }
   };
 
+  const fetchAllTeams = async () => {
+    try {
+      const res = await getAllTeam();
+      if (res.status === 200) {
+        const result = res.data?.data?.map((item) => ({
+          label: item?.name,
+          value: item?._id,
+        }));
+        setTeams(result);
+      } else {
+        toast.error(res.data?.message || 'Fetch error');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unexpected error');
+    }
+  };
+
+  useEffect(() => {
+    fetchAllTeams();
+  }, []);
+
   useEffect(() => {
     fetchAllSellers();
   }, []);
@@ -651,7 +784,7 @@ const SaleReport = () => {
   useEffect(() => {
     fetchAllReport(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.from, filters.to, filters.seller]);
+  }, [filters.from, filters.to, filters.seller, filters.team]);
 
   return (
     <div>
@@ -672,18 +805,19 @@ const SaleReport = () => {
                 <BiSolidFileExport size={15} />
               </div>
             </button>
+
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setOpenModalImportRefund(true)}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
-                
                 Import Refund
               </span>
               <div style={{ color: 'black' }}>
                 <LuImport size={15} />
               </div>
             </button>
+
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setOpenModalImportReport(true)}
@@ -695,6 +829,7 @@ const SaleReport = () => {
                 <LuImport size={15} />
               </div>
             </button>
+
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setOpenModalImportAds(true)}
@@ -706,6 +841,7 @@ const SaleReport = () => {
                 <LuImport size={15} />
               </div>
             </button>
+
             <DateRangePicker
               mode="range"
               showOutsideDays
@@ -733,15 +869,34 @@ const SaleReport = () => {
         <div className="flex justify-between items-center mt-4">
           <div className="flex w-[40%] gap-2">
             <div className="flex gap-2 items-center">
+              {/* NEW: Tabs Seller/Total */}
+
+              {/* Chỉ show select seller khi đang ở tab seller */}
+              {reportScope === 'seller' && (
+                <SelectSeller
+                  title="Report By Seller"
+                  ListData={sellers}
+                  value={selectSeller}
+                  onChange={(val) => {
+                    setSelectSeller(val);
+                    updateFilter({ seller: val });
+                  }}
+                />
+              )}
+
+              {/* Team vẫn cho chọn ở cả 2 tab.
+                  - Seller tab: lọc theo team nhưng vẫn hiển thị từng seller trong team
+                  - Total tab: tổng hợp team => All Sellers (team) */}
               <SelectSeller
-                title="Report By Seller"
-                ListData={sellers}
-                value={selectSeller}
+                title="Team"
+                ListData={teams}
+                value={selectTeam}
                 onChange={(val) => {
-                  setSelectSeller(val);
-                  updateFilter({ seller: val });
+                  updateFilter({ team: val });
+                  setSelectTeam(val);
                 }}
               />
+
               <Tooltip title="Refresh">
                 <button
                   className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
@@ -753,7 +908,8 @@ const SaleReport = () => {
                   <MdOutlineRefresh size={20} />
                 </button>
               </Tooltip>
-              {/* NEW: Toggle Table / Charts (giữ phong cách button đang dùng) */}
+
+              {/* Toggle Table / Charts */}
               {user?.role === 'Admin' && (
                 <Segmented
                   size={'middle'}
@@ -767,6 +923,16 @@ const SaleReport = () => {
               )}
             </div>
           </div>
+          <Segmented
+            size="middle"
+            shape="round"
+            value={reportScope}
+            options={[
+              { label: 'Report By Seller', value: 'seller' },
+              { label: 'Total Report', value: 'total' },
+            ]}
+            onChange={handleChangeScope}
+          />
         </div>
 
         {/* Table / Charts */}
@@ -782,7 +948,12 @@ const SaleReport = () => {
               loading={loading}
             />
           ) : (
-            <SaleReportCharts days={days} normalized={normalized} sellerFilter={filters.seller} loading={loading} />
+            <SaleReportCharts
+              days={days}
+              normalized={normalizedView}
+              sellerFilter={reportScope === 'total' ? '' : filters.seller}
+              loading={loading}
+            />
           )}
         </div>
       </div>
