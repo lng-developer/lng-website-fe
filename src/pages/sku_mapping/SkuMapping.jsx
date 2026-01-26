@@ -6,7 +6,13 @@ import { CalendarOutlined } from '@ant-design/icons';
 import { MdDeleteOutline, MdOutlineRemoveRedEye, MdAdd } from 'react-icons/md';
 import { BiSolidEdit } from 'react-icons/bi';
 import { toast } from 'sonner';
-import { getSkuMappingConfig, createSkuMappingConfig, updateSkuMappingConfig, deleteSkuMappingConfig } from '../../apis/skuMapping';
+import {
+  getSkuMappingConfig,
+  createSkuMappingConfig,
+  updateSkuMappingConfig,
+  deleteSkuMappingConfig,
+  applySkuMappingConfig,
+} from '../../apis/skuMapping';
 
 import ModalViewMapping from './ModalViewMapping';
 import ModalCreateUpdateMapping from './ModalCreateUpdateMapping';
@@ -14,6 +20,7 @@ import ModalDeleteConfirm from './ModalDeleteConfirm';
 
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
+import ModalConfigMapping from './ModalConfigMapping';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -28,6 +35,7 @@ const SkuMapping = () => {
   // --- STATE MỚI CHO CRUD ---
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null); // Dùng cho View, Update, Delete
@@ -104,12 +112,14 @@ const SkuMapping = () => {
     setSelectedRecord(record); // Nếu 'record' là null, đó là "Create"
     if (modalType === 'view') setIsViewModalOpen(true);
     if (modalType === 'edit') setIsEditModalOpen(true);
+    if (modalType === 'config') setIsConfigModalOpen(true);
   };
 
   const handleCloseModals = () => {
     setIsViewModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
+    setIsConfigModalOpen(false);
     setSelectedRecord(null);
   };
 
@@ -131,6 +141,19 @@ const SkuMapping = () => {
     } catch (error) {
       console.error('Failed to submit form:', error);
       toast.error(error.response?.data?.message || 'Submission failed');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+  const handleApplyConfig = async (payload) => {
+    setFormLoading(true);
+    try {
+      await applySkuMappingConfig(payload);
+      toast.success(payload?.dryRun ? 'Dry run applied successfully' : 'Config applied successfully');
+      handleCloseModals();
+    } catch (error) {
+      console.error('Failed to apply config:', error);
+      toast.error(error.response?.data?.message || 'Apply config failed');
     } finally {
       setFormLoading(false);
     }
@@ -307,7 +330,16 @@ const SkuMapping = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             SKU Mapping
           </h1>
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-3  ">
+            <button
+              className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
+              onClick={() => handleOpenModal('config', null)}
+            >
+              <MdAdd size={20} color="black" />
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                Config
+              </span>
+            </button>
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => handleOpenModal('edit', null)}
@@ -340,14 +372,7 @@ const SkuMapping = () => {
           />
         </div>
         <Spin spinning={loading}>
-          <Table
-            className="no-indent-table mt-4"
-            columns={columns}
-            dataSource={paginatedData}
-            rowKey="_id"
-            bordered
-            pagination={false}
-          />
+          <Table className="no-indent-table mt-4" columns={columns} dataSource={paginatedData} rowKey="_id" bordered pagination={false} />
         </Spin>
       </div>
 
@@ -359,6 +384,15 @@ const SkuMapping = () => {
         loading={formLoading}
         initialData={selectedRecord}
       />
+      <ModalConfigMapping
+        open={isConfigModalOpen}
+        onCancel={handleCloseModals}
+        onOk={handleApplyConfig}
+        loading={formLoading}
+        initialData={selectedRecord}
+        configs={data}
+      />
+
       <ModalDeleteConfirm
         open={isDeleteModalOpen}
         onCancel={handleCloseModals}
