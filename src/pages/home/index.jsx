@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Modal, Pagination, Table, Tooltip, Empty } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
@@ -56,6 +56,9 @@ const Home = () => {
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
+  const [selectedReplaceItemId, setSelectedReplaceItemId] = useState('');
+  const [selectedReplaceItemIds, setSelectedReplaceItemIds] = useState([]);
+
   const [orderInfo, setOrderInfo] = useState({});
   const [teams, setTeams] = useState([]);
   const [selectTeam, setSelectTeam] = useState('');
@@ -300,7 +303,15 @@ const Home = () => {
 
   const handleReplace = useCallback(async () => {
     try {
-      const response = await replaceOrder(orderInfo?.orderId);
+      if (!selectedReplaceItemIds?.length) {
+        toast.error('Please select at least one item to replace');
+        return;
+      }
+
+      const response = await replaceOrder(orderInfo?.orderId, {
+        orderItemIds: selectedReplaceItemIds,
+      });
+
       if (response.status === 200) {
         toast.success('Retest success!');
       }
@@ -312,7 +323,7 @@ const Home = () => {
       fetchCountStatus();
       setIsShowModalReplace(false);
     }
-  }, [orderInfo?.orderId, fetchAllOrder, fetchCountStatus, filters]);
+  }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchCountStatus, filters]);
 
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
@@ -469,6 +480,8 @@ const Home = () => {
           style={{ borderColor: dataColors.pending }}
           onClick={() => {
             setOrderInfo(item);
+            // const firstItemId = item?.items?.[0]?.orderItemId || '';
+            // setSelectedReplaceItemId(firstItemId);
             setIsShowModalReplace(true);
           }}
         >
@@ -564,6 +577,58 @@ const Home = () => {
       setExpandedRowKeys(orders.map((item) => item.orderId));
     }
   }, [orders, isShowRowkeys]);
+
+  const replaceItemData = useMemo(() => {
+    return (orderInfo?.items || []).map((it, idx) => ({
+      key: it?.orderItemId || String(idx),
+      orderItemId: it?.orderItemId,
+      baseImageUrl: it?.baseImageUrl,
+      sku: it?.sku,
+      mapped_sku: it?.mapped_sku,
+      quantity: it?.quantity,
+    }));
+  }, [orderInfo]);
+
+  const replaceItemColumns = useMemo(
+    () => [
+      {
+        title: <span style={{ color: dataColors.title }}>Product</span>,
+        dataIndex: 'baseImageUrl',
+        key: 'product',
+        render: (src, record) => (
+          <div className="flex items-center gap-2">
+            <div className="border rounded" style={{ width: 44, height: 44, overflow: 'hidden', borderColor: dataColors.default }}>
+              {src ? (
+                <img
+                  src={src}
+                  alt="product"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium whitespace-nowrap">{record?.sku || record?.mapped_sku || '—'}</span>
+              <span className="text-xs" style={{ color: dataColors.title }}>
+                Item: {record?.orderItemId || '—'}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>QTY</span>,
+        dataIndex: 'quantity',
+        key: 'qty',
+        width: 70,
+        align: 'center',
+        render: (v) => <span className="font-medium">{v ?? 1}</span>,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="overflow-hidden">
@@ -736,15 +801,48 @@ const Home = () => {
 
       <Modal
         title="Replace order"
-        width={500}
+        width={720}
         style={{ top: '30%' }}
         okText="Confirm"
+        cancelText="Cancel"
         closable={{ 'aria-label': 'Custom Close Button' }}
         open={isShowModalReplace}
         onOk={handleReplace}
         onCancel={() => setIsShowModalReplace(false)}
+        okButtonProps={{ disabled: !selectedReplaceItemIds?.length }}
       >
-        <span className="font-medium text-[#64748b]">Are you sure you want to replace this order? This action cannot be undone.</span>
+        <Flex vertical gap={12}>
+          <div className="text-sm text-[#64748b]">
+            Select the products (order items) you want to replace. Only the selected items will be replaced.
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-[#64748b]">
+              Order: <span className="font-medium text-black">{orderInfo?.orderId || '—'}</span>
+            </div>
+            <div className="text-xs text-[#94a3b8]">
+              Selected: <span className="font-medium text-black">{selectedReplaceItemIds?.length || 0}</span>
+            </div>
+          </div>
+
+          <Table
+            size="small"
+            bordered
+            pagination={false}
+            rowKey="orderItemId"
+            columns={replaceItemColumns}
+            dataSource={replaceItemData}
+            rowSelection={{
+              type: 'checkbox', // ✅ multi select
+              selectedRowKeys: selectedReplaceItemIds,
+              onChange: (keys) => setSelectedReplaceItemIds(keys || []),
+            }}
+            locale={{ emptyText: <Empty description="No items found" /> }}
+            scroll={{ y: 320 }}
+          />
+
+          <div className="text-xs text-[#94a3b8]">This action cannot be undone.</div>
+        </Flex>
       </Modal>
     </div>
   );

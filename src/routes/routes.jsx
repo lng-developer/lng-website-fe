@@ -38,6 +38,7 @@ const routes = {
   sku_mapping: '/sku_mapping',
   management_account: '/account',
   extensions_confirm_ship: '/extensions/confirm-ship',
+  manage_stores: '/manage_stores',
 };
 
 export { routes };

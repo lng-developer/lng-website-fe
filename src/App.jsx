@@ -31,6 +31,7 @@ import SkuMapping from './pages/sku_mapping/SkuMapping';
 import User from './pages/user/User';
 import ConfirmShip from './pages/extension/ConfirmShip';
 import Dashboard from './pages/dashboard/DashboardPage';
+import ManageStores from './pages/shop/ManageStore';
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.cost_center_mapping} element={<Mapping />} />
           <Route path={routes.cost_center_group_standards} element={<Teams />} />
+          <Route path={routes.manage_stores} element={<ManageStores />} />
 
           {/* Report */}
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
