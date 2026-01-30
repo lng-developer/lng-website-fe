@@ -40,7 +40,7 @@ const ItemShippingType = ({ orderId, shipping_type, fetchAllOrder, filters }) =>
         return dataColors.asin;
       case 'Second Day':
         return dataColors.process;
-      case 'Economy':
+      case 'FreeEconomy':
         return dataColors.pending;
       default:
         return dataColors.default;
