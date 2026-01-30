@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useContext } from 'react';
+import React, { useCallback, useEffect, useState, useContext, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Input, Tooltip, Table, Modal, Select, Pagination } from 'antd';
@@ -49,6 +49,10 @@ const CostCenterProductTypes = () => {
     perPage: PAGE_SIZE,
     search: '',
   });
+  const [searchText, setSearchText] = useState('');
+  const abortRef = useRef(null);
+  const latestReqIdRef = useRef(0);
+  const firstSearchRunRef = useRef(true);
 
   // DnD UI states
   const [activeRow, setActiveRow] = useState(null);
@@ -125,7 +129,7 @@ const CostCenterProductTypes = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
     }));
   };
 
@@ -389,46 +393,43 @@ const CostCenterProductTypes = () => {
   ];
 
   const fetchAllConfig = useCallback(async (params) => {
+    const reqId = ++latestReqIdRef.current;
+
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
-      const response = await getAllConfig(params);
+      const response = await getAllConfig(params, { signal: controller.signal });
+
+      if (reqId !== latestReqIdRef.current) return;
+
       if (response.status === 200) {
-        const result = response.data?.items?.map((k) => {
-          return {
-            ...k,
-            key: k._id || k.id,
-            items: k?.items?.map((j) => {
-              return {
-                ...j,
-                key: j._id || j.id,
-                payload: {
-                  productTypeId: k._id || k.id,
-                  cost_centers: j.cost_centers,
-                  _id: j._id || j.id,
-                },
-              };
-            }),
-          };
-        });
+        const result = response.data?.items?.map((k) => ({
+          ...k,
+          key: k._id || k.id,
+          items: k?.items?.map((j) => ({
+            ...j,
+            key: j._id || j.id,
+            payload: {
+              productTypeId: k._id || k.id,
+              cost_centers: j.cost_centers,
+              _id: j._id || j.id,
+            },
+          })),
+        }));
+
         setDataSource(result);
-        setDataFilter(result);
         setTotalCount(response.data?.total);
       }
     } catch (error) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
       console.log(error);
     } finally {
-      setLoading(false);
+      if (reqId === latestReqIdRef.current) setLoading(false);
     }
   }, []);
-
-  const handleSearch = (value) => {
-    if (!value) {
-      setDataSource(dataFilter);
-      return;
-    }
-    const results = dataFilter.filter((item) => item.name.toLowerCase().includes(value.toLowerCase()));
-    setDataSource(results);
-  };
 
   const handleDeleteProductType = async () => {
     try {
@@ -503,7 +504,14 @@ const CostCenterProductTypes = () => {
   useEffect(() => {
     fetchAllConfig(filters);
   }, [filters]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      updateFilter({ search: searchText, page: 1 });
+      setCurrentPage(1);
+    }, 200);
 
+    return () => clearTimeout(t);
+  }, [searchText]);
   return (
     <div>
       {/* CSS for DnD visuals */}
@@ -543,16 +551,19 @@ const CostCenterProductTypes = () => {
       <div className="mt-[60px] px-8 py-4 h-full">
         <div className="flex justify-between items-center">
           <Input
-            onChange={(e) => handleSearch(e.target.value)}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
             placeholder="Search..."
             className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
           />
+
           <div>
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={10}
-              defaultCurrent={1}
+              current={filters.page}
+              pageSize={filters.perPage}
+              showSizeChanger
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
