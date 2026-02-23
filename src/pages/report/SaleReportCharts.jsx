@@ -76,8 +76,8 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
       { key: 'profit', label: 'Profit', field: 'Profit', format: 'money', posColor: '#10b981', negColor: '#ef4444' },
       { key: 'ads', label: 'Ads', field: 'Ads', format: 'money', posColor: '#f97316', negColor: '#ef4444' },
       { key: 'revenue', label: 'Revenue', field: 'Revenue', format: 'money', posColor: '#3b82f6', negColor: '#ef4444' },
-      { key: 'roi', label: 'ROI', field: 'roi', format: 'percent', posColor: '#8ed7d7', negColor: '#ef4444' },
-      { key: 'roa', label: 'ROA', field: 'roa', format: 'percent', posColor: '#0ea5e9', negColor: '#ef4444' },
+      // { key: 'roi', label: 'ROI', field: 'roi', format: 'percent', posColor: '#8ed7d7', negColor: '#ef4444' },
+      // { key: 'roa', label: 'ROA', field: 'roa', format: 'percent', posColor: '#0ea5e9', negColor: '#ef4444' },
     ],
     []
   );

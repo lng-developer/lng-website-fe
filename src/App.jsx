@@ -32,6 +32,7 @@ import User from './pages/user/User';
 import ConfirmShip from './pages/extension/ConfirmShip';
 import Dashboard from './pages/dashboard/DashboardPage';
 import ManageStores from './pages/shop/ManageStore';
+import OrderEtsy from './pages/home/OrderEtsy';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
           }
         >
           <Route index path={routes.order_amazon} element={<Home />} />
+          <Route path={routes.order_etsy} element={<OrderEtsy />} />
           <Route path={routes.team_task} element={<Dashboard />} />
           <Route path={routes.sale_listing} element={<Listing />} />
           <Route path={routes.vendor_list} element={<Vendor />} />

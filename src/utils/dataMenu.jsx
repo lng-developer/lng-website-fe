@@ -23,7 +23,7 @@ import {
   TbBuildingFactory2,
   TbBuildingStore,
 } from 'react-icons/tb';
-import { FaAmazon, FaShopify, FaBalanceScaleLeft } from 'react-icons/fa';
+import { FaAmazon, FaShopify, FaBalanceScaleLeft, FaEtsy } from 'react-icons/fa';
 import { MdBalance, MdOutlinePendingActions } from 'react-icons/md';
 import { HiOutlineBuildingStorefront, HiOutlineKey } from 'react-icons/hi2';
 import { BsFiletypePsd, BsGraphUp } from 'react-icons/bs';
@@ -48,13 +48,14 @@ export const topMenus = [
 export const detailMenus = {
   sales: [
     {
-      key: routes.order_amazon,
+      key: routes.order_sc,
       label: 'Orders',
       icon: <LuBox size={20} />,
-      // children: [
-      //   { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-      //   // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
-      // ],
+      children: [
+        { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
+        { key: routes.order_etsy, label: 'Etsy', icon: <FaEtsy size={20} /> },
+        // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+      ],
     },
     {
       key: routes.team_task,

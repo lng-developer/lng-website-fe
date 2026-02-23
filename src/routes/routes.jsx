@@ -5,6 +5,7 @@ const routes = {
   sale_listing: '/sales/listing',
   order_amazon: '/order/amazon',
   order_shopify: '/order/shopify',
+  order_etsy: '/order/etsy',
   register: '/register',
   login: '/login',
   verify: '/verify',

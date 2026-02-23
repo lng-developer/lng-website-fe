@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const TITLES = {
-  '/order/amazon': 'Orders',
+  '/order/amazon': 'Orders Amazon',
+  '/order/etsy': 'Orders Etsy',
   '/sales/listing': 'Manage Listing',
   '/fulfillment/scale': 'Fulfillment Scale',
   '/fulfillment/qc': 'QC Fulfillment',

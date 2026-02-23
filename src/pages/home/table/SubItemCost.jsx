@@ -43,24 +43,22 @@ const SubItemCost = ({ data = {}, fulfillName }) => {
       </div>
       <div className="mb-1 max-w-[250px]" style={{ position: 'relative', width: '100%' }}>
         <div className="font-semibold text-gray-800 mb-1">Fulfill Name:</div>
-        <div>
-          <div
-            className="border px-2 py-1 rounded text-sm inline-flex items-center
-               max-w-[250px] break-words"
-            style={{ borderColor: '#08969b', fontWeight: 500 }}
-          >
-            {fulfillName}
-          </div>
+        <div
+          className="border px-2 py-1 rounded text-sm inline-flex items-center
+               max-w-[250px] break-words gap-3"
+          style={{ borderColor: '#08969b', fontWeight: 500 }}
+        >
+          <div>{fulfillName}</div>
           <Tooltip title="Copy">
             <CopyOutlined
               onClick={() => handleCopy(fulfillName)}
-              style={{
-                position: 'absolute',
-                top: 35,
-                right: 5,
-                cursor: 'pointer',
-                color: '#08969b',
-              }}
+              // style={{
+              //   position: 'absolute',
+              //   top: 35,
+              //   right: 5,
+              //   cursor: 'pointer',
+              //   color: '#08969b',
+              // }}
             />
           </Tooltip>
         </div>

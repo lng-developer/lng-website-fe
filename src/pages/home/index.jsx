@@ -635,7 +635,7 @@ const Home = () => {
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0 flex items-center" style={{ color: 'black' }}>
-            Manage Orders{' '}
+            Manage Orders Amazon{' '}
             <span className="text-xs ml-5 italic" style={{ color: dataColors.title, fontStyle: 'italic' }}>
               {lastUpdatedText}
             </span>
