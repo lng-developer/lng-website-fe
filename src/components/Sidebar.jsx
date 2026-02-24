@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { FcRating } from 'react-icons/fc';
 import { FaAnglesLeft, FaAnglesRight } from 'react-icons/fa6';
 import { dataColors } from '../utils/dataColors';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { routes } from '../routes/routes';
 import { useEffect, useState } from 'react';
 import logo from '../assets/logo.png';
@@ -12,6 +12,30 @@ import { changePassword } from '../apis/auth';
 import { toast } from 'sonner';
 const { Sider } = Layout;
 
+const generateLinkItems = (menuList) => {
+  if (!menuList) return [];
+  return menuList.map((item) => {
+    // Nếu có menu con, đệ quy gọi lại hàm
+    if (item.children) {
+      return {
+        ...item,
+        children: generateLinkItems(item.children),
+      };
+    }
+    // Nếu là menu item có link (key bắt đầu bằng '/')
+    if (item.key && String(item.key).startsWith('/')) {
+      return {
+        ...item,
+        label: (
+          <Link to={item.key} style={{ display: 'block', color: 'inherit' }}>
+            {item.label}
+          </Link>
+        ),
+      };
+    }
+    return item;
+  });
+};
 export default function Sidebar({ collapsed, toggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,7 +121,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
 
   // render nội dung popup menu
   const renderPopoverMenu = (menuKey) => {
-    const items = detailMenus[menuKey];
+    const items = generateLinkItems(detailMenus[menuKey]);
     return (
       <div style={{ width: 'auto', padding: 0 }}>
         <div style={{ fontWeight: 600, padding: '4px' }}>{topMenus.find((m) => m.key === menuKey)?.label}</div>
@@ -197,7 +221,8 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
                 defaultOpenKeys={[getOpenKey()]}
                 selectedKeys={[selectedKey]}
                 style={{ height: '100%', borderRight: 0, paddingLeft: 0 }}
-                items={detailMenus[activeMenu]}
+                // Bọc hàm generateLinkItems ở đây
+                items={generateLinkItems(detailMenus[activeMenu])}
                 className="ant-menu-submenu-title-config"
                 onClick={({ key }) => navigate(key)}
                 motion={{
