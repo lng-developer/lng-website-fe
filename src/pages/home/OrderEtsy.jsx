@@ -16,7 +16,7 @@ import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
-import { dataFilterStatus } from '../../utils/dataFilter';
+import { dataFilterStatusEtsy } from '../../utils/dataFilter';
 import SubItemImage from './table/SubItemImage';
 import SubItemSku from './table/SubItemSku';
 import SubItemCustomEtsy from './table/SubItemCustomEtsy';
@@ -27,23 +27,23 @@ import ItemCustomer from './table/ItemCustomer';
 import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import ItemCase from './table/ItemCase';
-import ModalImportOrder from './ModalImportOrder';
+import ModalImportEtsy from './ModalImportEtsy';
 import { getAllTeam } from '../../apis/teams';
 import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 import { useAuth } from '../../context/AuthContext';
-import { getAllEtsyOrders } from '../../apis/etsy';
-import { getAllCountStatus, getALlShop, replaceOrder, retestBasecode, syncVendorTracking } from '../../apis/order';
+import { getAllEtsyOrders, getEtsyStatistic, computeEtsyBaseCost } from '../../apis/etsy';
+import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 
 const OrderEtsy = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
-  const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
-  const [tabFilter, setTabFilter] = useState(dataFilterStatus);
+  const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusEtsy[0]);
+  const [tabFilter, setTabFilter] = useState(dataFilterStatusEtsy);
   const [isShowModal, setIsShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -71,14 +71,13 @@ const OrderEtsy = () => {
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: PAGE_SIZE,
-    statuses: '',
+    status: '',
     from: defaultFrom,
     to: defaultTo,
     search: '',
-    isNoCostCenter: false,
-    openCase: false,
     shopName: '',
     teamId: '',
+    shippingType: '',
   });
 
   const updateLastUpdatedAt = useCallback(() => {
@@ -148,11 +147,11 @@ const OrderEtsy = () => {
     }
   }, []);
 
-  const fetchCountStatus = useCallback(async () => {
+  const fetchEtsyStatistic = useCallback(async () => {
     try {
-      const response = await getAllCountStatus({ ...filters, openCase: false, noPsd: false });
+      const response = await getEtsyStatistic({ ...filters });
       if (response.status === 200) {
-        const resultTabFilter = dataFilterStatus.map(({ key, title, status }) => ({
+        const resultTabFilter = dataFilterStatusEtsy.map(({ key, title, status }) => ({
           key,
           title,
           status,
@@ -162,7 +161,7 @@ const OrderEtsy = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error('Erorr System!');
+      toast.error('Error loading statistic!');
     }
   }, [filters]);
 
@@ -174,7 +173,7 @@ const OrderEtsy = () => {
 
         if (response.status === 200) {
           setOrders(response.data?.data || []);
-          setTotalCount(response.data?.total || 0);
+          setTotalCount(response.data?.totalCount ?? response.data?.total ?? 0);
         } else {
           toast.error(response.data?.message);
         }
@@ -194,7 +193,7 @@ const OrderEtsy = () => {
     setIsImporting(true);
 
     const toastId = toast('Processing import tracking...', {
-      duration: Infinity, // Đang set là vô hạn
+      duration: Infinity,
       icon: <LoadingOutlined spin style={{ color: '#003a8c', fontSize: '16px' }} />,
       style: {
         backgroundColor: '#e6f7ff',
@@ -209,7 +208,6 @@ const OrderEtsy = () => {
       const response = await syncVendorTracking({ max: 300 });
 
       if (response.status === 200) {
-        console.log(response);
         toast.success('Import tracking finished!', {
           id: toastId,
           duration: 4000,
@@ -218,7 +216,7 @@ const OrderEtsy = () => {
         });
 
         fetchAllOrder(filters);
-        fetchCountStatus();
+        fetchEtsyStatistic();
       } else {
         toast.error('Import tracking failed!', {
           id: toastId,
@@ -234,7 +232,7 @@ const OrderEtsy = () => {
     } finally {
       setIsImporting(false);
     }
-  }, [fetchAllOrder, fetchCountStatus, filters, isImporting]);
+  }, [fetchAllOrder, fetchEtsyStatistic, filters, isImporting]);
   const handleCopy = useCallback(async (textToCopy) => {
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -266,41 +264,34 @@ const OrderEtsy = () => {
 
   const handleFilterForStatus = useCallback(
     (status) => {
-      if (status === 'All')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
-      if (status === 'NoCostCenter')
-        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false });
-      if (status === 'openCase')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false, noPsd: false });
-      if (status === 'invalidAddress')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true, noPsd: false });
-      if (status === 'noPsd')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true });
-      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
+      setCurrentPage(1); // Reset về trang 1 khi đổi filter
+      if (status === 'All') return updateFilter({ status: '', page: 1 });
+      if (status === 'NoCostCenter') return updateFilter({ status: '', page: 1 });
+      if (status === 'invalidAddress') return updateFilter({ status: '', page: 1 });
+      updateFilter({ status, page: 1 });
     },
     [updateFilter]
   );
 
   const handleRetest = useCallback(
     async (id) => {
-      if (!(user?.role === 'Admin')) {
-        toast.error('Access denied: insufficient permissions');
-        return;
-      }
       try {
-        const response = await retestBasecode({ orderId: id });
+        const toastId = toast.loading('Computing base cost...');
+        const response = await computeEtsyBaseCost({ orderId: id });
         if (response.status === 200) {
-          toast.success('Retest success!');
+          toast.success('Compute base cost success!', { id: toastId });
+        } else {
+          toast.error(response.data?.message || 'Compute failed!', { id: toastId });
         }
       } catch (error) {
         console.error(error);
-        toast.error('Retest error!');
+        toast.error(error?.response?.data?.message || 'Compute base cost error!');
       } finally {
         fetchAllOrder(filters);
-        fetchCountStatus();
+        fetchEtsyStatistic();
       }
     },
-    [fetchAllOrder, fetchCountStatus, filters, user?.role]
+    [fetchAllOrder, fetchEtsyStatistic, filters]
   );
 
   const handleReplace = useCallback(async () => {
@@ -315,22 +306,22 @@ const OrderEtsy = () => {
       });
 
       if (response.status === 200) {
-        toast.success('Retest success!');
+        toast.success('Replace success!');
       }
     } catch (error) {
       console.error(error);
-      toast.error('Retest error!');
+      toast.error('Replace error!');
     } finally {
       fetchAllOrder(filters);
-      fetchCountStatus();
+      fetchEtsyStatistic();
       setIsShowModalReplace(false);
     }
-  }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchCountStatus, filters]);
+  }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchEtsyStatistic, filters]);
 
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
     try {
-      const result = await getALlShop();
+      const result = await getALlShop({ merchant: 'etsy' });
       if (result.status === 200) {
         setShops(result.data);
       }
@@ -409,17 +400,8 @@ const OrderEtsy = () => {
 
   const tableData = useMemo(() => {
     const results = (orders || []).map((item, index) => {
-      // Map dữ liệu khách hàng từ object 'shipping' và 'buyer' của Etsy
-      const mappedCustomerInfo = {
-        name: item?.shipping?.name || item?.buyer?.fullName,
-        email: '', // Etsy API hiện không trả về email trực tiếp
-        phone: '', // Etsy API hiện không có phone
-        address: `${item?.shipping?.address1 || ''} ${item?.shipping?.address2 || ''}`.trim(),
-        city: item?.shipping?.city,
-        state: item?.shipping?.state,
-        zipcode: item?.shipping?.zipcode,
-        country: item?.shipping?.country,
-      };
+      // Response mới: backend đã map sẵn customer_infor
+      const mappedCustomerInfo = item?.customer_infor || {};
 
       return {
         key: item?.orderId,
@@ -434,7 +416,7 @@ const OrderEtsy = () => {
             orderId={item?.orderId}
             fetchAllOrder={fetchAllOrder}
             filters={filters}
-            address_validation={item?.address_validation} // Hiện tại API Etsy chưa có field này
+            address_validation={item?.address_validation}
           />
         ),
         status: (
@@ -449,26 +431,29 @@ const OrderEtsy = () => {
         ),
         created: (
           <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.createdAt)}</span>
+            <span className="font-medium whitespace-nowrap">
+              {item?.createdAt ? formatDate(item.createdAt) : '—'}
+            </span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(new Date(item?.createdAt), { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
+              {item?.createdAt
+                ? `(${formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })
+                    .replace(/^about /, '')
+                    .replace(/^less than /, '')})`
+                : ''}
             </span>
           </Flex>
         ),
         order_date: (
           <Flex vertical={true}>
-            {/* Etsy dùng saleDate thay cho purchase_date */}
-            <span className="font-medium whitespace-nowrap">{formatDate(item?.saleDate)}</span>
+            <span className="font-medium whitespace-nowrap">
+              {item?.purchase_date ? formatDate(item.purchase_date) : '—'}
+            </span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-              (
-              {formatDistanceToNow(new Date(item?.saleDate), { addSuffix: true })
-                .replace(/^about /, '')
-                .replace(/^less than /, '')}
-              )
+              {item?.purchase_date
+                ? `(${formatDistanceToNow(new Date(item.purchase_date), { addSuffix: true })
+                    .replace(/^about /, '')
+                    .replace(/^less than /, '')})`
+                : ''}
             </span>
           </Flex>
         ),
@@ -495,7 +480,7 @@ const OrderEtsy = () => {
           </div>
         ),
         base_cost: (
-          <ItemBaseCost orderId={item?.orderId} base_cost={item?.totals?.orderTotal} fetchAllOrder={fetchAllOrder} filters={filters} />
+          <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />
         ),
         replace: (
           <div
@@ -514,18 +499,17 @@ const OrderEtsy = () => {
             </span>
           </div>
         ),
-        // Etsy có item.seller.sellerCode thay vì shopName
-        store: <StatusComponent title={item?.shopName || 'Etsy Store'} color={dataColors.pending} />,
-        handling_time: <span className="font-medium whitespace-nowrap">{item?.remain || 'unknown'}</span>,
+        store: <StatusComponent title={item?.shopName || 'No Data'} color={dataColors.pending} />,
+        handling_time: <span className="font-medium whitespace-nowrap">{item?.remain || 'Unknown'}</span>,
         case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
         subItems: (item?.items || []).map((itemSub, indexItem) => ({
           key: `${index}-${indexItem}`,
           product: (
             <SubItemImage
-              linkImage={itemSub?.baseImageUrl} // API Etsy đang thiếu link ảnh
+              linkImage={itemSub?.baseImageUrl}
               linkFulfill={itemSub?.fulfillment_file}
               seller={item?.seller}
-              listing={itemSub?.listingId} // Dùng listingId của Etsy
+              listing={itemSub?.listingId}
               scale_status={itemSub?.scale_status}
               asin={itemSub?.asin}
               scale_by={item?.scaledBy}
@@ -540,29 +524,31 @@ const OrderEtsy = () => {
               listing={itemSub?.listingId} // Dùng listingId
             />
           ),
-          // Truyền variationsRaw của Etsy vào component hiển thị Customization
           customer: (
-            <SubItemCustomEtsy items={itemSub?.variations} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+            <SubItemCustomEtsy
+              items={itemSub?.version3Data}
+              customUrl={itemSub?.customized_url}
+              linkImage={itemSub?.snapshotImage}
+            />
           ),
           quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-          // Dùng transactionId của Etsy thay cho orderItemId
-          cost_center: <SubItemCost data={itemSub?.cost_center} fulfillName={`${item?.orderId}-${itemSub?.transactionId}`} />,
+          cost_center: <SubItemCost data={itemSub?.cost_center} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />,
           tracking_note: (
             <SubItemTracking
               tracking_info={itemSub?.tracking_info}
-              orderItemId={itemSub?.transactionId} // Etsy dùng transactionId cho từng item
+              orderItemId={itemSub?.orderItemId}
               orderId={item?.orderId}
               status={item?.status}
               fetchAllOrder={fetchAllOrder}
               filters={filters}
-              fetchCountStatus={fetchCountStatus}
+              fetchCountStatus={fetchEtsyStatistic}
             />
           ),
         })),
       };
     });
     return results;
-  }, [orders, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
+  }, [orders, fetchAllOrder, fetchEtsyStatistic, filters, handleColorStatus, handleRetest, handleCopy]);
 
   const fetchAllTeams = useCallback(async () => {
     try {
@@ -595,9 +581,9 @@ const OrderEtsy = () => {
   }, [fetchAllTeams]);
 
   useEffect(() => {
-    fetchCountStatus();
+    fetchEtsyStatistic();
     fetchAllOrder(filters);
-  }, [filters, fetchAllOrder, fetchCountStatus]);
+  }, [filters, fetchAllOrder, fetchEtsyStatistic]);
 
   useEffect(() => {
     if (isShowRowkeys) {
@@ -770,7 +756,7 @@ const OrderEtsy = () => {
                 className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
                 onClick={() => {
                   fetchAllOrder(filters);
-                  fetchCountStatus();
+                  fetchEtsyStatistic();
                   toast.success('Refresh success!');
                 }}
               >
@@ -779,13 +765,14 @@ const OrderEtsy = () => {
             </Tooltip>
           </div>
           <div>
-            <Pagination
+                      <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              pageSize={filters.perPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
+              showSizeChanger
               className="custom-pagination"
             />
           </div>
@@ -824,7 +811,14 @@ const OrderEtsy = () => {
         </div>
       </div>
 
-      <ModalImportOrder isModalOpen={isShowModal} setIsModalOpen={setIsShowModal} />
+      <ModalImportEtsy
+        isModalOpen={isShowModal}
+        setIsModalOpen={setIsShowModal}
+        onImportSuccess={() => {
+          fetchAllOrder(filters);
+          fetchCountStatus();
+        }}
+      />
 
       <Modal
         title="Replace order"

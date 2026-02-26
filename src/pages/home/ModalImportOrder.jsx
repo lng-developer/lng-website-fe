@@ -23,7 +23,7 @@ const ModalImportOrder = ({ isModalOpen, setIsModalOpen }) => {
       return;
     }
     try {
-      const result = await getALlShop();
+      const result = await getALlShop({ merchant: 'amazon' });
       if (result.status === 200) {
         const formatData = result.data.map((item) => {
           return {

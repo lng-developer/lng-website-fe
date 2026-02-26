@@ -317,6 +317,17 @@ const dataFilterIdeaTasks = [
   },
 ];
 
+const dataFilterStatusEtsy = [
+  { key: 'all',            title: 'All',             status: 'All'          },
+  { key: 'new',            title: 'New Order',       status: 'New'          },
+  { key: 'noCostCenter',   title: 'No Cost Center',  status: 'NoCostCenter' },
+  { key: 'fulfilled',      title: 'Fulfilled',       status: 'Fulfilled'    },
+  { key: 'shipped',        title: 'Shipped',         status: 'Shipped'      },
+  { key: 'cancelled',      title: 'Cancelled',       status: 'Cancelled'    },
+  { key: 'refund',         title: 'Refund',          status: 'Refund'       },
+  { key: 'invalidAddress', title: 'Address Invalid', status: 'invalidAddress'},
+];
+
 export {
   dataFilterStatus,
   dataFilterStatusFulfillment,
@@ -326,4 +337,5 @@ export {
   dataFilterStatusFulfillmentDesign,
   dataFilterTasks,
   dataFilterIdeaTasks,
+  dataFilterStatusEtsy,
 };

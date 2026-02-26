@@ -1,16 +1,22 @@
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
-import NoImage from '../../../assets/NoImage.jpg'; // Đảm bảo đường dẫn này đúng với dự án của bạn
+import NoImage from '../../../assets/NoImage.jpg';
 
-const SubItemCustomEtsy = ({ items = {}, customUrl, linkImage }) => {
+const SubItemCustomEtsy = ({ items = [], customUrl, linkImage }) => {
+  // Chuẩn hóa: items có thể là array [{label, value}] hoặc object {key: value}
+  const normalizedItems = Array.isArray(items)
+    ? items // version3Data: [{label, value}]
+    : Object.entries(items || {}).map(([label, value]) => ({ label, value }));
+
   return (
     <div className="flex-col justify-between">
-      {/* Sử dụng Object.entries để lặp qua Object thay vì Array.map */}
-      {Object.entries(items || {}).map(([key, value], index) => (
+      {normalizedItems.map((item, index) => (
         <div key={index} className="mb-0.5 max-w-[250px] whitespace-normal break-words">
-          <span className="font-medium">{key}:</span>
-          {/* Thêm whitespace-pre-wrap để giữ nguyên định dạng xuống dòng (\n) của Etsy */}
-          <span className="text-[#64748B] ml-2 whitespace-pre-wrap">{value ? value : <span className="text-red-500">x</span>}</span>
+          <span className="font-medium">{item.label}:</span>
+          {/* whitespace-pre-wrap giữ nguyên ký tự xuống dòng \n */}
+          <span className="text-[#64748B] ml-2 whitespace-pre-wrap">
+            {item.value ? item.value : <span className="text-red-500">x</span>}
+          </span>
         </div>
       ))}
 

@@ -11,8 +11,8 @@ const updateStatusOrder = (orderId, status) => {
   });
 };
 
-const getALlShop = () => {
-  return instance.get('/shop');
+const getALlShop = (params) => {
+  return instance.get('/shop', { params });
 };
 
 const importOrderByFile = (payload) => {

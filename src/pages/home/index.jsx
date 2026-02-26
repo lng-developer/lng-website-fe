@@ -328,7 +328,7 @@ const Home = () => {
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
     try {
-      const result = await getALlShop();
+      const result = await getALlShop({ merchant: 'amazon' });
       if (result.status === 200) {
         setShops(result.data);
       }
