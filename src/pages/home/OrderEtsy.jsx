@@ -520,8 +520,8 @@ const OrderEtsy = () => {
               sku={itemSub?.sku}
               mapped_sku={itemSub?.mapped_sku}
               asin={itemSub?.asin}
-              seller={item?.seller?.sellerId || 'unknown'}
-              listing={itemSub?.listingId} // Dùng listingId
+              sellerName={item?.seller?.full_name || '—'}
+              listing={itemSub?.listingId}
             />
           ),
           customer: (

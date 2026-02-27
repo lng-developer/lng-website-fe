@@ -4,7 +4,9 @@ import { dataColors } from '../../../utils/dataColors';
 import { RiLinkM } from 'react-icons/ri';
 import { Tooltip } from 'antd';
 
-const SubItemSku = ({ sku, asin, seller, mapped_sku, listing }) => {
+const SubItemSku = ({ sku, asin, seller, sellerName, mapped_sku, listing }) => {
+  // Hỗ trợ cả 2 cách: sellerName (string) hoặc seller (object với full_name)
+  const displaySellerName = sellerName || seller?.full_name || 'No data';
   return (
     <div className="text-left">
       {sku && (
@@ -55,7 +57,7 @@ const SubItemSku = ({ sku, asin, seller, mapped_sku, listing }) => {
           <span className="font-medium">Seller:</span>
         </div>
         <div>
-          <StatusComponent title={seller?.full_name || 'No data'} color={dataColors.process} />
+          <StatusComponent title={displaySellerName} color={dataColors.process} />
         </div>
       </div>
       <div className="flex-col gap-2 mb-2">
