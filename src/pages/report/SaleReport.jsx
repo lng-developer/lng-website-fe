@@ -274,7 +274,7 @@ const SaleReport = () => {
 
       // Nhóm dòng hiển thị theo seller
       const group = [
-        { type: 'Total Orders', values: r.items, money: false, totalVal: totals.items },
+        { type: 'Total Order Items', values: r.items, money: false, totalVal: totals.items },
         { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
@@ -431,7 +431,7 @@ const SaleReport = () => {
     const totalDiscount = entries.reduce((acc, r) => acc + sum(r.itemPromotionDiscount || []), 0);
 
     return [
-      { key: 'orders', label: 'Orders', value: totalItems, icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
+      { key: 'order', label: 'Order Items', value: totalItems, icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
       {
         key: 'revenue',
         label: 'Revenue',
