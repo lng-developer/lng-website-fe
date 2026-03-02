@@ -501,7 +501,7 @@ const SaleReport = () => {
     if (isMoney) {
       display = isProfit ? formatMoneySigned(valNum) : `$${formatNumber(valNum)}`;
     } else {
-      display = item.label === 'Orders' ? valNum : formatNumber(valNum);
+      display = item.label === 'Order Items' ? valNum : formatNumber(valNum);
     }
 
     const color = isProfit
