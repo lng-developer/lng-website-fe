@@ -132,7 +132,7 @@ const ModalImportEtsy = ({ isModalOpen, setIsModalOpen, onImportSuccess }) => {
     } catch (error) {
       console.error(error);
       const serverMessage = error?.response?.data?.message;
-      toast.error(serverMessage || 'System error during import!');
+      // toast.error(serverMessage || 'System error during import!');
     } finally {
       setLoading(false);
     }
