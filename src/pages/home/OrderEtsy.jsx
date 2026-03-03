@@ -75,6 +75,10 @@ const OrderEtsy = () => {
     from: defaultFrom,
     to: defaultTo,
     search: '',
+    isNoCostCenter: false,
+    invalidAddress: false,
+    openCase: false,
+    noPsd: false,
     shopName: '',
     teamId: '',
     shippingType: '',
@@ -264,11 +268,19 @@ const OrderEtsy = () => {
 
   const handleFilterForStatus = useCallback(
     (status) => {
-      setCurrentPage(1); // Reset về trang 1 khi đổi filter
-      if (status === 'All') return updateFilter({ status: '', page: 1 });
-      if (status === 'NoCostCenter') return updateFilter({ status: '', page: 1 });
-      if (status === 'invalidAddress') return updateFilter({ status: '', page: 1 });
-      updateFilter({ status, page: 1 });
+      setCurrentPage(1);
+      if (status === 'All')
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+      if (status === 'NoCostCenter')
+        return updateFilter({ status: '', isNoCostCenter: true,  invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+      if (status === 'invalidAddress')
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true,  openCase: false, noPsd: false, page: 1 });
+      if (status === 'openCase')
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true,  noPsd: false, page: 1 });
+      if (status === 'noPsd')
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true,  page: 1 });
+      // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
+      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
     },
     [updateFilter]
   );
