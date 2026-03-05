@@ -89,10 +89,11 @@ export const detailMenus = {
           key: routes.report_sale,
           label: 'Sale Report',
           icon: <TbReportSearch size={20} />,
-          // children: [
-          //   { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
-          //   { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
-          // ],
+        },
+        {
+          key: routes.report_sale_etsy,
+          label: 'Etsy Sale Report',
+          icon: <FaEtsy size={20} />,
         },
         // { key: '', label: 'Tool Scale Reports', icon: <FaBalanceScaleLeft size={20} /> },
         // { key: '', label: 'Amazon Store Report', icon: <LuStar size={20} /> },

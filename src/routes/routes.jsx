@@ -34,6 +34,7 @@ const routes = {
   cost_center_productTypes: '/cost-center/product-types',
   report_ordersCost: '/report/orders-cost',
   report_sale: '/report/sale',
+  report_sale_etsy: '/report/sale-etsy',
   report_ads: '/report/ads',
   extensions: '/extensions',
   sku_mapping: '/sku_mapping',
