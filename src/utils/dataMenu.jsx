@@ -126,7 +126,19 @@ export const detailMenus = {
     },
   ],
   fulfillment: [
-    { key: routes.fulfillmentScale, icon: <MdBalance size={20} />, label: 'Scale' },
+    { 
+      key: 'scale',
+      icon: <MdBalance size={20} />, 
+      label: 'Scale',
+      children:[
+        {
+          key:routes.fulfillmentScale,label:"AMAZON Scale",icon: <FaAmazon size={20} />
+        },
+        {
+          key:routes.scalesty,label:"ESTY Scale ",icon: <FaEtsy size={20} />
+        }
+      ]
+    },
     { key: routes.fulfillmentQc, icon: <TbBlender size={20} />, label: 'QC' },
     { key: '', icon: <TbHomeStats size={20} />, label: 'Working Status' },
     {

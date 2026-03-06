@@ -35,6 +35,7 @@ import ConfirmShip from './pages/extension/ConfirmShip';
 import Dashboard from './pages/dashboard/DashboardPage';
 import ManageStores from './pages/shop/ManageStore';
 import OrderEtsy from './pages/home/OrderEtsy';
+import ScaleEsty from './pages/fulfillment/ScaleEsty';
 
 function App() {
   return (
@@ -73,6 +74,11 @@ function App() {
           <Route path={routes.report_order_cost_etsy} element={<EtsyOrderCost />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
           <Route path={routes.report_ads} element={<AdsReport />} />
+
+            {/* ScalEsty */}
+          <Route path={routes.scalesty} element={<ScaleEsty />} />
+
+
 
           {/* Design */}
           <Route path={routes.psd_design} element={<PSDTasks />} />
