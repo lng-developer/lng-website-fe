@@ -19,6 +19,7 @@ import { TableOutlined, BarChartOutlined } from '@ant-design/icons';
 import { saveAs } from 'file-saver';
 import { getAllTeam } from '../../../apis/teams';
 import EtsySaleReportCharts from './EtsySaleReportCharts';
+import { reportForSaler } from '../../../apis/report';
 
 // ---------- helpers ----------
 const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -46,37 +47,39 @@ const buildAggregateReport = (normalizedObj = {}, dayLen = 0) => {
   const entries = Object.values(normalizedObj || {});
   if (!entries.length) return {};
   const agg = {
-    listingFee:     sumArraysByIndex(entries.map((r) => r.listingFee),     dayLen),
+    listingFee: sumArraysByIndex(entries.map((r) => r.listingFee), dayLen),
     transactionFee: sumArraysByIndex(entries.map((r) => r.transactionFee), dayLen),
-    paymentFee:     sumArraysByIndex(entries.map((r) => r.paymentFee),     dayLen),
-    offsiteAds:     sumArraysByIndex(entries.map((r) => r.offsiteAds),     dayLen),
-    tax:            sumArraysByIndex(entries.map((r) => r.tax),            dayLen),
-    opCost:         sumArraysByIndex(entries.map((r) => r.opCost),         dayLen),
-    refund:         sumArraysByIndex(entries.map((r) => r.refund),         dayLen),
-    items:          sumArraysByIndex(entries.map((r) => r.items),          dayLen),
-    revenue:        sumArraysByIndex(entries.map((r) => r.revenue),        dayLen),
-    baseCost:       sumArraysByIndex(entries.map((r) => r.baseCost),       dayLen),
-    discount:       sumArraysByIndex(entries.map((r) => r.discount),       dayLen),
+    paymentFee: sumArraysByIndex(entries.map((r) => r.paymentFee), dayLen),
+    offsiteAds: sumArraysByIndex(entries.map((r) => r.offsiteAds), dayLen),
+    tax: sumArraysByIndex(entries.map((r) => r.tax), dayLen),
+    opCost: sumArraysByIndex(entries.map((r) => r.opCost), dayLen),
+    refund: sumArraysByIndex(entries.map((r) => r.refund), dayLen),
+    items: sumArraysByIndex(entries.map((r) => r.items), dayLen),
+    revenue: sumArraysByIndex(entries.map((r) => r.revenue), dayLen),
+    baseCost: sumArraysByIndex(entries.map((r) => r.baseCost), dayLen),
+    discount: sumArraysByIndex(entries.map((r) => r.discount), dayLen),
   };
   const totals = entries.map((r) => r.totals).filter(Boolean);
   const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
   agg.totals = {
-    items:          get('items')          || sum(agg.items),
-    revenue:        get('revenue')        || sum(agg.revenue),
-    baseCost:       get('baseCost')       || sum(agg.baseCost),
-    listingFee:     get('listingFee')     || sum(agg.listingFee),
+    items: get('items') || sum(agg.items),
+    revenue: get('revenue') || sum(agg.revenue),
+    baseCost: get('baseCost') || sum(agg.baseCost),
+    listingFee: get('listingFee') || sum(agg.listingFee),
     transactionFee: get('transactionFee') || sum(agg.transactionFee),
-    paymentFee:     get('paymentFee')     || sum(agg.paymentFee),
-    offsiteAds:     get('offsiteAds')     || sum(agg.offsiteAds),
-    tax:            get('tax')            || sum(agg.tax),
-    opCost:         get('opCost')         || sum(agg.opCost),
-    refund:         get('refund')         || sum(agg.refund),
-    discount:       get('discount')       || sum(agg.discount),
-    profit1:        get('profit1')        || 0,
-    profit2:        get('profit2')        || 0,
+    paymentFee: get('paymentFee') || sum(agg.paymentFee),
+    offsiteAds: get('offsiteAds') || sum(agg.offsiteAds),
+    tax: get('tax') || sum(agg.tax),
+    opCost: get('opCost') || sum(agg.opCost),
+    refund: get('refund') || sum(agg.refund),
+    discount: get('discount') || sum(agg.discount),
+    profit1: get('profit1') || 0,
+    profit2: get('profit2') || 0,
   };
   return agg;
 };
+
+
 
 // ============================================================
 // MOCK DATA  –  sẽ được thay bằng API khi sẵn sàng
@@ -84,7 +87,7 @@ const buildAggregateReport = (normalizedObj = {}, dayLen = 0) => {
 const generateMockDays = (from, to) => {
   const days = [];
   const start = new Date(from);
-  const end   = new Date(to);
+  const end = new Date(to);
   const diffDays = Math.min(Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1, 14);
   for (let i = 0; i < diffDays; i++) {
     const d = new Date(start);
@@ -94,23 +97,23 @@ const generateMockDays = (from, to) => {
   return days;
 };
 
-const rand = (min, max) => +( Math.random() * (max - min) + min).toFixed(2);
+const rand = (min, max) => +(Math.random() * (max - min) + min).toFixed(2);
 
 const generateMockSellerData = (days) => {
   const len = days.length;
   const arr = (min, max) => Array.from({ length: len }, () => rand(min, max));
 
-  const items          = arr(3, 20).map(Math.round);
-  const revenue        = arr(120, 600);
-  const baseCost       = revenue.map((r) => +(r * rand(0.25, 0.40)).toFixed(2));
-  const listingFee     = arr(0.4, 1.2);
+  const items = arr(3, 20).map(Math.round);
+  const revenue = arr(120, 600);
+  const baseCost = revenue.map((r) => +(r * rand(0.25, 0.40)).toFixed(2));
+  const listingFee = arr(0.4, 1.2);
   const transactionFee = revenue.map((r) => +(r * 0.065).toFixed(2));
-  const paymentFee     = revenue.map((r) => +(r * 0.03).toFixed(2));
-  const offsiteAds     = revenue.map((r) => +(r * rand(0.01, 0.05)).toFixed(2));
-  const tax            = revenue.map((r) => +(r * 0.10).toFixed(2));
-  const opCost         = arr(5, 25);
-  const refund         = arr(0, 30);
-  const discount       = arr(0, 15);
+  const paymentFee = revenue.map((r) => +(r * 0.03).toFixed(2));
+  const offsiteAds = revenue.map((r) => +(r * rand(0.01, 0.05)).toFixed(2));
+  const tax = revenue.map((r) => +(r * 0.10).toFixed(2));
+  const opCost = arr(5, 25);
+  const refund = arr(0, 30);
+  const discount = arr(0, 15);
 
   const profit1 = revenue.map((v, i) =>
     +(v - baseCost[i] - listingFee[i] - transactionFee[i] - paymentFee[i]).toFixed(2)
@@ -123,19 +126,19 @@ const generateMockSellerData = (days) => {
     items, revenue, baseCost, listingFee, transactionFee, paymentFee,
     offsiteAds, tax, opCost, refund, discount, profit1, profit2,
     totals: {
-      items:          sum(items),
-      revenue:        +sum(revenue).toFixed(2),
-      baseCost:       +sum(baseCost).toFixed(2),
-      listingFee:     +sum(listingFee).toFixed(2),
+      items: sum(items),
+      revenue: +sum(revenue).toFixed(2),
+      baseCost: +sum(baseCost).toFixed(2),
+      listingFee: +sum(listingFee).toFixed(2),
       transactionFee: +sum(transactionFee).toFixed(2),
-      paymentFee:     +sum(paymentFee).toFixed(2),
-      offsiteAds:     +sum(offsiteAds).toFixed(2),
-      tax:            +sum(tax).toFixed(2),
-      opCost:         +sum(opCost).toFixed(2),
-      refund:         +sum(refund).toFixed(2),
-      discount:       +sum(discount).toFixed(2),
-      profit1:        +sum(profit1).toFixed(2),
-      profit2:        +sum(profit2).toFixed(2),
+      paymentFee: +sum(paymentFee).toFixed(2),
+      offsiteAds: +sum(offsiteAds).toFixed(2),
+      tax: +sum(tax).toFixed(2),
+      opCost: +sum(opCost).toFixed(2),
+      refund: +sum(refund).toFixed(2),
+      discount: +sum(discount).toFixed(2),
+      profit1: +sum(profit1).toFixed(2),
+      profit2: +sum(profit2).toFixed(2),
     },
   };
 };
@@ -154,20 +157,20 @@ const EtsySaleReport = () => {
   const { collapsed } = useOutletContext();
   const { user } = useAuth();
   const [reportBySeller, setReportBySeller] = useState({});
-  const [loading, setLoading]               = useState(false);
-  const [days, setDays]                     = useState([]);
-  const [sellers, setSellers]               = useState([]);
-  const [teams, setTeams]                   = useState([]);
-  const [selectSeller, setSelectSeller]     = useState();
-  const [selectTeam, setSelectTeam]         = useState();
-  const [viewMode, setViewMode]             = useState('table');
-  const [reportScope, setReportScope]       = useState('seller');
+  const [loading, setLoading] = useState(false);
+  const [days, setDays] = useState([]);
+  const [sellers, setSellers] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [selectSeller, setSelectSeller] = useState();
+  const [selectTeam, setSelectTeam] = useState();
+  const [viewMode, setViewMode] = useState('table');
+  const [reportScope, setReportScope] = useState('seller');
 
   const [filters, setFilters] = useState({
     from: defaultFrom,
-    to:   defaultTo,
+    to: defaultTo,
     seller: '',
-    team:   '',
+    team: '',
   });
 
   const updateFilter = (newValues) =>
@@ -181,15 +184,48 @@ const EtsySaleReport = () => {
     }
   };
 
-  // TODO: thay bằng API thực khi sẵn sàng
-  const fetchReport = (params) => {
+  const fetchReport = async (params) => {
     setLoading(true);
-    setTimeout(() => {
-      const { days: mockDays, reportBySeller: mockData } = buildMockReport(params?.from, params?.to);
-      setDays(mockDays);
-      setReportBySeller(mockData);
+    try {
+      const fromISO = new Date(params?.from || defaultFrom).toISOString();
+      const toISO = new Date(params?.to || defaultTo).toISOString();
+      const res = await reportForSaler(fromISO, toISO);
+      
+      if (res.status === 200 && res.data) {
+        const apiData = res.data;
+        // Map API data structure to component structure
+        const mappedData = {};
+        
+        Object.entries(apiData.data || {}).forEach(([seller, sellerData]) => {
+          mappedData[seller] = {
+            items: sellerData.items || [],
+            revenue: sellerData.revenue || [],
+            baseCost: sellerData.baseCost || [],
+            listingFee: sellerData.fee || [],
+            transactionFee: sellerData.fee || [], // API trả về 1 fee chung
+            paymentFee: Array(sellerData.items?.length || 0).fill(0),
+            offsiteAds: sellerData.ads || [],
+            tax: sellerData.itemTax || [],
+            opCost: sellerData.opCost || [],
+            refund: sellerData.refund || [],
+            discount: sellerData.itemPromotionDiscount || [],
+            profit1: sellerData.profit1 || [],
+            profit2: sellerData.profit2 || [],
+            totals: sellerData.totals || {},
+          };
+        });
+        
+        setDays(apiData.date || []);
+        setReportBySeller(mappedData);
+      } else {
+        toast.error('Failed to fetch report data');
+      }
+    } catch (error) {
+      console.error('Fetch report error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to fetch report');
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
   const dayKeys = days.map((d) => d.replace(/-/g, '_'));
@@ -200,19 +236,19 @@ const EtsySaleReport = () => {
     Object.entries(reportBySeller || {}).forEach(([seller, r]) => {
       out[seller] = {
         ...r,
-        items:          fitToLen(r.items,          len),
-        revenue:        fitToLen(r.revenue,        len),
-        baseCost:       fitToLen(r.baseCost,       len),
-        listingFee:     fitToLen(r.listingFee,     len),
+        items: fitToLen(r.items, len),
+        revenue: fitToLen(r.revenue, len),
+        baseCost: fitToLen(r.baseCost, len),
+        listingFee: fitToLen(r.listingFee, len),
         transactionFee: fitToLen(r.transactionFee, len),
-        paymentFee:     fitToLen(r.paymentFee,     len),
-        offsiteAds:     fitToLen(r.offsiteAds,     len),
-        tax:            fitToLen(r.tax,            len),
-        opCost:         fitToLen(r.opCost,         len),
-        refund:         fitToLen(r.refund,         len),
-        discount:       fitToLen(r.discount,       len),
-        profit1:        r.profit1 ? fitToLen(r.profit1, len) : undefined,
-        profit2:        r.profit2 ? fitToLen(r.profit2, len) : undefined,
+        paymentFee: fitToLen(r.paymentFee, len),
+        offsiteAds: fitToLen(r.offsiteAds, len),
+        tax: fitToLen(r.tax, len),
+        opCost: fitToLen(r.opCost, len),
+        refund: fitToLen(r.refund, len),
+        discount: fitToLen(r.discount, len),
+        profit1: r.profit1 ? fitToLen(r.profit1, len) : undefined,
+        profit2: r.profit2 ? fitToLen(r.profit2, len) : undefined,
       };
     });
     return out;
@@ -243,52 +279,52 @@ const EtsySaleReport = () => {
         numberSafe(ad) > 0 ? +((numberSafe(profit2[i]) / numberSafe(ad)) * 100).toFixed(2) : null
       );
       const totals = {
-        items:          r.totals?.items          ?? sum(r.items),
-        revenue:        r.totals?.revenue        ?? sum(r.revenue),
-        baseCost:       r.totals?.baseCost       ?? sum(r.baseCost),
-        listingFee:     r.totals?.listingFee     ?? sum(r.listingFee),
+        items: r.totals?.items ?? sum(r.items),
+        revenue: r.totals?.revenue ?? sum(r.revenue),
+        baseCost: r.totals?.baseCost ?? sum(r.baseCost),
+        listingFee: r.totals?.listingFee ?? sum(r.listingFee),
         transactionFee: r.totals?.transactionFee ?? sum(r.transactionFee),
-        paymentFee:     r.totals?.paymentFee     ?? sum(r.paymentFee),
-        offsiteAds:     r.totals?.offsiteAds     ?? sum(r.offsiteAds),
-        tax:            r.totals?.tax            ?? sum(r.tax),
-        opCost:         r.totals?.opCost         ?? sum(r.opCost),
-        refund:         r.totals?.refund         ?? sum(r.refund),
-        discount:       r.totals?.discount       ?? sum(r.discount || []),
-        profit1:        r.totals?.profit1        ?? sum(profit1),
-        profit2:        r.totals?.profit2        ?? sum(profit2),
+        paymentFee: r.totals?.paymentFee ?? sum(r.paymentFee),
+        offsiteAds: r.totals?.offsiteAds ?? sum(r.offsiteAds),
+        tax: r.totals?.tax ?? sum(r.tax),
+        opCost: r.totals?.opCost ?? sum(r.opCost),
+        refund: r.totals?.refund ?? sum(r.refund),
+        discount: r.totals?.discount ?? sum(r.discount || []),
+        profit1: r.totals?.profit1 ?? sum(profit1),
+        profit2: r.totals?.profit2 ?? sum(profit2),
       };
       const totalROI = totals.offsiteAds > 0
         ? +(((totals.profit2 || 0) / totals.offsiteAds) * 100).toFixed(2)
         : null;
 
       const group = [
-        { type: 'Total Order Items', values: r.items,          money: false,  totalVal: totals.items },
-        { type: 'Revenue',           values: r.revenue,        money: true,   totalVal: totals.revenue },
-        { type: 'Base Cost',         values: r.baseCost,       money: true,   totalVal: totals.baseCost },
-        { type: 'Listing Fee',       values: r.listingFee,     money: true,   totalVal: totals.listingFee },
-        { type: 'Transaction Fee',   values: r.transactionFee, money: true,   totalVal: totals.transactionFee },
-        { type: 'Payment Fee',       values: r.paymentFee,     money: true,   totalVal: totals.paymentFee },
-        { type: 'Tax',               values: r.tax,            money: true,   totalVal: totals.tax },
-        { type: 'Discount',          values: r.discount || [], money: true,   totalVal: totals.discount },
-        { type: 'Profit 1',          values: profit1,          money: true,   totalVal: totals.profit1, signAware: true },
-        { type: 'Offsite Ads',       values: r.offsiteAds,     money: true,   totalVal: totals.offsiteAds },
-        { type: 'Operation Cost',    values: r.opCost,         money: true,   totalVal: totals.opCost },
-        { type: 'Refund',            values: r.refund,         money: true,   totalVal: totals.refund },
-        { type: 'Profit 2',          values: profit2,          money: true,   totalVal: totals.profit2, signAware: true },
-        { type: 'ROI',               values: roiArr,           percent: true, totalVal: totalROI },
+        { type: 'Total Order Items', values: r.items, money: false, totalVal: totals.items },
+        { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
+        { type: 'Base Cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
+        { type: 'Listing Fee', values: r.listingFee, money: true, totalVal: totals.listingFee },
+        { type: 'Transaction Fee', values: r.transactionFee, money: true, totalVal: totals.transactionFee },
+        { type: 'Payment Fee', values: r.paymentFee, money: true, totalVal: totals.paymentFee },
+        { type: 'Tax', values: r.tax, money: true, totalVal: totals.tax },
+        { type: 'Discount', values: r.discount || [], money: true, totalVal: totals.discount },
+        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
+        { type: 'Offsite Ads', values: r.offsiteAds, money: true, totalVal: totals.offsiteAds },
+        { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
+        { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
+        { type: 'Profit 2', values: profit2, money: true, totalVal: totals.profit2, signAware: true },
+        { type: 'ROI', values: roiArr, percent: true, totalVal: totalROI },
       ];
 
       group.forEach((row, idx) => {
         const isFirst = idx === 0;
         const record = {
-          key:        `${seller}-${row.type}`,
+          key: `${seller}-${row.type}`,
           seller,
-          type:       <span className="font-medium">{row.type}</span>,
-          total:      row.totalVal,
-          _rowSpan:   isFirst ? group.length : 0,
+          type: <span className="font-medium">{row.type}</span>,
+          total: row.totalVal,
+          _rowSpan: isFirst ? group.length : 0,
           _groupStart: isFirst && rows.length > 0,
-          _money:     row.money,
-          _percent:   row.percent,
+          _money: row.money,
+          _percent: row.percent,
           _signAware: row.signAware || false,
         };
         dayKeys.forEach((k, i) => (record[k] = row.values[i]));
@@ -358,17 +394,17 @@ const EtsySaleReport = () => {
   // ----- KPIs -----
   const kpis = useMemo(() => {
     const entries = Object.values(normalizedView);
-    const totals  = entries.map((r) => r.totals).filter(Boolean);
-    const get     = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
+    const totals = entries.map((r) => r.totals).filter(Boolean);
+    const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
     return [
-      { key: 'order',          label: 'Order Items',     value: get('items'),          icon: <LuBoxes className="text-white" />,          iconBg: 'bg-slate-600' },
-      { key: 'revenue',        label: 'Revenue',         value: get('revenue'),        prefix: '$', icon: <FaMoneyBillWave className="text-white" />, iconBg: 'bg-emerald-500' },
-      { key: 'baseCost',       label: 'Base Cost',       value: get('baseCost'),       prefix: '$', icon: <FaDollarSign className="text-white" />,     iconBg: 'bg-amber-500' },
-      { key: 'listingFee',     label: 'Listing Fee',     value: get('listingFee'),     prefix: '$', icon: <FaDolly className="text-white" />,           iconBg: 'bg-fuchsia-500' },
-      { key: 'transactionFee', label: 'Transaction Fee', value: get('transactionFee'), prefix: '$', icon: <FaPercentage className="text-white" />,      iconBg: 'bg-orange-500' },
-      { key: 'paymentFee',     label: 'Payment Fee',     value: get('paymentFee'),     prefix: '$', icon: <FaPercentage className="text-white" />,      iconBg: 'bg-pink-500' },
-      { key: 'offsiteAds',     label: 'Offsite Ads',     value: get('offsiteAds'),     prefix: '$', icon: <FaDollarSign className="text-white" />,      iconBg: 'bg-blue-500' },
-      { key: 'profit',         label: 'Profit',          value: get('profit2'),        prefix: '$', icon: <FaUser className="text-white" />,             iconBg: 'bg-emerald-500' },
+      { key: 'order', label: 'Order Items', value: get('items'), icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
+      { key: 'revenue', label: 'Revenue', value: get('revenue'), prefix: '$', icon: <FaMoneyBillWave className="text-white" />, iconBg: 'bg-emerald-500' },
+      { key: 'baseCost', label: 'Base Cost', value: get('baseCost'), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-amber-500' },
+      { key: 'listingFee', label: 'Listing Fee', value: get('listingFee'), prefix: '$', icon: <FaDolly className="text-white" />, iconBg: 'bg-fuchsia-500' },
+      { key: 'transactionFee', label: 'Transaction Fee', value: get('transactionFee'), prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-orange-500' },
+      { key: 'paymentFee', label: 'Payment Fee', value: get('paymentFee'), prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-pink-500' },
+      { key: 'offsiteAds', label: 'Offsite Ads', value: get('offsiteAds'), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-blue-500' },
+      { key: 'profit', label: 'Profit', value: get('profit2'), prefix: '$', icon: <FaUser className="text-white" />, iconBg: 'bg-emerald-500' },
     ];
   }, [normalizedView]);
 
@@ -383,9 +419,9 @@ const EtsySaleReport = () => {
 
   const Card = ({ item }) => {
     const isProfit = item.key === 'profit';
-    const isMoney  = item.prefix === '$';
-    const valNum   = typeof item.value === 'number' ? item.value : Number(item.value) || 0;
-    const display  = isMoney
+    const isMoney = item.prefix === '$';
+    const valNum = typeof item.value === 'number' ? item.value : Number(item.value) || 0;
+    const display = isMoney
       ? isProfit ? formatMoneySigned(valNum) : `$${formatNumber(valNum)}`
       : item.label === 'Order Items' ? valNum : formatNumber(valNum);
     const color = isProfit
@@ -419,29 +455,29 @@ const EtsySaleReport = () => {
   const handleExportExcel = async () => {
     try {
       const entries = Object.entries(normalizedView);
-      const sumArr  = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
+      const sumArr = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
       const getTotal = (k) => entries.reduce((acc, [, r]) => acc + numberSafe(r.totals?.[k]), 0);
 
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Etsy Sale Report', {
         properties: { defaultRowHeight: 18 },
-        views:      [{ state: 'frozen', xSplit: 0, ySplit: 14 }],
+        views: [{ state: 'frozen', xSplit: 0, ySplit: 14 }],
       });
 
       const borderThin = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       const fillOrange = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F56400' } };
-      const fillBlue   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9EEF8' } };
-      const moneyFmt   = '$#,##0.00;[Red]-$#,##0.00';
+      const fillBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9EEF8' } };
+      const moneyFmt = '$#,##0.00;[Red]-$#,##0.00';
 
       const set = (addr, v, opts = {}) => {
         const c = ws.getCell(addr);
         c.value = v;
-        if (opts.bold)   c.font  = { ...(c.font  || {}), bold:   true };
-        if (opts.italic) c.font  = { ...(c.font  || {}), italic: true };
-        if (opts.size)   c.font  = { ...(c.font  || {}), size:   opts.size };
-        if (opts.color)  c.font  = { ...(c.font  || {}), color:  { argb: opts.color } };
-        if (opts.align)  c.alignment = { ...(c.alignment || {}), ...opts.align };
-        if (opts.fill)   c.fill  = opts.fill;
+        if (opts.bold) c.font = { ...(c.font || {}), bold: true };
+        if (opts.italic) c.font = { ...(c.font || {}), italic: true };
+        if (opts.size) c.font = { ...(c.font || {}), size: opts.size };
+        if (opts.color) c.font = { ...(c.font || {}), color: { argb: opts.color } };
+        if (opts.align) c.alignment = { ...(c.alignment || {}), ...opts.align };
+        if (opts.fill) c.fill = opts.fill;
         if (opts.border) c.border = opts.border;
         if (opts.numFmt) c.numFmt = opts.numFmt;
         return c;
@@ -455,19 +491,19 @@ const EtsySaleReport = () => {
       });
       ws.mergeCells('B3', 'I3');
       const fromStr = (filters.from || '').slice(0, 10).split('-').reverse().join('/');
-      const toStr   = (filters.to   || '').slice(0, 10).split('-').reverse().join('/');
+      const toStr = (filters.to || '').slice(0, 10).split('-').reverse().join('/');
       set('B3', `Từ ngày ${fromStr} đến ngày ${toStr}`, { italic: true, color: '0033CC', align: { horizontal: 'center' } });
       set('J3', `Tổng đơn: ${getTotal('items')}`, { bold: true, align: { horizontal: 'right' } });
 
       ws.mergeCells('B5', 'I5');
       set('B5', 'Chi phí', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
       [
-        ['B6', 'Base Cost',       'baseCost'],
-        ['B7', 'Listing Fee',     'listingFee'],
+        ['B6', 'Base Cost', 'baseCost'],
+        ['B7', 'Listing Fee', 'listingFee'],
         ['B8', 'Transaction Fee', 'transactionFee'],
-        ['B9', 'Payment Fee',     'paymentFee'],
-        ['B10','Offsite Ads',     'offsiteAds'],
-        ['B11','Thuế',            'tax'],
+        ['B9', 'Payment Fee', 'paymentFee'],
+        ['B10', 'Offsite Ads', 'offsiteAds'],
+        ['B11', 'Thuế', 'tax'],
       ].forEach(([addr, label, key]) => {
         set(addr, label, { border: borderThin });
         set(`I${addr.slice(1)}`, getTotal(key), { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
@@ -475,10 +511,10 @@ const EtsySaleReport = () => {
 
       ws.mergeCells('B13', 'I13');
       set('B13', 'Thu nhập', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
-      set('B14', 'Doanh thu',  { border: borderThin });
-      set('I14', getTotal('revenue'),  { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
+      set('B14', 'Doanh thu', { border: borderThin });
+      set('I14', getTotal('revenue'), { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
       set('B15', 'Lợi nhuận', { border: borderThin });
-      set('I15', getTotal('profit2'),  { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
+      set('I15', getTotal('profit2'), { border: borderThin, numFmt: moneyFmt, align: { horizontal: 'right' } });
 
       const startRow = 17;
       const col = { seller: 2, type: 3, total: 4, firstDay: 5 };
@@ -489,8 +525,8 @@ const EtsySaleReport = () => {
         cell.alignment = { horizontal: 'center' }; cell.border = borderThin;
       });
       ws.getColumn(col.seller).width = 18;
-      ws.getColumn(col.type).width   = 18;
-      ws.getColumn(col.total).width  = 14;
+      ws.getColumn(col.type).width = 18;
+      ws.getColumn(col.total).width = 14;
       days.forEach((_, i) => (ws.getColumn(col.firstDay + i).width = 12));
 
       let rIdx = startRow + 1;
@@ -501,23 +537,23 @@ const EtsySaleReport = () => {
           profit1.map((p, i) => +(numberSafe(p) - numberSafe(r.offsiteAds[i]) - numberSafe(r.tax[i]) - numberSafe(r.opCost[i]) - numberSafe(r.refund[i])).toFixed(2));
 
         const group = [
-          { label: 'Total Order Items', values: r.items,          total: r.totals?.items,          money: false  },
-          { label: 'Revenue',           values: r.revenue,        total: r.totals?.revenue,        money: true   },
-          { label: 'Base Cost',         values: r.baseCost,       total: r.totals?.baseCost,       money: true   },
-          { label: 'Listing Fee',       values: r.listingFee,     total: r.totals?.listingFee,     money: true   },
-          { label: 'Transaction Fee',   values: r.transactionFee, total: r.totals?.transactionFee, money: true   },
-          { label: 'Payment Fee',       values: r.paymentFee,     total: r.totals?.paymentFee,     money: true   },
-          { label: 'Tax',               values: r.tax,            total: r.totals?.tax,            money: true   },
-          { label: 'Discount',          values: r.discount || [], total: sumArr(r.discount || []), money: true   },
-          { label: 'Profit 1',          values: profit1,          total: r.totals?.profit1,        money: true,  signAware: true },
-          { label: 'Offsite Ads',       values: r.offsiteAds,     total: r.totals?.offsiteAds,     money: true   },
-          { label: 'Operation Cost',    values: r.opCost,         total: r.totals?.opCost,         money: true   },
-          { label: 'Refund',            values: r.refund,         total: r.totals?.refund,         money: true   },
-          { label: 'Profit 2',          values: profit2,          total: r.totals?.profit2,        money: true,  signAware: true },
+          { label: 'Total Order Items', values: r.items, total: r.totals?.items, money: false },
+          { label: 'Revenue', values: r.revenue, total: r.totals?.revenue, money: true },
+          { label: 'Base Cost', values: r.baseCost, total: r.totals?.baseCost, money: true },
+          { label: 'Listing Fee', values: r.listingFee, total: r.totals?.listingFee, money: true },
+          { label: 'Transaction Fee', values: r.transactionFee, total: r.totals?.transactionFee, money: true },
+          { label: 'Payment Fee', values: r.paymentFee, total: r.totals?.paymentFee, money: true },
+          { label: 'Tax', values: r.tax, total: r.totals?.tax, money: true },
+          { label: 'Discount', values: r.discount || [], total: sumArr(r.discount || []), money: true },
+          { label: 'Profit 1', values: profit1, total: r.totals?.profit1, money: true, signAware: true },
+          { label: 'Offsite Ads', values: r.offsiteAds, total: r.totals?.offsiteAds, money: true },
+          { label: 'Operation Cost', values: r.opCost, total: r.totals?.opCost, money: true },
+          { label: 'Refund', values: r.refund, total: r.totals?.refund, money: true },
+          { label: 'Profit 2', values: profit2, total: r.totals?.profit2, money: true, signAware: true },
           {
             label: 'ROI', percent: true,
             values: (r.offsiteAds || []).map((ad, i) => numberSafe(ad) > 0 ? numberSafe(profit2[i]) / numberSafe(ad) : null),
-            total:  r.totals?.offsiteAds > 0 ? r.totals?.profit2 / r.totals?.offsiteAds : null,
+            total: r.totals?.offsiteAds > 0 ? r.totals?.profit2 / r.totals?.offsiteAds : null,
           },
         ];
 
@@ -534,8 +570,8 @@ const EtsySaleReport = () => {
           const cTotal = row.getCell(col.total);
           cTotal.value = rowObj.total ?? (rowObj.percent ? null : 0);
           cTotal.alignment = { horizontal: 'right' }; cTotal.border = borderThin;
-          if (rowObj.money)     cTotal.numFmt = moneyFmt;
-          if (rowObj.percent)   cTotal.numFmt = '0.00%';
+          if (rowObj.money) cTotal.numFmt = moneyFmt;
+          if (rowObj.percent) cTotal.numFmt = '0.00%';
           if (rowObj.signAware && typeof cTotal.value === 'number')
             cTotal.font = { color: { argb: cTotal.value >= 0 ? '008000' : 'FF0000' }, bold: true };
 
@@ -544,8 +580,8 @@ const EtsySaleReport = () => {
             const v = rowObj.values?.[i];
             c.value = rowObj.percent ? (v == null ? null : Number(v)) : Number(v || 0);
             c.alignment = { horizontal: 'right' }; c.border = borderThin;
-            if (rowObj.money)     c.numFmt = moneyFmt;
-            if (rowObj.percent)   c.numFmt = '0.00%';
+            if (rowObj.money) c.numFmt = moneyFmt;
+            if (rowObj.percent) c.numFmt = '0.00%';
             if (rowObj.signAware && typeof c.value === 'number')
               c.font = { color: { argb: c.value >= 0 ? '008000' : 'FF0000' }, bold: true };
           });
@@ -575,7 +611,11 @@ const EtsySaleReport = () => {
     }
   };
 
-  useEffect(() => { fetchAllTeams();   }, []);
+
+
+  useEffect(() => {
+    fetchAllTeams();
+  }, []);
   useEffect(() => { fetchAllSellers(); }, []);
   useEffect(() => {
     fetchReport(filters);
@@ -589,9 +629,6 @@ const EtsySaleReport = () => {
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>Etsy Sale Report</h1>
-            <Tag color="orange" style={{ marginLeft: 4 }}>
-              <span className="flex items-center gap-1"><FaEtsy /> Mock Data</span>
-            </Tag>
           </div>
           <div className="flex justify-center items-center gap-2">
             <button
@@ -663,7 +700,7 @@ const EtsySaleReport = () => {
             value={reportScope}
             options={[
               { label: 'Report By Shop', value: 'seller' },
-              { label: 'Total Report',   value: 'total'  },
+              { label: 'Total Report', value: 'total' },
             ]}
             onChange={handleChangeScope}
           />
