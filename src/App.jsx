@@ -17,6 +17,7 @@ import CostCenterConfig from './pages/cost_center/CostCenterConfig';
 import ReportOrderCost from './pages/report/ReportOrderCost';
 import SaleReport from './pages/report/SaleReport';
 import EtsySaleReport from './pages/report/etsy/EtsySaleReport';
+import EtsyOrderCost from './pages/report/etsy/EtsyOrderCost';
 import UnauthorizedPage from './pages/unauthorized';
 import QC from './pages/fulfillment/QC';
 import TitlePages from './utils/TitlePages';
@@ -69,6 +70,7 @@ function App() {
           <Route path={routes.report_ordersCost} element={<ReportOrderCost />} />
           <Route path={routes.report_sale} element={<SaleReport />} />
           <Route path={routes.report_sale_etsy} element={<EtsySaleReport />} />
+          <Route path={routes.report_order_cost_etsy} element={<EtsyOrderCost />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
           <Route path={routes.report_ads} element={<AdsReport />} />
 

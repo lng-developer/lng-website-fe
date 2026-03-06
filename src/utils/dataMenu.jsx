@@ -95,6 +95,11 @@ export const detailMenus = {
           label: 'Etsy Sale Report',
           icon: <FaEtsy size={20} />,
         },
+        {
+          key: routes.report_order_cost_etsy,
+          label: 'Etsy Orders Cost',
+          icon: <FaEtsy size={20} />,
+        },
         // { key: '', label: 'Tool Scale Reports', icon: <FaBalanceScaleLeft size={20} /> },
         // { key: '', label: 'Amazon Store Report', icon: <LuStar size={20} /> },
         { key: routes.report_ads, label: 'Ads Report', icon: <RiAdvertisementLine size={20} /> },

@@ -35,6 +35,7 @@ const routes = {
   report_ordersCost: '/report/orders-cost',
   report_sale: '/report/sale',
   report_sale_etsy: '/report/sale-etsy',
+  report_order_cost_etsy: '/report/order-cost-etsy',
   report_ads: '/report/ads',
   extensions: '/extensions',
   sku_mapping: '/sku_mapping',
