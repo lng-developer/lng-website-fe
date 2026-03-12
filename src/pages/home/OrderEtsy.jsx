@@ -100,9 +100,8 @@ const OrderEtsy = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page:
-        (Object.prototype.hasOwnProperty.call(newValues, 'page') && newValues.page) ||
-        (Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1),
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
 
@@ -128,6 +127,14 @@ const OrderEtsy = () => {
     (page, pageSize) => {
       updateFilter({ page, perPage: pageSize });
       setCurrentPage(page);
+      
+      // Scroll tới vị trí table khi đổi trang
+      setTimeout(() => {
+        const tableElement = document.querySelector('.ant-table-tbody');
+        if (tableElement) {
+          tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     },
     [updateFilter]
   );
@@ -250,7 +257,7 @@ const OrderEtsy = () => {
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
-        updateFilter({ search: keyword || '' });
+        updateFilter({ search: keyword || '', page: 1 });
       }, 300),
     [updateFilter]
   );
@@ -258,6 +265,11 @@ const OrderEtsy = () => {
     // Clear debounce on unmount để tránh memory leak
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
 
   const handleSearch = useCallback(
     (e) => {
@@ -741,7 +753,7 @@ const OrderEtsy = () => {
                 value={shippingType}
                 onChange={(val) => {
                   setShippingType(val);
-                  updateFilter({ shippingType: val });
+                  updateFilter({ shippingType: val, page: 1 });
                 }}
               />
               <SelectFilter
@@ -750,7 +762,7 @@ const OrderEtsy = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
               <SelectSeller
@@ -759,7 +771,7 @@ const OrderEtsy = () => {
                 value={selectTeam}
                 onChange={(val) => {
                   setSelectTeam(val);
-                  updateFilter({ teamId: val });
+                  updateFilter({ teamId: val, page: 1 });
                 }}
               />
             </div>

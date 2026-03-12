@@ -34,6 +34,7 @@ const Listing = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [tableHeight, setTableHeight] = useState(0);
   const [tabFilter, setTabFilter] = useState(dataFilterListing);
   const [openModalAdd, setOpenModalAdd] = useState(false);
   const [openModalImport, setOpenModalImport] = useState(false);
@@ -60,10 +61,27 @@ const Listing = () => {
     }));
   }, []);
 
-  const handlePageChange = (page, pageSize) => {
-    updateFilter({ page: page, perPage: pageSize });
-    setCurrentPage(page);
-  };
+  const handlePageChange = useCallback(
+    (page, pageSize) => {
+      updateFilter({ page: page, perPage: pageSize });
+      setCurrentPage(page);
+      
+      // Tắt scroll của trang trước
+      document.body.style.overflow = 'hidden';
+      
+      // Scroll tới vị trí table khi đổi trang
+      setTimeout(() => {
+        const tableElement = document.querySelector('.ant-table-tbody');
+        if (tableElement) {
+          tableElement.scrollTop = 0; // Scroll trong table thay vì scroll trang
+        }
+        
+        // Bật lại scroll sau khi xong
+        document.body.style.overflow = 'auto';
+      }, 100);
+    },
+    [updateFilter]
+  );
 
   const handleClickButton = useCallback((item) => {
     setIsActivefilter(item);
@@ -350,6 +368,17 @@ const Listing = () => {
   }, [filters.page]);
 
   useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 240;
+      const availableHeight = window.innerHeight - headerHeight - 20;
+      setTableHeight(availableHeight);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     fetchAllShop();
   }, []);
 
@@ -365,7 +394,7 @@ const Listing = () => {
   }, [fetchCountStatus, filters]);
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
@@ -524,6 +553,9 @@ const Listing = () => {
             pagination={false}
             loading={loading}
             onChange={handleTableChange}
+            sticky={{ offsetHeader: 0 }}
+            scroll={{ y: tableHeight }}
+            tableLayout="auto"
           />
         </div>
       </div>

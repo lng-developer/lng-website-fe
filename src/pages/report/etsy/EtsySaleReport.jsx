@@ -156,6 +156,7 @@ const EtsySaleReport = () => {
   const { user } = useAuth();
   const [reportBySeller, setReportBySeller] = useState({});
   const [loading, setLoading] = useState(false);
+  const [tableHeight, setTableHeight] = useState(0);
   const [days, setDays] = useState([]);
   const [sellers, setSellers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -606,6 +607,29 @@ const EtsySaleReport = () => {
 
 
   useEffect(() => {
+    // Tắt scroll của trang
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    return () => {
+      // Bật lại scroll khi component unmount
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const headerHeight = 240;
+      const availableHeight = window.innerHeight - headerHeight - 20;
+      setTableHeight(availableHeight);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     fetchAllTeams();
   }, []);
   useEffect(() => { fetchAllSellers(); }, []);
@@ -615,7 +639,7 @@ const EtsySaleReport = () => {
   }, [filters.from, filters.to, filters.seller, filters.team]);
 
   return (
-    <div>
+    <div className="overflow-hidden">
       {/* ── Header bar ── */}
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
@@ -707,8 +731,10 @@ const EtsySaleReport = () => {
               rowKey="key"
               bordered
               pagination={false}
-              scroll={{ x: 'max-content' }}
+              scroll={{ x: 'max-content', y: tableHeight }}
               loading={loading}
+              sticky={{ offsetHeader: 0 }}
+              tableLayout="auto"
             />
           ) : (
             <EtsySaleReportCharts
