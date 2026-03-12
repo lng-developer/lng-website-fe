@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import { Flex, Input, Pagination, Switch, Table, Tooltip } from 'antd';
@@ -32,13 +32,14 @@ const CostCenterConfig = () => {
     product_for_seller: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     setCurrentPage(page);
@@ -226,7 +227,7 @@ const CostCenterConfig = () => {
     },
   ];
 
-  const fetchAllConfig = async (params) => {
+  const fetchAllConfig = useCallback(async (params) => {
     try {
       const response = await getConfigCost(params);
       if (response.status === 200) {
@@ -255,18 +256,18 @@ const CostCenterConfig = () => {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
   const debouncedSearch = useMemo(
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ code: '' });
+          updateFilter({ code: '', page: 1 });
           return;
         }
-        updateFilter({ code: keyword });
+        updateFilter({ code: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -319,7 +320,7 @@ const CostCenterConfig = () => {
       toast.error('Create error!');
     } finally {
       setOpenModalAdd(false);
-      fetchAllConfig();
+      fetchAllConfig(filters); // Truyền filters để giữ nguyên trạng thái filter hiện tại
     }
   };
 
@@ -352,7 +353,7 @@ const CostCenterConfig = () => {
       toast.error('Update error!');
     } finally {
       setOpenModalEdit(false);
-      fetchAllConfig();
+      fetchAllConfig(filters); // Truyền filters để giữ nguyên trạng thái filter hiện tại
     }
   };
   console.log('oke');
@@ -368,9 +369,19 @@ const CostCenterConfig = () => {
       toast.error('Update error!');
     } finally {
       setOpenModalEdit(false);
-      fetchAllConfig();
+      fetchAllConfig(filters); // Truyền filters để giữ nguyên trạng thái filter hiện tại
     }
   };
+
+  useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
 
   useEffect(() => {
     fetchAllProductType();
@@ -378,7 +389,7 @@ const CostCenterConfig = () => {
 
   useEffect(() => {
     fetchAllConfig(filters);
-  }, [filters]);
+  }, [filters, fetchAllConfig]);
 
   return (
     <div>
@@ -415,7 +426,7 @@ const CostCenterConfig = () => {
                 value={valueFilter}
                 onChange={(val) => {
                   setValueFilter(val);
-                  updateFilter({ product_for_seller: val });
+                  updateFilter({ product_for_seller: val, page: 1 });
                 }}
               />
             </div>
@@ -425,7 +436,7 @@ const CostCenterConfig = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />

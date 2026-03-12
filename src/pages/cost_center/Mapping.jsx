@@ -27,13 +27,14 @@ const Mapping = () => {
     search: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     updateFilter({ page: page, perPage: pageSize });
@@ -173,12 +174,12 @@ const Mapping = () => {
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ search: '', page: 1 });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ search: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -204,7 +205,7 @@ const Mapping = () => {
       } catch (error) {
         console.log(error);
       } finally {
-        fetchAllMapping();
+        fetchAllMapping(filters);
         setOpenModal(false);
       }
     } else {
@@ -218,7 +219,7 @@ const Mapping = () => {
       } catch (error) {
         console.log(error);
       } finally {
-        fetchAllMapping();
+        fetchAllMapping(filters);
         setOpenModal(false);
       }
     }
@@ -235,7 +236,7 @@ const Mapping = () => {
     } catch (error) {
       console.log(error);
     } finally {
-      fetchAllMapping();
+      fetchAllMapping(filters);
       setIsShowModalDelete(false);
     }
   };
@@ -251,13 +252,23 @@ const Mapping = () => {
     } catch (error) {
       console.log(error);
     } finally {
-      fetchAllMapping();
+      fetchAllMapping(filters); // Truyền filters để giữ nguyên trạng thái filter hiện tại
     }
   };
 
   useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     fetchAllMapping(filters);
-  }, [filters]);
+  }, [filters, fetchAllMapping]);
 
   return (
     <div>
@@ -294,7 +305,7 @@ const Mapping = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
