@@ -51,27 +51,28 @@ const Listing = () => {
     store: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     updateFilter({ page: page, perPage: pageSize });
     setCurrentPage(page);
   };
 
-  const handleClickButton = (item) => {
+  const handleClickButton = useCallback((item) => {
     setIsActivefilter(item);
     if (item?.status === 'All') {
-      updateFilter({ asinType: '' });
+      updateFilter({ asinType: '', page: 1 });
       return;
     }
-    updateFilter({ asinType: item?.status });
-  };
+    updateFilter({ asinType: item?.status, page: 1 });
+  }, [updateFilter]);
 
   const columns = [
     {
@@ -252,12 +253,12 @@ const Listing = () => {
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ search: '', page: 1 });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ search: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -319,16 +320,16 @@ const Listing = () => {
     }
   };
 
-  const handleTableChange = (pagination, filters, sorter, extra) => {
+  const handleTableChange = useCallback((pagination, filters, sorter, extra) => {
     if (extra.action === 'sort') {
       const { order } = sorter;
       if (order === 'ascend') {
-        updateFilter({ sort: 'total_sales', order: 'asc' });
+        updateFilter({ sort: 'total_sales', order: 'asc', page: 1 });
       } else if (order === 'descend') {
-        updateFilter({ sort: 'total_sales', order: 'des' });
+        updateFilter({ sort: 'total_sales', order: 'des', page: 1 });
       } else {
         const resultFilter = {
-          page: filters.currentPage,
+          page: 1,
           perPage: filters.perPage,
           search: filters.search,
           store: filters.store,
@@ -336,7 +337,17 @@ const Listing = () => {
         setFilters(resultFilter);
       }
     }
-  };
+  }, [updateFilter]);
+
+  useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
 
   useEffect(() => {
     fetchAllShop();
@@ -464,7 +475,7 @@ const Listing = () => {
                   value={selectSeller}
                   onChange={(val) => {
                     setSelectSeller(val);
-                    updateFilter({ seller: val });
+                    updateFilter({ seller: val, page: 1 });
                     fetchCountStatus();
                   }}
                 />
@@ -475,7 +486,7 @@ const Listing = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ store: val });
+                  updateFilter({ store: val, page: 1 });
                   fetchCountStatus();
                 }}
               />
@@ -498,7 +509,7 @@ const Listing = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
