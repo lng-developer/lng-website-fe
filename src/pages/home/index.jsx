@@ -96,9 +96,8 @@ const Home = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page:
-        (Object.prototype.hasOwnProperty.call(newValues, 'page') && newValues.page) ||
-        (Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1),
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
 
@@ -157,6 +156,7 @@ const Home = () => {
           status,
           count: response.data[key] ?? 0,
         }));
+        console.log("resultTabFilter :", resultTabFilter)
         setTabFilter(resultTabFilter);
       }
     } catch (error) {
@@ -246,7 +246,7 @@ const Home = () => {
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
-        updateFilter({ search: keyword || '' });
+        updateFilter({ search: keyword || '', page: 1 });
       }, 300),
     [updateFilter]
   );
@@ -261,20 +261,33 @@ const Home = () => {
     },
     [debouncedSearch]
   );
-
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
   const handleFilterForStatus = useCallback(
     (status) => {
-      if (status === 'All')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
-      if (status === 'NoCostCenter')
-        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false });
-      if (status === 'openCase')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false, noPsd: false });
-      if (status === 'invalidAddress')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true, noPsd: false });
-      if (status === 'noPsd')
-        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true });
-      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false });
+      if (status === 'All') {
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+      }
+
+      if (status === 'NoCostCenter') {
+        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+      }
+
+      if (status === 'openCase') {
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: true, invalidAddress: false, noPsd: false, page: 1 });
+      }
+
+      if (status === 'invalidAddress') {
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: true, noPsd: false, page: 1 });
+      }
+
+      if (status === 'noPsd') {
+        return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true, page: 1 });
+      }
+
+      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
     },
     [updateFilter]
   );
@@ -716,7 +729,7 @@ const Home = () => {
                 value={shippingType}
                 onChange={(val) => {
                   setShippingType(val);
-                  updateFilter({ shippingType: val });
+                  updateFilter({ shippingType: val, page: 1 });
                 }}
               />
               <SelectFilter
@@ -725,7 +738,7 @@ const Home = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
               <SelectSeller
@@ -734,7 +747,7 @@ const Home = () => {
                 value={selectTeam}
                 onChange={(val) => {
                   setSelectTeam(val);
-                  updateFilter({ teamId: val });
+                  updateFilter({ teamId: val, page: 1 });
                 }}
               />
             </div>
@@ -756,7 +769,7 @@ const Home = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
               className="custom-pagination"
