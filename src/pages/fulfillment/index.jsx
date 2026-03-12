@@ -69,8 +69,8 @@ const FulfillmentScale = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      // nếu có truyền page thì dùng, nếu không có thì reset về 1
-      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
 
@@ -161,10 +161,10 @@ const FulfillmentScale = () => {
   const handleFilterForStatus = useCallback(
     (status) => {
       if (status === 'All') {
-        updateFilter({ scale_status: '' });
+        updateFilter({ scale_status: '', page: 1 });
         return;
       }
-      updateFilter({ scale_status: status });
+      updateFilter({ scale_status: status, page: 1 });
     },
     [updateFilter]
   );
@@ -184,7 +184,7 @@ const FulfillmentScale = () => {
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
-        updateFilter({ search: keyword || '' });
+        updateFilter({ search: keyword || '', page: 1 });
       }, 300),
     [updateFilter]
   );
@@ -318,6 +318,11 @@ const FulfillmentScale = () => {
 
   // ====== Effects ======
   useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     fetchAllShop();
   }, [fetchAllShop]);
 
@@ -395,7 +400,7 @@ const FulfillmentScale = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
             </div>
@@ -417,7 +422,7 @@ const FulfillmentScale = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />

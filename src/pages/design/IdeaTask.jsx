@@ -48,26 +48,27 @@ const IdeaTask = () => {
     status: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     updateFilter({ page: page, perPage: pageSize });
     setCurrentPage(page);
   };
 
-  const handleFilterForStatus = (status) => {
+  const handleFilterForStatus = useCallback((status) => {
     if (status === 'All') {
-      updateFilter({ status: '' });
+      updateFilter({ status: '', page: 1 });
       return;
     }
-    updateFilter({ status: status });
-  };
+    updateFilter({ status: status, page: 1 });
+  }, [updateFilter]);
 
   const handleOpenModal = (modalType, record = null) => {
     setSelectedRecord(record);
@@ -102,12 +103,12 @@ const IdeaTask = () => {
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ search: '', page: 1 });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ search: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -202,9 +203,19 @@ const IdeaTask = () => {
   }, [filters]);
 
   useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     fetchCountStatus();
     fetchAllTask(filters);
-  }, [filters, fetchAllTask, fetchCountStatus]); // Thêm fetchAllTask và fetchCountStatus vào dependencies
+  }, [filters, fetchAllTask, fetchCountStatus]);
 
   const columns = useMemo(() => {
     // Định nghĩa các cột cơ bản
@@ -439,7 +450,7 @@ const IdeaTask = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={10}
-              defaultCurrent={1}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />

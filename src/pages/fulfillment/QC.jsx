@@ -66,7 +66,8 @@ const QC = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
 
@@ -213,7 +214,7 @@ const QC = () => {
 
   const handleFilterForStatus = useCallback(
     (status) => {
-      updateFilter({ scale_status: status === 'All' ? '' : status });
+      updateFilter({ scale_status: status === 'All' ? '' : status, page: 1 });
     },
     [updateFilter]
   );
@@ -245,7 +246,7 @@ const QC = () => {
   }, []);
 
   // debounce search
-  const debouncedSearch = useMemo(() => debounce((keyword) => updateFilter({ search: keyword || '' }), 300), [updateFilter]);
+  const debouncedSearch = useMemo(() => debounce((keyword) => updateFilter({ search: keyword || '', page: 1 }), 300), [updateFilter]);
   const handleSearch = useCallback((e) => debouncedSearch(e.target.value), [debouncedSearch]);
 
   const handleCopy = useCallback(async (textToCopy) => {
@@ -462,6 +463,11 @@ const QC = () => {
 
   // =============== EFFECTS ===============
   useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     fetchAllShop();
   }, [fetchAllShop]);
 
@@ -536,7 +542,7 @@ const QC = () => {
                 value={selectSeller}
                 onChange={(val) => {
                   setSelectSeller(val);
-                  updateFilter({ sellerId: val });
+                  updateFilter({ sellerId: val, page: 1 });
                 }}
               />
               <SelectFilter
@@ -545,7 +551,7 @@ const QC = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
               <Tooltip title="Refresh">
@@ -568,7 +574,7 @@ const QC = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
