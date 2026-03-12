@@ -126,6 +126,14 @@ const ScaleEsty = () => {
     (page, pageSize) => {
       updateFilter({ page, perPage: pageSize });
       setCurrentPage(page);
+      
+      // Scroll tới vị trí table khi đổi trang
+      setTimeout(() => {
+        const tableElement = document.querySelector('.ant-table-tbody');
+        if (tableElement) {
+          tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     },
     [updateFilter]
   );
