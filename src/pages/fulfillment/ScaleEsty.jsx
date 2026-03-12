@@ -117,7 +117,8 @@ const ScaleEsty = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
 
@@ -243,10 +244,10 @@ const ScaleEsty = () => {
   const handleFilterForStatus = useCallback(
     (status) => {
       if (status === 'All') {
-        updateFilter({ scale_status: '' });
+        updateFilter({ scale_status: '', page: 1 });
         return;
       }
-      updateFilter({ scale_status: status });
+      updateFilter({ scale_status: status, page: 1 });
     },
     [updateFilter]
   );
@@ -254,7 +255,7 @@ const ScaleEsty = () => {
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
-        updateFilter({ search: keyword || '' });
+        updateFilter({ search: keyword || '', page: 1 });
       }, 300),
     [updateFilter]
   );
@@ -390,6 +391,11 @@ const ScaleEsty = () => {
   }, []);
 
   useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     const handleResize = () => {
       const headerHeight = 240;
       const marginBottom = 20;
@@ -464,7 +470,7 @@ const ScaleEsty = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
             </div>
@@ -486,7 +492,7 @@ const ScaleEsty = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={PAGE_SIZE}
-              defaultCurrent={currentPage}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />

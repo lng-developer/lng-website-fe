@@ -41,26 +41,27 @@ const PSDTasks = () => {
     seller: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     updateFilter({ page: page, perPage: pageSize });
     setCurrentPage(page);
   };
 
-  const handleFilterForStatus = (status) => {
+  const handleFilterForStatus = useCallback((status) => {
     if (status === 'all') {
-      updateFilter({ status: '' });
+      updateFilter({ status: '', page: 1 });
       return;
     }
-    updateFilter({ status: status });
-  };
+    updateFilter({ status: status, page: 1 });
+  }, [updateFilter]);
 
   const handleColorStatus = (stt) => {
     switch (stt) {
@@ -108,12 +109,12 @@ const PSDTasks = () => {
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ search: '', page: 1 });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ search: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -302,7 +303,7 @@ const PSDTasks = () => {
     return baseColumns;
   }, [isActiveFilter]);
 
-  const fetchAllTask = async (params) => {
+  const fetchAllTask = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getAllPsdTask(params);
@@ -332,7 +333,7 @@ const PSDTasks = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // fetch count order by status
   const fetchCountStatus = useCallback(async () => {
@@ -378,20 +379,30 @@ const PSDTasks = () => {
   }, []);
 
   useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
+
+  useEffect(() => {
     fetchAllSellersMemo();
   }, [fetchAllSellersMemo]);
 
   useEffect(() => {
     fetchCountStatus();
     fetchAllTask(filters);
-  }, [filters]);
+  }, [filters, fetchAllTask, fetchCountStatus]);
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
         <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             PSD Tasks
-          </h1>
+          </h1> 
           <div className="flex justify-center items-center gap-2">
             <DateRangePicker
               mode="range"
@@ -438,7 +449,7 @@ const PSDTasks = () => {
                 value={selectSeller}
                 onChange={(val) => {
                   setSelectSeller(val);
-                  updateFilter({ seller: val });
+                  updateFilter({ seller: val, page: 1 });
                 }}
               />
               <Tooltip title="Refresh">
@@ -460,7 +471,7 @@ const PSDTasks = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={10}
-              defaultCurrent={1}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />

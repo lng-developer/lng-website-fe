@@ -55,13 +55,14 @@ const FulfillmentScale = () => {
     asin_type: '',
   });
 
-  const updateFilter = (newValues) => {
+  const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      page: newValues.page || Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : 1,
+      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
-  };
+  }, []);
 
   const handlePageChange = (page, pageSize) => {
     updateFilter({ page: page, perPage: pageSize });
@@ -276,7 +277,7 @@ const FulfillmentScale = () => {
     );
   };
 
-  const fetchAllFulfill = async (params) => {
+  const fetchAllFulfill = useCallback(async (params) => {
     setLoading(true);
     try {
       const response = await getAllFulfillScaleForDesign(params);
@@ -291,18 +292,18 @@ const FulfillmentScale = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const debouncedSearch = useMemo(
     () =>
       debounce(async (keyword) => {
         if (!keyword) {
-          updateFilter({ search: '' });
+          updateFilter({ search: '', page: 1 });
           return;
         }
-        updateFilter({ search: keyword });
+        updateFilter({ search: keyword, page: 1 });
       }, 300),
-    []
+    [updateFilter]
   );
 
   const handleSearch = (e) => {
@@ -346,20 +347,20 @@ const FulfillmentScale = () => {
     }
   }, [filters]);
 
-  const handleFilterForStatus = (status) => {
+  const handleFilterForStatus = useCallback((status) => {
     if (status === 'All') {
-      updateFilter({ scale_status: '', unassigned: false });
+      updateFilter({ scale_status: '', unassigned: false, page: 1 });
       return;
     }
 
     if (status === 'Unassigned') {
-      updateFilter({ unassigned: true });
+      updateFilter({ unassigned: true, page: 1 });
       return;
     }
-    updateFilter({ scale_status: status, unassigned: false });
-  };
+    updateFilter({ scale_status: status, unassigned: false, page: 1 });
+  }, [updateFilter]);
 
-  const fetchAllShop = async () => {
+  const fetchAllShop = useCallback(async () => {
     try {
       const result = await getALlShop();
       if (result.status === 200) {
@@ -368,9 +369,9 @@ const FulfillmentScale = () => {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
-  const fetchAllDesigner = async () => {
+  const fetchAllDesigner = useCallback(async () => {
     try {
       const res = await getAllDesigner();
       if (res.status === 200) {
@@ -387,12 +388,22 @@ const FulfillmentScale = () => {
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Unexpected error');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Clear debounce on unmount để tránh memory leak
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    // Đồng bộ currentPage với filters.page
+    setCurrentPage(filters.page);
+  }, [filters.page]);
 
   useEffect(() => {
     fetchAllShop();
     fetchAllDesigner();
-  }, []);
+  }, [fetchAllShop, fetchAllDesigner]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -414,7 +425,7 @@ const FulfillmentScale = () => {
   useEffect(() => {
     fetchAllFulfill(filters);
     fetchCountStatus();
-  }, [filters]);
+  }, [filters, fetchAllFulfill, fetchCountStatus]);
 
   useEffect(() => {
     if (isShowRowkeys) {
@@ -476,7 +487,7 @@ const FulfillmentScale = () => {
                 value={selectShop}
                 onChange={(val) => {
                   setSelectShop(val);
-                  updateFilter({ shopName: val });
+                  updateFilter({ shopName: val, page: 1 });
                 }}
               />
 
@@ -486,7 +497,7 @@ const FulfillmentScale = () => {
                 value={asinType}
                 onChange={(val) => {
                   setAsinType(val);
-                  updateFilter({ asin_type: val });
+                  updateFilter({ asin_type: val, page: 1 });
                 }}
               />
               <Tooltip title="Refresh">
@@ -508,7 +519,7 @@ const FulfillmentScale = () => {
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               defaultPageSize={10}
-              defaultCurrent={1}
+              current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
             />
