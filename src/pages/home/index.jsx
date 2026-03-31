@@ -14,7 +14,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
-import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode, syncVendorTracking } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode, syncVendorTracking, resetOrdersBulk } from '../../apis/order';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { dataFilterStatus } from '../../utils/dataFilter';
@@ -58,6 +58,8 @@ const Home = () => {
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [selectedReplaceItemId, setSelectedReplaceItemId] = useState('');
   const [selectedReplaceItemIds, setSelectedReplaceItemIds] = useState([]);
+  const [isShowModalResetOrder, setIsShowModalResetOrder] = useState(false);
+  const [selectedResetOrderId, setSelectedResetOrderId] = useState('');
 
   const [orderInfo, setOrderInfo] = useState({});
   const [teams, setTeams] = useState([]);
@@ -123,7 +125,7 @@ const Home = () => {
     (page, pageSize) => {
       updateFilter({ page, perPage: pageSize });
       setCurrentPage(page);
-      
+
       // Scroll tới vị trí table khi đổi trang
       setTimeout(() => {
         const tableElement = document.querySelector('.ant-table-tbody');
@@ -164,7 +166,7 @@ const Home = () => {
           status,
           count: response.data[key] ?? 0,
         }));
-        console.log("resultTabFilter :", resultTabFilter)
+        console.log('resultTabFilter :', resultTabFilter);
         setTabFilter(resultTabFilter);
       }
     } catch (error) {
@@ -320,6 +322,32 @@ const Home = () => {
       }
     },
     [fetchAllOrder, fetchCountStatus, filters, user?.role]
+  );
+
+  const handleResetOrder = useCallback(
+    async () => {
+      if (!(user?.role === 'Admin')) {
+        toast.error('Access denied: insufficient permissions');
+        return;
+      }
+      try {
+        const response = await resetOrdersBulk({ 
+          orderIds: [selectedResetOrderId] 
+        });
+        if (response.status === 200) {
+          toast.success('Reset order success!');
+          setIsShowModalResetOrder(false);
+          setSelectedResetOrderId('');
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Reset order error!');
+      } finally {
+        fetchAllOrder(filters);
+        fetchCountStatus();
+      }
+    },
+    [selectedResetOrderId, fetchAllOrder, fetchCountStatus, filters, user?.role]
   );
 
   const handleReplace = useCallback(async () => {
@@ -481,17 +509,36 @@ const Home = () => {
         <ItemShippingType shipping_type={item?.shipping_type} orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} />
       ),
       config_cost_center: (
-        <div
-          className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
-          style={{ borderColor: dataColors.pending }}
-          onClick={() => handleRetest(item?.orderId)}
-        >
-          <div>
-            <BiRefresh size={16} color={dataColors.pending} />
+        <div>
+          <div
+            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+            style={{ borderColor: dataColors.pending }}
+            onClick={() => handleRetest(item?.orderId)}
+          >
+            <div>
+              <BiRefresh size={16} color={dataColors.pending} />
+            </div>
+            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+              Re-Test
+            </span>
           </div>
-          <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-            Re-Test
-          </span>
+          {user?.role === 'Admin' && (
+            <div
+              className="border-1 rounded-full px-2 my-2 cursor-pointer flex justify-center items-center text-sm"
+              style={{ borderColor: dataColors.pending }}
+              onClick={() => {
+                setSelectedResetOrderId(item?.orderId);
+                setIsShowModalResetOrder(true);
+              }}
+            >
+              <div>
+                <BiRefresh size={16} color={dataColors.pending} />
+              </div>
+              <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+                Reset Order
+              </span>
+            </div>
+          )}
         </div>
       ),
       base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
@@ -863,6 +910,39 @@ const Home = () => {
           />
 
           <div className="text-xs text-[#94a3b8]">This action cannot be undone.</div>
+        </Flex>
+      </Modal>
+
+      <Modal
+        title="Reset Order Confirmation"
+        width={480}
+        style={{ top: '30%' }}
+        okText="Confirm Reset"
+        cancelText="Cancel"
+        closable={{ 'aria-label': 'Custom Close Button' }}
+        open={isShowModalResetOrder}
+        onOk={handleResetOrder}
+        onCancel={() => {
+          setIsShowModalResetOrder(false);
+          setSelectedResetOrderId('');
+        }}
+        okButtonProps={{ danger: true }}
+      >
+        <Flex vertical gap={16}>
+          <div className="text-sm text-[#64748b]">
+            Are you sure you want to reset this order? This action will reset the order status and cannot be undone.
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div className="text-sm">
+              <span className="text-[#64748b]">Order ID: </span>
+              <span className="font-medium text-black">{selectedResetOrderId || '—'}</span>
+            </div>
+          </div>
+
+          <div className="text-xs text-red-500 font-medium">
+            ⚠️ This action cannot be undone.
+          </div>
         </Flex>
       </Modal>
     </div>

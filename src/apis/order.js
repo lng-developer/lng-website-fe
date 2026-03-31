@@ -129,6 +129,10 @@ export const retryScaleOrder = (orderId) => {
 export const syncVendorTracking = (payload) => {
   return instance.post('/ext/vendor-sync/batch', payload);
 };
+
+export const resetOrdersBulk = (payload) => {
+  return instance.put('/scale/orders/reset/bulk', payload);
+};
 export {
   getALlOrder,
   updateStatusOrder,
