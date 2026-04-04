@@ -556,7 +556,16 @@ const OrderEtsy = () => {
             />
           ),
           quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-          cost_center: <SubItemCost data={itemSub?.cost_center} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />,
+          cost_center: <SubItemCost 
+            data={itemSub?.cost_center} 
+            fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+            orderId={item?.orderId}
+            orderItemId={itemSub?.orderItemId}
+            onProductChange={handleProductChange}
+            onSizeChange={handleSizeChange}
+            onColorChange={handleColorChange}
+            onVariantDataChange={handleVariantDataChange}
+          />,
           tracking_note: (
             <SubItemTracking
               tracking_info={itemSub?.tracking_info}

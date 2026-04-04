@@ -44,12 +44,12 @@ const ItemBaseCost = ({ orderId, base_cost, fetchAllOrder, filters }) => {
       {user?.role === 'Admin' ? (
         <Popover content={content}>
           <div className="cursor-pointer">
-            <span className="font-medium hover:text-blue-600">${base_cost ? base_cost : 0}</span>
+            <span className="font-medium hover:text-blue-600">${base_cost ? parseFloat(base_cost).toFixed(2) : '0.00'}</span>
           </div>
         </Popover>
       ) : (
         <div className="cursor-pointer">
-          <span className="font-medium">${base_cost ? base_cost : 0}</span>
+          <span className="font-medium">${base_cost ? parseFloat(base_cost).toFixed(2) : '0.00'}</span>
         </div>
       )}
     </>

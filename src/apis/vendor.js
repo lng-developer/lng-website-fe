@@ -61,6 +61,19 @@ const updateVendorProductCostCenter = (id, payload) => {
   return instance.put(`/vendor-cost-center/${id}`, payload);
 };
 
+// New APIs for Cost Center integration
+const searchVendorProducts = (search) => {
+  return instance.get(`/vendor-cost-center/list-product?search=${search}`);
+};
+
+const getVendorProductVariants = (productId) => {
+  return instance.get(`/vendor-cost-center/variants/${productId}`);
+};
+
+const lookupVendorProductVariant = (productId, color, size) => {
+  return instance.get(`/vendor-cost-center/variants/${productId}/lookup?color=${color}&size=${size}`);
+};
+
 export {
   getALlVendor,
   updateVender,
@@ -74,4 +87,7 @@ export {
   importVendorProduct,
   updateVendorProduct,
   updateVendorProductCostCenter,
+  searchVendorProducts,
+  getVendorProductVariants,
+  lookupVendorProductVariant,
 };

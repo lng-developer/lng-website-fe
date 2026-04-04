@@ -14,7 +14,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
-import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode, syncVendorTracking, resetOrdersBulk } from '../../apis/order';
+import { getAllCountStatus, getALlOrder, getALlShop, replaceOrder, retestBasecode, syncVendorTracking, resetOrdersBulk, manualMapping } from '../../apis/order';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { dataFilterStatus } from '../../utils/dataFilter';
@@ -48,6 +48,11 @@ const Home = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const { collapsed } = useOutletContext();
+  
+  // State for managing cost center mapping data
+  const [mappingData, setMappingData] = useState({});
+  const [appliedOrders, setAppliedOrders] = useState(new Set());
+  const [editingOrders, setEditingOrders] = useState(new Set());
   const [totalCount, setTotalCount] = useState(0);
   const [shippingType, setShippingType] = useState('');
   const [shops, setShops] = useState([]);
@@ -178,6 +183,9 @@ const Home = () => {
   const fetchAllOrder = useCallback(
     async (params) => {
       setLoading(true);
+      // Only reset applied orders when fetching new data, keep mappingData
+      setAppliedOrders(new Set());
+      
       try {
         const response = await getALlOrder(params);
         if (response.status === 200) {
@@ -252,6 +260,141 @@ const Home = () => {
       toast.error('Failed to copy!');
     }
   }, []);
+
+  // Callback functions for cost center mapping
+  const handleVariantDataChange = useCallback((orderItemId, variantInfo) => {
+    setMappingData(prev => ({
+      ...prev,
+      [orderItemId]: variantInfo
+    }));
+  }, []);
+
+  const handleProductChange = useCallback((orderItemId, product, orderId) => {
+    // Mark order as being edited when user starts selecting vendor product
+    setEditingOrders(prev => new Set([...prev, orderId]));
+    
+    // Only update mapping data if product is not null
+    if (product) {
+      setMappingData(prev => ({
+        ...prev,
+        [orderItemId]: {
+          ...prev[orderItemId],
+          selectedProduct: product
+        }
+      }));
+    }
+  }, []);
+
+  const handleSizeChange = useCallback((orderItemId, size) => {
+    setMappingData(prev => ({
+      ...prev,
+      [orderItemId]: {
+        ...prev[orderItemId],
+        selectedSize: size
+      }
+    }));
+  }, []);
+
+  const handleColorChange = useCallback((orderItemId, color) => {
+    setMappingData(prev => ({
+      ...prev,
+      [orderItemId]: {
+        ...prev[orderItemId],
+        selectedColor: color
+      }
+    }));
+  }, []);
+
+// Apply mapping for all items in an order
+  const handleApplyMappingForOrder = useCallback(async (orderId, orderItems) => {
+    const editedItems = [];
+    const incompleteItems = [];
+
+    // Duyệt qua toàn bộ item trong đơn hàng để kiểm tra trạng thái
+    for (const item of orderItems) {
+      const itemId = item.orderItemId;
+      const mappingInfo = mappingData[itemId];
+      const originalData = item.cost_center;
+
+      // Trường hợp 1: Item đang được người dùng thao tác chọn lại trong lần này
+      if (mappingInfo) {
+        // Phải có đủ Product và VariantData (tương đương đã chọn đủ size/color hợp lệ)
+        if (mappingInfo.selectedProduct && mappingInfo.variantData) {
+          editedItems.push(item);
+        } else {
+          incompleteItems.push(item);
+        }
+      } 
+      // Trường hợp 2: Item không bị sửa, kiểm tra xem dữ liệu gốc đã được mapping chưa
+      else {
+        // Dựa vào vendorProductId từ dữ liệu gốc để biết đã mapping hay chưa
+        if (!originalData || !originalData.vendorProductId) {
+          incompleteItems.push(item);
+        }
+      }
+    }
+
+    // YÊU CẦU 2: Nếu có bất kỳ item nào chưa có vendor product/size/color -> Hiện toast và chặn gọi API
+    if (incompleteItems.length > 0) {
+      toast.warning(`Vui lòng hoàn thành mapping cho tất cả các sản phẩm. Đang thiếu ${incompleteItems.length} item.`);
+      return; 
+    }
+
+    // YÊU CẦU 3: Khi tất cả đã có data hợp lệ, kiểm tra xem có item nào thực sự được sửa không
+    if (editedItems.length === 0) {
+      toast.info('Không có thay đổi nào để Apply.');
+      return;
+    }
+
+    try {
+      // Chuẩn bị Payload CHỈ chứa các item được người dùng thao tác sửa
+      const itemsPayload = editedItems.map(item => {
+        const mappingInfo = mappingData[item.orderItemId];
+        return {
+          orderItemId: item.orderItemId,
+          vendorCostCenterId: mappingInfo.variantData._id
+        };
+      });
+
+      // Lấy forcedVendorId từ item đầu tiên được sửa
+      const firstItemMapping = mappingData[editedItems[0].orderItemId];
+      
+      const payload = {
+        orderId,
+        forcedVendorId: firstItemMapping.selectedProduct.vendorId,
+        items: itemsPayload
+      };
+
+      // GỌI API
+      await manualMapping(payload);
+      toast.success(`Manual mapping applied successfully for ${editedItems.length} items`);
+      
+      // RESET 1: Đánh dấu order đã apply để ẩn nút Apply ngay lập tức 
+      setAppliedOrders(prev => new Set([...prev, orderId]));
+
+      // RESET 2: Xóa order khỏi danh sách đang edit
+      setEditingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+      
+      // RESET 3: Dọn dẹp sạch sẽ TẤT CẢ mapping data của toàn bộ item trong đơn hàng này
+      setMappingData(prev => {
+        const newData = { ...prev };
+        orderItems.forEach(item => {
+          delete newData[item.orderItemId]; // Xóa data của cả item sửa lẫn không sửa
+        });
+        return newData;
+      });
+      
+      // Làm mới dữ liệu (Hàm này sẽ tự động reset appliedOrders về rỗng nhờ setAppliedOrders(new Set()))
+      fetchAllOrder(filters);
+    } catch (error) {
+      console.error('Error applying manual mapping:', error);
+      toast.error('Failed to apply manual mapping');
+    }
+  }, [mappingData, fetchAllOrder, filters]);
 
   const debouncedSearch = useMemo(
     () =>
@@ -548,8 +691,6 @@ const Home = () => {
           style={{ borderColor: dataColors.pending }}
           onClick={() => {
             setOrderInfo(item);
-            // const firstItemId = item?.items?.[0]?.orderItemId || '';
-            // setSelectedReplaceItemId(firstItemId);
             setIsShowModalReplace(true);
           }}
         >
@@ -588,7 +729,21 @@ const Home = () => {
         ),
         customer: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
         quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-        cost_center: <SubItemCost data={itemSub?.cost_center} fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`} />,
+        cost_center: <SubItemCost 
+          data={itemSub?.cost_center} 
+          fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+          orderId={item?.orderId}
+          orderItemId={itemSub?.orderItemId}
+          onProductChange={handleProductChange}
+          onSizeChange={handleSizeChange}
+          onColorChange={handleColorChange}
+          onVariantDataChange={handleVariantDataChange}
+          isLastItem={indexItem === (item?.items || []).length - 1}
+          onApplyMapping={handleApplyMappingForOrder}
+          orderItems={item?.items || []}
+          isOrderApplied={appliedOrders.has(item?.orderId)}
+          isOrderEditing={editingOrders.has(item?.orderId)}
+        />,
         tracking_note: (
           <SubItemTracking
             tracking_info={itemSub?.tracking_info}
@@ -603,7 +758,21 @@ const Home = () => {
       })),
     }));
     return results;
-  }, [orders, fetchAllOrder, fetchCountStatus, filters, handleColorStatus, handleRetest, handleCopy]);
+  }, [orders, 
+    fetchAllOrder, 
+    fetchCountStatus, 
+    filters, 
+    handleColorStatus, 
+    handleRetest, 
+    handleCopy,
+    appliedOrders,
+    editingOrders,
+    handleProductChange,
+    handleSizeChange,
+    handleColorChange,
+    handleVariantDataChange,
+    handleApplyMappingForOrder,
+    user?.role]);
 
   const fetchAllTeams = useCallback(async () => {
     try {

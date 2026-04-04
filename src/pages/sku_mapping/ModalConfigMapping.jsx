@@ -25,7 +25,7 @@ const ModalConfigMapping = ({ open, onCancel, onOk, loading, configs = [] }) => 
       form.setFieldsValue({
         configId: activeConfigs?.[0]?._id,
         orderIds: [],
-        dryRun: true,
+        dryRun: false,
       });
     } else {
       form.resetFields();
