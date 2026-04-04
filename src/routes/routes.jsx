@@ -42,7 +42,8 @@ const routes = {
   management_account: '/account',
   extensions_confirm_ship: '/extensions/confirm-ship',
   manage_stores: '/manage_stores',
-   scalesty: '/scale/esty',
+  scalesty: '/scale/esty',
+  checkodertracking: '/checkoder/tracking',
 };
 
 export { routes };

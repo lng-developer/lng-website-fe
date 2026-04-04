@@ -36,6 +36,7 @@ import Dashboard from './pages/dashboard/DashboardPage';
 import ManageStores from './pages/shop/ManageStore';
 import OrderEtsy from './pages/home/OrderEtsy';
 import ScaleEsty from './pages/fulfillment/ScaleEsty';
+import CheckOder from './pages/home/checkoder/checkoder';
 
 function App() {
   return (
@@ -75,7 +76,8 @@ function App() {
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
           <Route path={routes.report_ads} element={<AdsReport />} />
 
-            {/* ScalEsty */}
+          <Route path={routes.checkodertracking} element={<CheckOder />} />
+          {/* ScalEsty */}
           <Route path={routes.scalesty} element={<ScaleEsty />} />
 
 
