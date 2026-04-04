@@ -1,5 +1,5 @@
 // Feather, Lucide, Remix...
-import { LuBox, LuLayoutList, LuStar, LuBrain, LuListTodo, LuNotebook } from 'react-icons/lu';
+import { LuBox, LuLayoutList, LuStar, LuBrain, LuListTodo, LuNotebook, LuTruck } from 'react-icons/lu';
 import { LiaReact } from 'react-icons/lia';
 import {
   RiPaletteLine,
@@ -62,6 +62,7 @@ export const detailMenus = {
       label: 'Team Tasks',
       icon: <LuNotebook size={20} />,
     },
+   
     {
       key: routes.sale_listing,
       label: 'Listings',
@@ -126,16 +127,16 @@ export const detailMenus = {
     },
   ],
   fulfillment: [
-    { 
+    {
       key: 'scale',
-      icon: <MdBalance size={20} />, 
+      icon: <MdBalance size={20} />,
       label: 'Scale',
-      children:[
+      children: [
         {
-          key:routes.fulfillmentScale,label:"AMAZON Scale",icon: <FaAmazon size={20} />
+          key: routes.fulfillmentScale, label: "AMAZON Scale", icon: <FaAmazon size={20} />
         },
         {
-          key:routes.scalesty,label:"ESTY Scale ",icon: <FaEtsy size={20} />
+          key: routes.scalesty, label: "ESTY Scale ", icon: <FaEtsy size={20} />
         }
       ]
     },
@@ -182,6 +183,11 @@ export const detailMenus = {
       key: routes.extensions_confirm_ship,
       label: 'Amz Confirm Ship',
       icon: <RiContractLine size={20} />,
+    },
+     {
+      key: routes.checkodertracking,
+      label: 'Check Tracking',
+      icon: <LuTruck size={20} />,
     },
   ],
 };
