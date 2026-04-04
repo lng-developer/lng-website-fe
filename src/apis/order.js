@@ -30,6 +30,10 @@ const updateCustomerInfor = (orderId, customer_infor) => {
   });
 };
 
+const manualMapping = (payload) => {
+  return instance.put('/order/manual-mapping', payload);
+};
+
 const updateBaseCost = (orderId, base_cost) => {
   return instance.put('/order/update-base-cost', {
     orderId,
@@ -123,9 +127,11 @@ const importAsyncOrder = (payload) => {
 const ChangeTimeAutoOrder = (payload) => {
   return instance.post('/admin/schedule', payload);
 };
+
 export const retryScaleOrder = (orderId) => {
   return instance.post(`/scale/orders/${orderId}/scale/send`);
 };
+
 export const syncVendorTracking = (payload) => {
   return instance.post('/ext/vendor-sync/batch', payload);
 };
@@ -133,12 +139,14 @@ export const syncVendorTracking = (payload) => {
 export const resetOrdersBulk = (payload) => {
   return instance.put('/scale/orders/reset/bulk', payload);
 };
+
 export {
   getALlOrder,
   updateStatusOrder,
   getALlShop,
   importOrderByFile,
   updateCustomerInfor,
+  manualMapping,
   updateBaseCost,
   getAllCountStatus,
   updateShippingType,
