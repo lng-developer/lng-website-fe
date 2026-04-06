@@ -209,7 +209,7 @@ const CheckOder = () => {
             setSubmitting(true);
 
             const response = await fetch(
-                'https://api.lngmerch.co/api    /shipping-batch/create-from-orders',
+                'https://api.lngmerch.co/api/shipping-batch/create-from-orders',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
