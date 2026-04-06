@@ -1,44 +1,100 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { getAllShop } from '../../../apis/shop';
 
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
     const [stats, setStats] = useState({});
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [filterTracking, setFilterTracking] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [limit, setLimit] = useState(100);
-    const [machineId, setMachineId] = useState('anle');
+    const [limit, setLimit] = useState(20);
+    
+    // Shop selection states
+    const [shops, setShops] = useState([]);
+    const [selectedShop, setSelectedShop] = useState(null);
+    const [showShopModal, setShowShopModal] = useState(true);
+    const [tempSelectedShop, setTempSelectedShop] = useState(null);
+    const [loadingShops, setLoadingShops] = useState(false);
 
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        fetchData();
+        getShop();
     }, []);
 
+    useEffect(() => {
+        if (selectedShop && !showShopModal) {
+            console.log('Selected shop changed, fetching data...');
+            fetchData();
+        }
+    }, [selectedShop, limit]);
+
+    const getShop = async () => {
+        try {
+            setLoadingShops(true);
+            const res = await getAllShop();
+            console.log("SHOP RES :", res);
+            setShops(res.data || []);
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách shop:', error);
+            setError('Không thể tải danh sách shop. Vui lòng thử lại.');
+        } finally {
+            setLoadingShops(false);
+        }
+    };
+
+    const handleConfirmShop = () => {
+        if (tempSelectedShop) {
+            setSelectedShop(tempSelectedShop);
+            setShowShopModal(false);
+            // Reset states khi chọn shop mới
+            setOrders([]);
+            setStats({});
+            setSelectedOrders([]);
+            setError(null);
+            // Sẽ tự động call fetchData thông qua useEffect
+        }
+    };
+
+    const handleChangeShop = () => {
+        setShowShopModal(true);
+        setTempSelectedShop(selectedShop);
+        // Reset error khi mở modal chọn shop
+        setError(null);
+    };
+
+
     const fetchData = async () => {
-        if (!machineId.trim()) {
-            setError('Vui lòng nhập machineId.');
+        if (!selectedShop) {
+            setError('Vui lòng chọn shop.');
+            setLoading(false);
             return;
         }
 
         try {
             setLoading(true);
+            setError(null);
+            
+            console.log('Fetching data for shop:', selectedShop.name, 'ID:', selectedShop._id);
+            
             const res = await axios.get(
                 `https://api.lngmerch.co/api/shipping-batch/check-orders-status?machineId=${encodeURIComponent(
-                    machineId.trim()
+                    selectedShop._id
                 )}&limit=${limit}`
             );
-
+            
+            console.log("CHECK RES :", res);
             setOrders(res.data.orders || []);
             setStats(res.data.stats || {});
-            setError(null);
             setSelectedOrders([]);
         } catch (err) {
             console.error('LỖI:', err);
             setError('Không thể tải dữ liệu. Vui lòng thử lại.');
+            setOrders([]);
+            setStats({});
         } finally {
             setLoading(false);
         }
@@ -54,7 +110,6 @@ const CheckOder = () => {
                 searchTerm === '' ||
                 order.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.shopStore?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.shopId?.toLowerCase().includes(searchTerm.toLowerCase());
 
             return matchesTracking && matchesSearch;
@@ -71,7 +126,7 @@ const CheckOder = () => {
     };
 
     const handleSelectOrder = (order) => {
-        if (!order.orderId || !order.shopId) return;
+        if (!order.orderId || !order.shopId || order.submittedToAmazon) return;
 
         const payload = {
             orderId: order.orderId,
@@ -97,7 +152,7 @@ const CheckOder = () => {
     const isAllFilteredSelected =
         filteredOrders.length > 0 &&
         filteredOrders
-            .filter((order) => order.orderId && order.shopId)
+            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon)
             .every((order) =>
                 selectedOrders.some(
                     (item) => item.orderId === order.orderId && item.shopId === order.shopId
@@ -106,7 +161,7 @@ const CheckOder = () => {
 
     const handleSelectAllFiltered = () => {
         const validFilteredOrders = filteredOrders
-            .filter((order) => order.orderId && order.shopId)
+            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon)
             .map((order) => ({
                 orderId: order.orderId,
                 shopId: order.shopId
@@ -140,8 +195,8 @@ const CheckOder = () => {
     };
 
     const handlePushOrders = async () => {
-        if (!machineId.trim()) {
-            alert('Vui lòng nhập machineId.');
+        if (!selectedShop) {
+            alert('Vui lòng chọn shop.');
             return;
         }
 
@@ -154,12 +209,12 @@ const CheckOder = () => {
             setSubmitting(true);
 
             const response = await fetch(
-                'https://api.lngmerch.co/api/shipping-batch/create-from-orders',
+                'https://api.lngmerch.co/api    /shipping-batch/create-from-orders',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        machineId: machineId.trim(),
+                        machineId: selectedShop._id,
                         orders: selectedOrders,
                         label: 'Manual Upload',
                         autoUpload: true
@@ -184,10 +239,10 @@ const CheckOder = () => {
         }
     };
 
-    if (loading) {
+    if (loading && selectedShop) {
         return (
             <div style={styles.page}>
-                <div style={styles.centerBox}>Đang tải dữ liệu...</div>
+                <div style={styles.centerBox}>Đang tải dữ liệu đơn hàng...</div>
             </div>
         );
     }
@@ -202,6 +257,61 @@ const CheckOder = () => {
 
     return (
         <div style={styles.page}>
+            {/* Shop Selection Modal */}
+            {showShopModal && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent}>
+                        <h3 style={styles.modalTitle}>Chọn Shop</h3>
+                        <p style={styles.modalSubtitle}>Vui lòng chọn shop để tiếp tục</p>
+                        
+                        {loadingShops ? (
+                            <div style={styles.modalLoading}>Đang tải danh sách shop...</div>
+                        ) : (
+                            <div style={styles.shopList}>
+                                {shops.map((shop) => (
+                                    <div
+                                        key={shop._id}
+                                        onClick={() => setTempSelectedShop(shop)}
+                                        style={{
+                                            ...styles.shopItem,
+                                            ...(tempSelectedShop?._id === shop._id ? styles.shopItemSelected : {})
+                                        }}
+                                    >
+                                        <div style={styles.shopInfo}>
+                                            <div style={styles.shopName}>{shop.name}</div>
+                                            <div style={styles.shopStore}>{shop.store} - {shop.merchant}</div>
+                                            <div style={styles.shopStatus}>
+                                                <span style={{
+                                                    ...styles.statusBadge,
+                                                    backgroundColor: shop.status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                    color: shop.status === 'Active' ? '#166534' : '#991b1b'
+                                                }}>
+                                                    {shop.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        <div style={styles.modalActions}>
+                            <button
+                                onClick={handleConfirmShop}
+                                disabled={!tempSelectedShop || loadingShops}
+                                style={{
+                                    ...styles.confirmButton,
+                                    opacity: !tempSelectedShop || loadingShops ? 0.6 : 1,
+                                    cursor: !tempSelectedShop || loadingShops ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                Xác nhận
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div style={styles.container}>
                 <div style={styles.header}>
                     <div>
@@ -213,14 +323,13 @@ const CheckOder = () => {
 
                     <div style={styles.headerActions}>
                         <div style={styles.limitBox}>
-                            <span style={styles.limitLabel}>Machine</span>
-                            <input
-                                type="text"
-                                value={machineId}
-                                onChange={(e) => setMachineId(e.target.value)}
-                                placeholder="Nhập machineId"
-                                style={styles.machineInput}
-                            />
+                            <span style={styles.limitLabel}>Shop</span>
+                            <span style={styles.shopDisplay}>
+                                {selectedShop ? selectedShop.name : 'Chưa chọn'}
+                            </span>
+                            <button onClick={handleChangeShop} style={styles.changeShopButton}>
+                                Đổi
+                            </button>
                         </div>
 
                         <div style={styles.limitBox}>
@@ -235,8 +344,16 @@ const CheckOder = () => {
                             />
                         </div>
 
-                        <button onClick={fetchData} style={styles.primaryButton}>
-                            Tải lại
+                        <button 
+                            onClick={fetchData} 
+                            disabled={!selectedShop || loading}
+                            style={{
+                                ...styles.primaryButton,
+                                opacity: !selectedShop || loading ? 0.6 : 1,
+                                cursor: !selectedShop || loading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {loading ? 'Đang tải...' : 'Tải lại'}
                         </button>
                     </div>
                 </div>
@@ -271,7 +388,7 @@ const CheckOder = () => {
                 <div style={styles.filterBar}>
                     <input
                         type="text"
-                        placeholder="Tìm theo Shop Name, Store, Shop ID hoặc Order ID..."
+                        placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={styles.searchInput}
@@ -280,27 +397,36 @@ const CheckOder = () => {
                     <div style={styles.filterButtons}>
                         <button
                             onClick={() => setFilterTracking('all')}
+                            disabled={loading}
                             style={{
                                 ...styles.filterButton,
-                                ...(filterTracking === 'all' ? styles.filterButtonActive : {})
+                                ...(filterTracking === 'all' ? styles.filterButtonActive : {}),
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
                             }}
                         >
                             Tất cả
                         </button>
                         <button
                             onClick={() => setFilterTracking('yes')}
+                            disabled={loading}
                             style={{
                                 ...styles.filterButton,
-                                ...(filterTracking === 'yes' ? styles.filterButtonActive : {})
+                                ...(filterTracking === 'yes' ? styles.filterButtonActive : {}),
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
                             }}
                         >
                             Có tracking
                         </button>
                         <button
                             onClick={() => setFilterTracking('no')}
+                            disabled={loading}
                             style={{
                                 ...styles.filterButton,
-                                ...(filterTracking === 'no' ? styles.filterButtonActive : {})
+                                ...(filterTracking === 'no' ? styles.filterButtonActive : {}),
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
                             }}
                         >
                             Không tracking
@@ -308,12 +434,12 @@ const CheckOder = () => {
 
                         <button
                             onClick={handlePushOrders}
-                            disabled={submitting || selectedOrders.length === 0}
+                            disabled={submitting || selectedOrders.length === 0 || loading}
                             style={{
                                 ...styles.pushButton,
-                                opacity: submitting || selectedOrders.length === 0 ? 0.6 : 1,
+                                opacity: submitting || selectedOrders.length === 0 || loading ? 0.6 : 1,
                                 cursor:
-                                    submitting || selectedOrders.length === 0
+                                    submitting || selectedOrders.length === 0 || loading
                                         ? 'not-allowed'
                                         : 'pointer'
                             }}
@@ -328,7 +454,7 @@ const CheckOder = () => {
                 <div style={styles.tableCard}>
                     <div style={styles.tableInfo}>
                         <span>
-                            Machine: <strong>{machineId || '-'}</strong> | Hiển thị{' '}
+                            Shop: <strong>{selectedShop ? selectedShop.name : '-'}</strong> | Hiển thị{' '}
                             <strong>{filteredOrders.length}</strong> đơn hàng | Đã chọn{' '}
                             <strong>{selectedOrders.length}</strong>
                         </span>
@@ -343,35 +469,45 @@ const CheckOder = () => {
                                             type="checkbox"
                                             checked={isAllFilteredSelected}
                                             onChange={handleSelectAllFiltered}
+                                            disabled={loading || filteredOrders.filter(order => order.orderId && order.shopId && !order.submittedToAmazon).length === 0}
                                         />
                                     </th>
                                     <th style={styles.th}>Order ID</th>
                                     <th style={styles.th}>Tên Shop</th>
-                                    <th style={styles.th}>Cửa hàng</th>
                                     <th style={styles.th}>Shop ID</th>
                                     <th style={styles.th}>Trạng thái</th>
                                     <th style={styles.th}>Ngày tạo</th>
                                     <th style={styles.th}>Tracking</th>
                                     <th style={styles.th}>Mã tracking</th>
+                                    <th style={styles.th}>Up to AMZ</th>
                                     <th style={styles.th}>Số lượng</th>
                                     <th style={styles.th}>Tổng tiền</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredOrders.length > 0 ? (
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="11" style={styles.emptyCell}>
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : filteredOrders.length > 0 ? (
                                     filteredOrders.map((order) => (
                                         <tr key={getOrderKey(order)} style={styles.tr}>
                                             <td style={styles.tdCheckbox}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isOrderSelected(order)}
-                                                    onChange={() => handleSelectOrder(order)}
-                                                    disabled={!order.orderId || !order.shopId}
-                                                />
+                                                {order.submittedToAmazon ? (
+                                                    <span style={styles.disabledCheckbox}>-</span>
+                                                ) : (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isOrderSelected(order)}
+                                                        onChange={() => handleSelectOrder(order)}
+                                                        disabled={!order.orderId || !order.shopId}
+                                                    />
+                                                )}
                                             </td>
                                             <td style={styles.tdStrong}>{order.orderId || '-'}</td>
                                             <td style={styles.td}>{order.shopName || '-'}</td>
-                                            <td style={styles.td}>{order.shopStore || '-'}</td>
                                             <td style={styles.td}>{order.shopId || '-'}</td>
                                             <td style={styles.td}>
                                                 <span style={styles.statusBadge}>
@@ -399,6 +535,21 @@ const CheckOder = () => {
                                                 </span>
                                             </td>
                                             <td style={styles.td}>{order.tracking || 'N/A'}</td>
+                                            <td style={styles.td}>
+                                                <span
+                                                    style={{
+                                                        ...styles.trackingBadge,
+                                                        backgroundColor: order.submittedToAmazon
+                                                            ? '#dcfce7'
+                                                            : '#fee2e2',
+                                                        color: order.submittedToAmazon
+                                                            ? '#166534'
+                                                            : '#991b1b'
+                                                    }}
+                                                >
+                                                    {order.submittedToAmazon ? 'Có' : 'Không'}
+                                                </span>
+                                            </td>
                                             <td style={styles.td}>{order.itemsCount || 0}</td>
                                             <td style={styles.td}>
                                                 ${Number(order.totalAmount || 0).toFixed(2)}
@@ -408,7 +559,7 @@ const CheckOder = () => {
                                 ) : (
                                     <tr>
                                         <td colSpan="11" style={styles.emptyCell}>
-                                            Không có dữ liệu phù hợp
+                                            {selectedShop ? 'Không có dữ liệu phù hợp' : 'Vui lòng chọn shop để xem dữ liệu'}
                                         </td>
                                     </tr>
                                 )}
@@ -488,14 +639,6 @@ const styles = {
         fontSize: '14px',
         color: '#0f172a'
     },
-    machineInput: {
-        width: '140px',
-        border: 'none',
-        outline: 'none',
-        background: 'transparent',
-        fontSize: '14px',
-        color: '#0f172a'
-    },
     primaryButton: {
         border: 'none',
         borderRadius: '12px',
@@ -518,22 +661,23 @@ const styles = {
     statsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-        gap: '14px'
+        gap: '8px'
     },
     statCard: {
         background: '#fff',
         border: '1px solid #e5e7eb',
-        borderRadius: '18px',
-        padding: '18px',
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)'
+        borderRadius: '12px',
+        padding: '12px',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
     },
     statLabel: {
-        fontSize: '13px',
+        fontSize: '11px',
         color: '#64748b',
-        marginBottom: '8px'
+        marginBottom: '4px',
+        fontWeight: 500
     },
     statValue: {
-        fontSize: '28px',
+        fontSize: '20px',
         fontWeight: 700,
         color: '#0f172a'
     },
@@ -683,6 +827,117 @@ const styles = {
         justifyContent: 'center',
         fontSize: '16px',
         color: '#334155'
+    },
+    // Modal styles
+    modalOverlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+    },
+    modalContent: {
+        background: '#fff',
+        borderRadius: '20px',
+        padding: '24px',
+        width: '90%',
+        maxWidth: '600px',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+    },
+    modalTitle: {
+        margin: '0 0 8px 0',
+        fontSize: '24px',
+        fontWeight: 700,
+        color: '#0f172a'
+    },
+    modalSubtitle: {
+        margin: '0 0 20px 0',
+        fontSize: '14px',
+        color: '#64748b'
+    },
+    modalLoading: {
+        textAlign: 'center',
+        padding: '40px',
+        color: '#64748b'
+    },
+    shopList: {
+        display: 'grid',
+        gap: '12px',
+        marginBottom: '24px',
+        maxHeight: '400px',
+        overflow: 'auto'
+    },
+    shopItem: {
+        border: '2px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        background: '#fff'
+    },
+    shopItemSelected: {
+        borderColor: '#2563eb',
+        backgroundColor: '#eff6ff'
+    },
+    shopInfo: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+    },
+    shopName: {
+        fontSize: '16px',
+        fontWeight: 600,
+        color: '#0f172a'
+    },
+    shopStore: {
+        fontSize: '14px',
+        color: '#64748b'
+    },
+    shopStatus: {
+        marginTop: '4px'
+    },
+    modalActions: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px'
+    },
+    confirmButton: {
+        border: 'none',
+        borderRadius: '12px',
+        padding: '12px 24px',
+        background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+        color: '#fff',
+        fontWeight: 600,
+        cursor: 'pointer',
+        boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)'
+    },
+    shopDisplay: {
+        fontSize: '14px',
+        color: '#0f172a',
+        fontWeight: 600,
+        minWidth: '120px'
+    },
+    changeShopButton: {
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '4px 8px',
+        background: '#fff',
+        color: '#334155',
+        fontSize: '12px',
+        fontWeight: 600,
+        cursor: 'pointer'
+    },
+    disabledCheckbox: {
+        color: '#9ca3af',
+        fontSize: '14px',
+        fontWeight: 600
     }
 };
 
