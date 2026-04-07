@@ -21,6 +21,19 @@ const CheckOder = () => {
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
+    // Add CSS animation for spinner
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+
     useEffect(() => {
         getShop();
     }, []);
@@ -239,14 +252,6 @@ const CheckOder = () => {
         }
     };
 
-    if (loading && selectedShop) {
-        return (
-            <div style={styles.page}>
-                <div style={styles.centerBox}>Đang tải dữ liệu đơn hàng...</div>
-            </div>
-        );
-    }
-
     if (error) {
         return (
             <div style={styles.page}>
@@ -257,6 +262,15 @@ const CheckOder = () => {
 
     return (
         <div style={styles.page}>
+            {/* Loading Overlay */}
+            {loading && selectedShop && (
+                <div style={styles.loadingOverlay}>
+                    <div style={styles.loadingContent}>
+                        <div style={styles.spinner}></div>
+                        <div style={styles.loadingText}>Đang tải dữ liệu đơn hàng...</div>
+                    </div>
+                </div>
+            )}
             {/* Shop Selection Modal */}
             {showShopModal && (
                 <div style={styles.modalOverlay}>
@@ -334,14 +348,16 @@ const CheckOder = () => {
 
                         <div style={styles.limitBox}>
                             <span style={styles.limitLabel}>Limit</span>
-                            <input
-                                type="number"
+                            <select
                                 value={limit}
                                 onChange={(e) => setLimit(Number(e.target.value))}
-                                min="1"
-                                max="1000"
-                                style={styles.limitInput}
-                            />
+                                style={styles.limitSelect}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
                         </div>
 
                         <button 
@@ -631,13 +647,14 @@ const styles = {
         fontWeight: 600,
         whiteSpace: 'nowrap'
     },
-    limitInput: {
-        width: '80px',
+    limitSelect: {
         border: 'none',
         outline: 'none',
         background: 'transparent',
         fontSize: '14px',
-        color: '#0f172a'
+        color: '#0f172a',
+        cursor: 'pointer',
+        minWidth: '60px'
     },
     primaryButton: {
         border: 'none',
@@ -937,6 +954,44 @@ const styles = {
     disabledCheckbox: {
         color: '#9ca3af',
         fontSize: '14px',
+        fontWeight: 600
+    },
+    // Loading overlay styles
+    loadingOverlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000
+    },
+    loadingContent: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '16px',
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '32px',
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #e5e7eb'
+    },
+    spinner: {
+        width: '40px',
+        height: '40px',
+        border: '4px solid #f3f4f6',
+        borderTop: '4px solid #2563eb',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+    },
+    loadingText: {
+        fontSize: '16px',
+        color: '#334155',
         fontWeight: 600
     }
 };
