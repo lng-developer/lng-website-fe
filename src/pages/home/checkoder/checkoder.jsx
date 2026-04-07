@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getAllShop } from '../../../apis/shop';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
@@ -8,6 +10,7 @@ const CheckOder = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [filterTracking, setFilterTracking] = useState('all');
+    const [filterAmazon, setFilterAmazon] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
     
@@ -20,6 +23,7 @@ const CheckOder = () => {
 
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [submitting, setSubmitting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     // Add CSS animation for spinner
     useEffect(() => {
@@ -68,6 +72,9 @@ const CheckOder = () => {
             setStats({});
             setSelectedOrders([]);
             setError(null);
+            setFilterTracking('all');
+            setFilterAmazon('all');
+            setSearchTerm('');
             // Sẽ tự động call fetchData thông qua useEffect
         }
     };
@@ -119,15 +126,19 @@ const CheckOder = () => {
                 filterTracking === 'all' ||
                 (filterTracking === 'yes' ? order.hasTracking : !order.hasTracking);
 
+            const matchesAmazon =
+                filterAmazon === 'all' ||
+                (filterAmazon === 'yes' ? order.submittedToAmazon : !order.submittedToAmazon);
+
             const matchesSearch =
                 searchTerm === '' ||
                 order.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.shopId?.toLowerCase().includes(searchTerm.toLowerCase());
 
-            return matchesTracking && matchesSearch;
+            return matchesTracking && matchesAmazon && matchesSearch;
         });
-    }, [orders, filterTracking, searchTerm]);
+    }, [orders, filterTracking, filterAmazon, searchTerm]);
 
     const getOrderKey = (order) =>
         `${order.orderId || 'no-order-id'}__${order.shopId || 'no-shop-id'}`;
@@ -204,6 +215,112 @@ const CheckOder = () => {
 
                 return merged;
             });
+        }
+    };
+
+    const handleExportExcel = async () => {
+        if (filteredOrders.length === 0) {
+            alert('Không có dữ liệu để xuất');
+            return;
+        }
+
+        try {
+            setExporting(true);
+
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('Kiểm tra đơn hàng', {
+                properties: { defaultRowHeight: 18 }
+            });
+
+            // Header row
+            const headers = [
+                'Order ID',
+                'Tên Shop', 
+                'Shop ID',
+                'Trạng thái',
+                'Ngày tạo',
+                'Có Tracking',
+                'Mã Tracking',
+                'Up to AMZ',
+                'Số lượng',
+                'Fulfillment',
+                'Updated At'
+            ];
+
+            ws.addRow(headers);
+
+            // Style header
+            const headerRow = ws.getRow(1);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: '2563eb' }
+            };
+            headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // Add data rows
+            filteredOrders.forEach((order) => {
+                ws.addRow([
+                    order.orderId || '',
+                    order.shopName || '',
+                    order.shopId || '',
+                    order.status || '',
+                    order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : '',
+                    order.hasTracking ? 'Có' : 'Không',
+                    order.tracking || '',
+                    order.submittedToAmazon ? 'Có' : 'Không',
+                    order.itemsCount || 0,
+                    order.trackingInfo?.fulfillment || '',
+                    order.trackingInfo?.updated_at 
+                        ? new Date(order.trackingInfo.updated_at).toLocaleString('vi-VN') 
+                        : ''
+                ]);
+            });
+
+            // Auto-fit columns
+            ws.columns.forEach((column) => {
+                let maxLength = 0;
+                column.eachCell({ includeEmpty: true }, (cell) => {
+                    const columnLength = cell.value ? cell.value.toString().length : 10;
+                    if (columnLength > maxLength) {
+                        maxLength = columnLength;
+                    }
+                });
+                column.width = Math.min(maxLength + 2, 50);
+            });
+
+            // Add borders
+            ws.eachRow((row) => {
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+
+            // Generate filename with timestamp and shop name
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const shopName = selectedShop?.name || 'AllShops';
+            const filename = `CheckOrder_${shopName}_${timestamp}.xlsx`;
+
+            // Save file
+            const buffer = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            });
+            saveAs(blob, filename);
+
+            alert(`Xuất Excel thành công: ${filteredOrders.length} đơn hàng`);
+
+        } catch (error) {
+            console.error('Export Excel error:', error);
+            alert('Có lỗi khi xuất Excel');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -411,41 +528,54 @@ const CheckOder = () => {
                     />
 
                     <div style={styles.filterButtons}>
+                        {/* Tracking Filter Dropdown */}
+                        <div style={styles.filterGroup}>
+                            <span style={styles.filterLabel}>Tracking:</span>
+                            <select
+                                value={filterTracking}
+                                onChange={(e) => setFilterTracking(e.target.value)}
+                                disabled={loading}
+                                style={{
+                                    ...styles.filterSelect,
+                                    opacity: loading ? 0.6 : 1,
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <option value="all">Tất cả</option>
+                                <option value="yes">Có tracking</option>
+                                <option value="no">Không tracking</option>
+                            </select>
+                        </div>
+
+                        {/* Amazon Filter Dropdown */}
+                        <div style={styles.filterGroup}>
+                            <span style={styles.filterLabel}>Up to AMZ:</span>
+                            <select
+                                value={filterAmazon}
+                                onChange={(e) => setFilterAmazon(e.target.value)}
+                                disabled={loading}
+                                style={{
+                                    ...styles.filterSelect,
+                                    opacity: loading ? 0.6 : 1,
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <option value="all">Tất cả</option>
+                                <option value="yes">Đã submit</option>
+                                <option value="no">Chưa submit</option>
+                            </select>
+                        </div>
+
                         <button
-                            onClick={() => setFilterTracking('all')}
-                            disabled={loading}
+                            onClick={handleExportExcel}
+                            disabled={exporting || filteredOrders.length === 0 || loading}
                             style={{
-                                ...styles.filterButton,
-                                ...(filterTracking === 'all' ? styles.filterButtonActive : {}),
-                                opacity: loading ? 0.6 : 1,
-                                cursor: loading ? 'not-allowed' : 'pointer'
+                                ...styles.exportButton,
+                                opacity: exporting || filteredOrders.length === 0 || loading ? 0.6 : 1,
+                                cursor: exporting || filteredOrders.length === 0 || loading ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            Tất cả
-                        </button>
-                        <button
-                            onClick={() => setFilterTracking('yes')}
-                            disabled={loading}
-                            style={{
-                                ...styles.filterButton,
-                                ...(filterTracking === 'yes' ? styles.filterButtonActive : {}),
-                                opacity: loading ? 0.6 : 1,
-                                cursor: loading ? 'not-allowed' : 'pointer'
-                            }}
-                        >
-                            Có tracking
-                        </button>
-                        <button
-                            onClick={() => setFilterTracking('no')}
-                            disabled={loading}
-                            style={{
-                                ...styles.filterButton,
-                                ...(filterTracking === 'no' ? styles.filterButtonActive : {}),
-                                opacity: loading ? 0.6 : 1,
-                                cursor: loading ? 'not-allowed' : 'pointer'
-                            }}
-                        >
-                            Không tracking
+                            {exporting ? 'Đang xuất...' : `Xuất Excel (${filteredOrders.length})`}
                         </button>
 
                         <button
@@ -497,13 +627,14 @@ const CheckOder = () => {
                                     <th style={styles.th}>Mã tracking</th>
                                     <th style={styles.th}>Up to AMZ</th>
                                     <th style={styles.th}>Số lượng</th>
-                                    <th style={styles.th}>Tổng tiền</th>
+                                    <th style={styles.th}>Fulfillment</th>
+                                    <th style={styles.th}>Updated At</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="11" style={styles.emptyCell}>
+                                        <td colSpan="12" style={styles.emptyCell}>
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
@@ -568,13 +699,18 @@ const CheckOder = () => {
                                             </td>
                                             <td style={styles.td}>{order.itemsCount || 0}</td>
                                             <td style={styles.td}>
-                                                ${Number(order.totalAmount || 0).toFixed(2)}
+                                                {order.trackingInfo?.fulfillment || 'N/A'}
+                                            </td>
+                                            <td style={styles.td}>
+                                                {order.trackingInfo?.updated_at
+                                                    ? new Date(order.trackingInfo.updated_at).toLocaleString()
+                                                    : 'N/A'}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="11" style={styles.emptyCell}>
+                                        <td colSpan="12" style={styles.emptyCell}>
                                             {selectedShop ? 'Không có dữ liệu phù hợp' : 'Vui lòng chọn shop để xem dữ liệu'}
                                         </td>
                                     </tr>
@@ -675,6 +811,16 @@ const styles = {
         fontWeight: 700,
         boxShadow: '0 8px 20px rgba(22, 163, 74, 0.25)'
     },
+    exportButton: {
+        border: 'none',
+        borderRadius: '12px',
+        padding: '10px 16px',
+        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        color: '#fff',
+        fontWeight: 700,
+        boxShadow: '0 8px 20px rgba(5, 150, 105, 0.25)',
+        cursor: 'pointer'
+    },
     statsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
@@ -724,6 +870,31 @@ const styles = {
         gap: '10px',
         alignItems: 'center',
         flexWrap: 'wrap'
+    },
+    filterGroup: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 12px',
+        background: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0'
+    },
+    filterLabel: {
+        fontSize: '12px',
+        color: '#64748b',
+        fontWeight: 600,
+        whiteSpace: 'nowrap'
+    },
+    filterSelect: {
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        fontSize: '14px',
+        color: '#0f172a',
+        cursor: 'pointer',
+        minWidth: '100px',
+        fontWeight: 500
     },
     filterButton: {
         border: '1px solid #dbeafe',
