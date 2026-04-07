@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { FcLinux } from 'react-icons/fc';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcAlarmClock } from 'react-icons/fc';
+import useSocketIO from '../../hooks/useSocketIO';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
@@ -18,6 +19,53 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
+
+  // Socket.IO connection for real-time updates
+  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
+    auth: {
+      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
+    }
+  });
+
+  // Helper functions for status display
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-500';
+      case 'maybe-online':
+        return 'bg-yellow-500';
+      case 'offline':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'online':
+        return 'Online';
+      case 'maybe-online':
+        return 'Maybe Online';
+      case 'offline':
+        return 'Offline';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const getStatusBadgeStyle = (status) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-100 text-green-800';
+      case 'maybe-online':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'offline':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   const handleImportOrder = async (client) => {
     setIsLoadingImportOrder(true);
@@ -98,6 +146,7 @@ const ExtensionManager = () => {
     try {
       const response = await getAllClient();
       if (response.status === 200) {
+        console.log("CHECK :",response)
         setClients(response.data);
       }
     } catch (error) {
@@ -131,6 +180,74 @@ const ExtensionManager = () => {
     fetchAllClients();
   }, []);
 
+  // Socket.IO event listeners for real-time updates
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    // Listen for client status changes
+    const handleClientStatusUpdate = (data) => {
+      console.log('Client status update:', data);
+      setClients(prevClients => {
+        return prevClients.map(client => {
+          if (client.clientId === data.clientId) {
+            return { ...client, ...data };
+          }
+          return client;
+        });
+      });
+      
+      // Update selected client if it's the one that changed
+      setSelectedClient(prevSelected => {
+        if (prevSelected.clientId === data.clientId) {
+          return { ...prevSelected, ...data };
+        }
+        return prevSelected;
+      });
+    };
+
+    // Listen for new client connections
+    const handleClientConnected = (data) => {
+      console.log('Client connected:', data);
+      toast.success(`${data.label} connected`);
+      fetchAllClients(); // Refresh the list
+    };
+
+    // Listen for client disconnections
+    const handleClientDisconnected = (data) => {
+      console.log('Client disconnected:', data);
+      toast.info(`${data.label} disconnected`);
+      setClients(prevClients => {
+        return prevClients.map(client => {
+          if (client.clientId === data.clientId) {
+            return { ...client, status: 'offline' };
+          }
+          return client;
+        });
+      });
+    };
+
+    // Listen for new logs
+    const handleNewLog = (logData) => {
+      if (selectedClient?.machineId === logData.machineId) {
+        setLogs(prevLogs => [logData, ...prevLogs].slice(0, 100)); // Keep only latest 100 logs
+      }
+    };
+
+    // Register event listeners
+    socket.on('client:status-update', handleClientStatusUpdate);
+    socket.on('client:connected', handleClientConnected);
+    socket.on('client:disconnected', handleClientDisconnected);
+    socket.on('extension:log', handleNewLog);
+
+    // Cleanup
+    return () => {
+      socket.off('client:status-update', handleClientStatusUpdate);
+      socket.off('client:connected', handleClientConnected);
+      socket.off('client:disconnected', handleClientDisconnected);
+      socket.off('extension:log', handleNewLog);
+    };
+  }, [socket, connected, selectedClient?.machineId]);
+
   useEffect(() => {
     if (!selectedClient?.machineId) return;
     const fetchData = () => {
@@ -141,6 +258,16 @@ const ExtensionManager = () => {
     return () => clearInterval(interval);
   }, [selectedClient]);
 
+  // Auto refresh clients list every 5 seconds to track status changes
+  useEffect(() => {
+    const fetchClientsData = () => {
+      fetchAllClients();
+    };
+    
+    const interval = setInterval(fetchClientsData, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
@@ -148,6 +275,17 @@ const ExtensionManager = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Clients
           </h1>
+          
+          {/* Socket Connection Status */}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+            <span className="text-sm text-slate-600">
+              {connected ? 'Real-time Connected' : 'Disconnected'}
+            </span>
+            {socketError && (
+              <span className="text-xs text-red-500">({socketError})</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -160,30 +298,68 @@ const ExtensionManager = () => {
           {/* Client List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h2 className="text-md font-semibold text-slate-800 mb-4">List clients online</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-md font-semibold text-slate-800">List clients online</h2>
+                
+                {/* Status Summary */}
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="text-green-600 font-medium">{clients.filter(c => c.status === 'online').length}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                    <span className="text-yellow-600 font-medium">{clients.filter(c => c.status === 'maybe-online').length}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span className="text-red-600 font-medium">{clients.filter(c => c.status === 'offline').length}</span>
+                  </div>
+                </div>
+              </div>
+              
               <Flex vertical gap={4}>
                 {clients.length > 0 &&
                   clients?.map((client) => (
                     <button
                       key={client.clientId}
                       onClick={() => setSelectedClient(client)}
-                      className={`w-full flex items-center justify-between p-4 rounded-lg transition-all cursor-pointer text-md ${
+                      className={`w-full p-4 rounded-lg transition-all cursor-pointer text-md ${
                         selectedClient.clientId === client.clientId
                           ? 'bg-blue-50 border-2 border-blue-500'
                           : 'bg-slate-50 border-2 border-transparent hover:border-slate-300'
                       }`}
                       style={{ fontSize: 14 }}
                     >
-                      <div className="w-[93%] flex justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full bg-green-500`}></div>
+                          <div className={`w-3 h-3 rounded-full ${getStatusColor(client.status)} animate-pulse`}></div>
                           <span className="font-medium text-slate-700">{`${client.label} (${client.shopName})`}</span>
                         </div>
-                        <div style={{ color: '#8c8c8c' }}>{formatDateToUI(client.connectedAt)}</div>
+                        <RightOutlined
+                          className={`text-slate-400 transition-transform ${selectedClient.clientId === client.clientId ? 'rotate-90' : ''}`}
+                        />
                       </div>
-                      <RightOutlined
-                        className={`text-slate-400 transition-transform ${selectedClient.clientId === client.clientId ? 'rotate-90' : ''}`}
-                      />
+                      
+                      {/* Status Row */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-full font-medium ${getStatusBadgeStyle(client.status)}`}>
+                            {getStatusText(client.status)}
+                          </span>
+                          {client.statusSummary && (
+                            <span className="text-slate-500">
+                              {client.status === 'online' 
+                                ? `Online: ${Math.floor(client.statusSummary.onlineForSec / 60)}m`
+                                : `Idle: ${Math.floor(client.statusSummary.idleForSec / 60)}m`
+                              }
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-slate-400">
+                          {formatDateToUI(client.connectedAt)}
+                        </div>
+                      </div>
                     </button>
                   ))}
               </Flex>
@@ -205,7 +381,7 @@ const ExtensionManager = () => {
             {Object.keys(selectedClient).length > 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-4 h-4 rounded-full bg-green-500`}></div>
+                  <div className={`w-4 h-4 rounded-full ${getStatusColor(selectedClient.status)} animate-pulse`}></div>
                   <span className="text-md font-semibold text-slate-800">
                     {selectedClient.label} ({selectedClient.shopName})
                   </span>

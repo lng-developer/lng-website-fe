@@ -179,11 +179,11 @@ export const detailMenus = {
       label: 'Manage Clients',
       icon: <MdOutlineConnectedTv size={20} />,
     },
-    {
-      key: routes.extensions_confirm_ship,
-      label: 'Amz Confirm Ship',
-      icon: <RiContractLine size={20} />,
-    },
+    // {
+    //   key: routes.extensions_confirm_ship,
+    //   label: 'Amz Confirm Ship',
+    //   icon: <RiContractLine size={20} />,
+    // },
      {
       key: routes.checkodertracking,
       label: 'Check Tracking',
