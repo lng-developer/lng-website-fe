@@ -254,17 +254,17 @@ const ExtensionManager = () => {
       fetchLogs(selectedClient.machineId);
     };
     fetchData();
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(fetchData, 15000); // Refresh every 15 seconds
     return () => clearInterval(interval);
   }, [selectedClient]);
 
-  // Auto refresh clients list every 5 seconds to track status changes
+  // Auto refresh clients list every 15 seconds to track status changes
   useEffect(() => {
     const fetchClientsData = () => {
       fetchAllClients();
     };
     
-    const interval = setInterval(fetchClientsData, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchClientsData, 15000); // Refresh every 15 seconds
     return () => clearInterval(interval);
   }, []);
 
