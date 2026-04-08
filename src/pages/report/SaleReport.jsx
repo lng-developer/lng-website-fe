@@ -529,7 +529,7 @@ const SaleReport = () => {
   };
 
   const fetchAllSellers = async () => {
-    if (user?.role === 'Admin') {
+    
       try {
         const res = await getAllSellers();
         if (res.status === 200) {
@@ -544,7 +544,7 @@ const SaleReport = () => {
       } catch (err) {
         toast.error(err?.response?.data?.message || 'Unexpected error');
       }
-    }
+    
   };
 
   // ====== EXPORT EXCEL (giữ nguyên logic hiện tại) ======
