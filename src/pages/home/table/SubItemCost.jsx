@@ -263,6 +263,7 @@ const SubItemCost = ({
           <span className="font-medium">Color:</span>
         </div>
         <Select 
+          showSearch
           style={{ width: 250 }} 
           value={selectedColor} 
           options={colors} 
@@ -270,6 +271,10 @@ const SubItemCost = ({
           suffixIcon={<LuChevronsUpDown />}
           onSelect={handleColorSelect}
           disabled={!selectedProduct || colors.length === 0}
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
+          optionFilterProp="label"
         />
       </div>
 
