@@ -179,6 +179,11 @@ export const detailMenus = {
       label: 'Manage Clients',
       icon: <MdOutlineConnectedTv size={20} />,
     },
+    {
+      key: routes.extensions_config_auto,
+      label: 'Config Auto',
+      icon: <RiSettings2Line size={20} />,
+    },
     // {
     //   key: routes.extensions_confirm_ship,
     //   label: 'Amz Confirm Ship',
