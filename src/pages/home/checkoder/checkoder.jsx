@@ -13,7 +13,7 @@ const CheckOder = () => {
     const [filterAmazon, setFilterAmazon] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
-    
+
     // Shop selection states
     const [shops, setShops] = useState([]);
     const [selectedShop, setSelectedShop] = useState(null);
@@ -97,15 +97,15 @@ const CheckOder = () => {
         try {
             setLoading(true);
             setError(null);
-            
+
             console.log('Fetching data for shop:', selectedShop.name, 'ID:', selectedShop._id);
-            
+
             const res = await axios.get(
                 `https://api.lngmerch.co/api/shipping-batch/check-orders-status?machineId=${encodeURIComponent(
                     selectedShop._id
                 )}&limit=${limit}`
             );
-            
+
             console.log("CHECK RES :", res);
             setOrders(res.data.orders || []);
             setStats(res.data.stats || {});
@@ -235,7 +235,7 @@ const CheckOder = () => {
             // Header row
             const headers = [
                 'Order ID',
-                'Tên Shop', 
+                'Tên Shop',
                 'Shop ID',
                 'Trạng thái',
                 'Ngày tạo',
@@ -272,8 +272,8 @@ const CheckOder = () => {
                     order.submittedToAmazon ? 'Có' : 'Không',
                     order.itemsCount || 0,
                     order.trackingInfo?.fulfillment || '',
-                    order.trackingInfo?.updated_at 
-                        ? new Date(order.trackingInfo.updated_at).toLocaleString('vi-VN') 
+                    order.trackingInfo?.updated_at
+                        ? new Date(order.trackingInfo.updated_at).toLocaleString('vi-VN')
                         : ''
                 ]);
             });
@@ -309,8 +309,8 @@ const CheckOder = () => {
 
             // Save file
             const buffer = await wb.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { 
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            const blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
             saveAs(blob, filename);
 
@@ -394,7 +394,7 @@ const CheckOder = () => {
                     <div style={styles.modalContent}>
                         <h3 style={styles.modalTitle}>Chọn Shop</h3>
                         <p style={styles.modalSubtitle}>Vui lòng chọn shop để tiếp tục</p>
-                        
+
                         {loadingShops ? (
                             <div style={styles.modalLoading}>Đang tải danh sách shop...</div>
                         ) : (
@@ -425,7 +425,7 @@ const CheckOder = () => {
                                 ))}
                             </div>
                         )}
-                        
+
                         <div style={styles.modalActions}>
                             <button
                                 onClick={handleConfirmShop}
@@ -474,11 +474,13 @@ const CheckOder = () => {
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
+                                <option value={500}>500</option>
+                                <option value={1000}>1000</option>
                             </select>
                         </div>
 
-                        <button 
-                            onClick={fetchData} 
+                        <button
+                            onClick={fetchData}
                             disabled={!selectedShop || loading}
                             style={{
                                 ...styles.primaryButton,

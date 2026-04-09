@@ -38,6 +38,7 @@ const routes = {
   report_order_cost_etsy: '/report/order-cost-etsy',
   report_ads: '/report/ads',
   extensions: '/extensions',
+  extensions_config_auto: '/extensions/config-auto',
   sku_mapping: '/sku_mapping',
   management_account: '/account',
   extensions_confirm_ship: '/extensions/confirm-ship',
