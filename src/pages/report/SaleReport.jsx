@@ -974,12 +974,17 @@ const SaleReport = () => {
               tableLayout="auto"
             />
           ) : (
-            <SaleReportCharts
-              days={days}
-              normalized={normalizedView}
-              sellerFilter={reportScope === 'total' ? '' : filters.seller}
-              loading={loading}
-            />
+            <div 
+              className="overflow-y-auto"
+              style={{ maxHeight: tableHeight }}
+            >
+              <SaleReportCharts
+                days={days}
+                normalized={normalizedView}
+                sellerFilter={reportScope === 'total' ? '' : filters.seller}
+                loading={loading}
+              />
+            </div>
           )}
         </div>
       </div>
