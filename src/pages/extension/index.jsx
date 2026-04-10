@@ -70,6 +70,7 @@ const ExtensionManager = () => {
   const handleImportOrder = async (client) => {
     setIsLoadingImportOrder(true);
     try {
+      console.log("Checklog :",client)
       const response = await requestExtension({
         shopId: client?.shopId,
         machineId: client?.machineId,
