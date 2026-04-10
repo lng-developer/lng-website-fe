@@ -29,6 +29,7 @@ import AdsReport from './pages/report/AdsReport';
 import Teams from './pages/cost_center/Teams';
 import ExtensionManager from './pages/extension';
 import ConfigAuto from './pages/extension/ConfigAuto';
+import LogManager from './pages/extension/LogManager';
 import PointsDashboard from './pages/design/PointsDashboard';
 import SkuMapping from './pages/sku_mapping/SkuMapping';
 import User from './pages/user/User';
@@ -92,6 +93,7 @@ function App() {
           {/* Extension */}
           <Route path={routes.extensions} element={<ExtensionManager />} />
           <Route path={routes.extensions_config_auto} element={<ConfigAuto />} />
+          <Route path={routes.extensions_log_manager} element={<LogManager />} />
           <Route path={routes.extensions_confirm_ship} element={<ConfirmShip />} />
 
           {/* SKU Mapping */}

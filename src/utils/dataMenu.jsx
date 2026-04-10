@@ -184,6 +184,11 @@ export const detailMenus = {
       label: 'Config Auto',
       icon: <RiSettings2Line size={20} />,
     },
+    {
+      key: routes.extensions_log_manager,
+      label: 'Log Manager',
+      icon: <TbReport size={20} />,
+    },
     // {
     //   key: routes.extensions_confirm_ship,
     //   label: 'Amz Confirm Ship',

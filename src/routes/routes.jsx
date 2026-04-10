@@ -39,6 +39,7 @@ const routes = {
   report_ads: '/report/ads',
   extensions: '/extensions',
   extensions_config_auto: '/extensions/config-auto',
+  extensions_log_manager: '/extensions/log-manager',
   sku_mapping: '/sku_mapping',
   management_account: '/account',
   extensions_confirm_ship: '/extensions/confirm-ship',

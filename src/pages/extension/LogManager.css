@@ -1,0 +1,191 @@
+/* LogManager.css */
+.log-manager-container {
+  padding: 20px;
+}
+
+.log-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.log-filters-card {
+  margin-bottom: 16px;
+}
+
+.log-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.extension-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.extension-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+}
+
+.log-level-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-type-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.log-message-cell {
+  max-width: 300px;
+}
+
+.log-performance-cell {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.log-detail-modal .ant-tabs-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.log-detail-section {
+  margin-bottom: 16px;
+}
+
+.log-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.log-message-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+}
+
+.error-stack-trace {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.task-timeline-item {
+  margin-bottom: 12px;
+}
+
+.task-timeline-timestamp {
+  color: #6b7280;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.task-timeline-type {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.task-timeline-message {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .log-filters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .log-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .extension-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .log-manager-container {
+    padding: 12px;
+  }
+  
+  .log-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Custom scrollbar for timeline */
+.ant-drawer-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ant-drawer-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.ant-drawer-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.ant-drawer-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Table customization */
+.ant-table-tbody > tr > td {
+  padding: 8px 12px;
+}
+
+.ant-table-thead > tr > th {
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+/* Progress bar in upload info */
+.ant-progress-line {
+  margin: 0;
+}
+
+/* Timeline customization */
+.ant-timeline-item-content {
+  margin-left: 8px;
+}
+
+/* Modal tabs */
+.ant-tabs-tab {
+  font-size: 13px;
+}
+
+/* Badge customization */
+.ant-badge-status-text {
+  font-size: 12px;
+}
+
+/* Card title */
+.ant-card-head-title {
+  font-size: 16px;
+  font-weight: 600;
+}
