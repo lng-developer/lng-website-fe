@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Pagination, Table, Tooltip, Button } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
@@ -23,6 +23,8 @@ import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
 import { MdOutlineRefresh } from 'react-icons/md';
 import SelectSeller from '../../components/SelectSeller';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const PAGE_SIZE = 10;
 
@@ -61,6 +63,8 @@ const QC = () => {
     sellerId: '',
     shopName: '',
   });
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
   const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
@@ -258,6 +262,98 @@ const QC = () => {
       toast.error('Failed to copy!');
     }
   }, []);
+
+  // Export Excel function
+  const handleExportExcel = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      toast.error('Please select orders to export');
+      return;
+    }
+
+    try {
+      // Filter selected orders from original dataSource
+      const selectedOrders = dataSource.filter(order => selectedRowKeys.includes(order.orderId));
+      
+      if (selectedOrders.length === 0) {
+        toast.error('No matching orders found for export');
+        return;
+      }
+      
+      // Create workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('QC Export');
+      
+      // Define columns
+      worksheet.columns = [
+        { header: 'Order ID', key: 'orderId', width: 20 },
+        { header: 'Mock Up', key: 'mockUp', width: 50 },
+        { header: 'Design', key: 'design', width: 50 },
+        { header: 'Quantity', key: 'quantity', width: 10 },
+        { header: 'Full Name (Shipping)', key: 'fullName', width: 25 },
+        { header: 'Address 1 (Shipping)', key: 'address1', width: 30 },
+        { header: 'Address 2 (Shipping)', key: 'address2', width: 30 },
+        { header: 'City (Shipping)', key: 'city', width: 20 },
+        { header: 'Postcode (Shipping)', key: 'postcode', width: 15 },
+        { header: 'State Name (Shipping)', key: 'state', width: 20 }
+      ];
+      
+      // Add data rows
+      selectedOrders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            // Get fulfillment file URLs
+            const designUrls = [];
+            if (item.fulfillment_file && typeof item.fulfillment_file === 'object') {
+              Object.values(item.fulfillment_file).forEach(url => {
+                if (url && typeof url === 'string') {
+                  designUrls.push(url);
+                }
+              });
+            }
+            
+            const rowData = {
+              orderId: order.orderId || '',
+              mockUp: item.baseImageUrl || '',
+              design: designUrls.join(', '),
+              quantity: item.quantity || 0,
+              fullName: order.customer_infor?.name || '',
+              address1: order.customer_infor?.address || '',
+              address2: order.customer_infor?.address_2 || '',
+              city: order.customer_infor?.city || '',
+              postcode: order.customer_infor?.zip_code || '',
+              state: order.customer_infor?.state || ''
+            };
+            
+            worksheet.addRow(rowData);
+          });
+        }
+      });
+      
+      // Style the header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F3FF' }
+      };
+      
+      // Generate filename with current date
+      const now = new Date();
+      const filename = `QC_Export_${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.xlsx`;
+      
+      // Generate buffer and save file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, filename);
+      
+      const totalItems = selectedOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
+      toast.success(`Exported ${totalItems} items from ${selectedOrders.length} orders to Excel`);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export Excel file');
+    }
+  }, [selectedRowKeys, dataSource]);
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
@@ -566,6 +662,20 @@ const QC = () => {
                   <MdOutlineRefresh size={20} />
                 </button>
               </Tooltip>
+              
+              <Tooltip title="Export Excel">
+                <Button
+                  type="primary"
+                  onClick={handleExportExcel}
+                  disabled={selectedRowKeys.length === 0}
+                  style={{ 
+                    backgroundColor: selectedRowKeys.length > 0 ? '#52c41a' : undefined,
+                    borderColor: selectedRowKeys.length > 0 ? '#52c41a' : undefined
+                  }}
+                >
+                  Export Excel ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
@@ -586,6 +696,11 @@ const QC = () => {
             className="no-indent-table table-qc"
             columns={columns}
             dataSource={tableData}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+              type: 'checkbox',
+            }}
             expandable={{
               indentSize: 0,
               expandedRowRender,
