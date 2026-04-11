@@ -26,7 +26,8 @@ import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 
 const QC = () => {
   const { collapsed } = useOutletContext();
@@ -36,6 +37,7 @@ const QC = () => {
   const [loading, setLoading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusQC[0]);
 
   const [openModalQC, setOpenMOdalQC] = useState(false);
@@ -55,7 +57,7 @@ const QC = () => {
 
   const [filters, setFilters] = useState({
     page: currentPage,
-    perPage: PAGE_SIZE,
+    perPage: DEFAULT_PAGE_SIZE,
     scale_status: '',
     from: defaultFrom,
     to: defaultTo,
@@ -76,11 +78,15 @@ const QC = () => {
   }, []);
 
   const handlePageChange = useCallback(
-    (page, pageSize) => {
-      updateFilter({ page, perPage: pageSize });
+    (page, newPageSize) => {
+      const updatedPageSize = newPageSize || pageSize;
+      updateFilter({ page, perPage: updatedPageSize });
       setCurrentPage(page);
+      if (newPageSize && newPageSize !== pageSize) {
+        setPageSize(updatedPageSize);
+      }
     },
-    [updateFilter]
+    [updateFilter, pageSize]
   );
 
   const handleExpand = useCallback((expanded, record) => {
@@ -559,9 +565,12 @@ const QC = () => {
 
   // =============== EFFECTS ===============
   useEffect(() => {
-    // Đồng bộ currentPage với filters.page
+    // Đồng bộ currentPage và pageSize với filters
     setCurrentPage(filters.page);
-  }, [filters.page]);
+    if (filters.perPage !== pageSize) {
+      setPageSize(filters.perPage);
+    }
+  }, [filters.page, filters.perPage, pageSize]);
 
   useEffect(() => {
     fetchAllShop();
@@ -682,8 +691,10 @@ const QC = () => {
           <div>
             <Pagination
               total={totalCount}
-              showTotal={(total) => `Total ${total} items`}
-              defaultPageSize={PAGE_SIZE}
+              showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS.map(size => size.toString())}
+              showSizeChanger={true}
               current={currentPage}
               onChange={handlePageChange}
               onShowSizeChange={handlePageChange}
