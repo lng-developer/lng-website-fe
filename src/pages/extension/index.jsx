@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RightOutlined, DollarOutlined, ThunderboltOutlined, ClockCircleFilled, CloudDownloadOutlined } from '@ant-design/icons';
+import { RightOutlined, ThunderboltOutlined, CloudDownloadOutlined } from '@ant-design/icons';
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Flex, Spin, Switch } from 'antd';
@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { FcLinux } from 'react-icons/fc';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcAlarmClock } from 'react-icons/fc';
-import useSocketIO from '../../hooks/useSocketIO';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
@@ -19,25 +18,6 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [socketRetryCount, setSocketRetryCount] = useState(0);
-  const [usePollingFallback, setUsePollingFallback] = useState(false);
-
-  // Socket.IO connection for real-time updates với fallback
-  const socketConfig = {
-    auth: {
-      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
-    },
-    transports: ['polling'], // Chỉ dùng polling trước, tránh WebSocket lỗi
-    timeout: 20000,
-    forceNew: true,
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
-    maxReconnectionAttempts: 5,
-    upgrade: false // Không upgrade lên WebSocket
-  };
-
-  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', socketConfig);
 
   // Helper functions for status display
   const getStatusColor = (status) => {
@@ -197,106 +177,6 @@ const ExtensionManager = () => {
     fetchAllClients();
   }, []);
 
-  // Socket.IO event listeners for real-time updates
-  useEffect(() => {
-    if (!socket || !connected) return;
-
-    // Listen for client status changes
-    const handleClientStatusUpdate = (data) => {
-      try {
-        console.log('Client status update:', data);
-        setClients(prevClients => {
-          if (!Array.isArray(prevClients)) return [];
-          return prevClients.map(client => {
-            if (client.clientId === data.clientId) {
-              return { ...client, ...data };
-            }
-            return client;
-          });
-        });
-        
-        // Update selected client if it's the one that changed
-        setSelectedClient(prevSelected => {
-          if (prevSelected.clientId === data.clientId) {
-            return { ...prevSelected, ...data };
-          }
-          return prevSelected;
-        });
-      } catch (error) {
-        console.error('Error handling client status update:', error);
-      }
-    };
-
-    // Listen for new client connections
-    const handleClientConnected = (data) => {
-      console.log('Client connected:', data);
-      toast.success(`${data.label} connected`);
-      fetchAllClients(); // Refresh the list
-    };
-
-    // Listen for client disconnections
-    const handleClientDisconnected = (data) => {
-      try {
-        console.log('Client disconnected:', data);
-        toast.info(`${data.label} disconnected`);
-        setClients(prevClients => {
-          if (!Array.isArray(prevClients)) return [];
-          return prevClients.map(client => {
-            if (client.clientId === data.clientId) {
-              return { ...client, status: 'offline' };
-            }
-            return client;
-          });
-        });
-      } catch (error) {
-        console.error('Error handling client disconnection:', error);
-      }
-    };
-
-    // Listen for new logs
-    const handleNewLog = (logData) => {
-      if (selectedClient?.machineId === logData.machineId) {
-        setLogs(prevLogs => [logData, ...prevLogs].slice(0, 100)); // Keep only latest 100 logs
-      }
-    };
-
-    // Register event listeners
-    socket.on('client:status-update', handleClientStatusUpdate);
-    socket.on('client:connected', handleClientConnected);
-    socket.on('client:disconnected', handleClientDisconnected);
-    socket.on('extension:log', handleNewLog);
-
-    // Cleanup
-    return () => {
-      socket.off('client:status-update', handleClientStatusUpdate);
-      socket.off('client:connected', handleClientConnected);
-      socket.off('client:disconnected', handleClientDisconnected);
-      socket.off('extension:log', handleNewLog);
-    };
-  }, [socket, connected, selectedClient?.machineId]);
-
-  // Handle Socket.IO connection errors và retry logic
-  useEffect(() => {
-    if (socketError && socketRetryCount < 3) {
-      console.log(`Socket error, retry attempt ${socketRetryCount + 1}:`, socketError);
-      
-      // Sau 3 lần thử websocket, chuyển sang polling only
-      if (socketRetryCount >= 2) {
-        setUsePollingFallback(true);
-        toast.warning('Switching to polling mode due to connection issues');
-      }
-      
-      setTimeout(() => {
-        setSocketRetryCount(prev => prev + 1);
-      }, 2000 * (socketRetryCount + 1)); // Exponential backoff
-    }
-    
-    if (connected) {
-      setSocketRetryCount(0); // Reset retry count on successful connection
-      setUsePollingFallback(false);
-    }
-  }, [socketError, connected, socketRetryCount]);
-
   useEffect(() => {
     if (!selectedClient?.machineId) return;
     const fetchData = () => {
@@ -324,35 +204,6 @@ const ExtensionManager = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Clients
           </h1>
-          
-          {/* Socket Connection Status */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-              <span className="text-sm text-slate-600">
-                {connected ? 'Real-time Connected' : socketRetryCount > 0 ? `Reconnecting... (${socketRetryCount}/3)` : 'Disconnected'}
-              </span>
-              {usePollingFallback && (
-                <span className="text-xs text-orange-500">(Polling Mode)</span>
-              )}
-              {socketError && (
-                <span className="text-xs text-red-500">({socketError})</span>
-              )}
-            </div>
-            
-            {!connected && (
-              <button
-                onClick={() => {
-                  setSocketRetryCount(0);
-                  setUsePollingFallback(false);
-                  window.location.reload(); // Force reconnect
-                }}
-                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
-              >
-                Reconnect
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
