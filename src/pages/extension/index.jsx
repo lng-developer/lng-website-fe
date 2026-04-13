@@ -27,13 +27,14 @@ const ExtensionManager = () => {
     auth: {
       token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
     },
-    transports: usePollingFallback ? ['polling'] : ['websocket', 'polling'],
+    transports: ['polling'], // Chỉ dùng polling trước, tránh WebSocket lỗi
     timeout: 20000,
     forceNew: true,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 5,
-    maxReconnectionAttempts: 5
+    maxReconnectionAttempts: 5,
+    upgrade: false // Không upgrade lên WebSocket
   };
 
   const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', socketConfig);
@@ -159,10 +160,14 @@ const ExtensionManager = () => {
       const response = await getAllClient();
       if (response.status === 200) {
         console.log("CHECK :",response)
-        setClients(response.data);
+        // Đảm bảo data luôn là array
+        const clientsData = Array.isArray(response.data) ? response.data : [];
+        setClients(clientsData);
       }
     } catch (error) {
       console.log(error);
+      // Set empty array khi có lỗi
+      setClients([]);
     }
   };
 
@@ -198,23 +203,28 @@ const ExtensionManager = () => {
 
     // Listen for client status changes
     const handleClientStatusUpdate = (data) => {
-      console.log('Client status update:', data);
-      setClients(prevClients => {
-        return prevClients.map(client => {
-          if (client.clientId === data.clientId) {
-            return { ...client, ...data };
-          }
-          return client;
+      try {
+        console.log('Client status update:', data);
+        setClients(prevClients => {
+          if (!Array.isArray(prevClients)) return [];
+          return prevClients.map(client => {
+            if (client.clientId === data.clientId) {
+              return { ...client, ...data };
+            }
+            return client;
+          });
         });
-      });
-      
-      // Update selected client if it's the one that changed
-      setSelectedClient(prevSelected => {
-        if (prevSelected.clientId === data.clientId) {
-          return { ...prevSelected, ...data };
-        }
-        return prevSelected;
-      });
+        
+        // Update selected client if it's the one that changed
+        setSelectedClient(prevSelected => {
+          if (prevSelected.clientId === data.clientId) {
+            return { ...prevSelected, ...data };
+          }
+          return prevSelected;
+        });
+      } catch (error) {
+        console.error('Error handling client status update:', error);
+      }
     };
 
     // Listen for new client connections
@@ -226,16 +236,21 @@ const ExtensionManager = () => {
 
     // Listen for client disconnections
     const handleClientDisconnected = (data) => {
-      console.log('Client disconnected:', data);
-      toast.info(`${data.label} disconnected`);
-      setClients(prevClients => {
-        return prevClients.map(client => {
-          if (client.clientId === data.clientId) {
-            return { ...client, status: 'offline' };
-          }
-          return client;
+      try {
+        console.log('Client disconnected:', data);
+        toast.info(`${data.label} disconnected`);
+        setClients(prevClients => {
+          if (!Array.isArray(prevClients)) return [];
+          return prevClients.map(client => {
+            if (client.clientId === data.clientId) {
+              return { ...client, status: 'offline' };
+            }
+            return client;
+          });
         });
-      });
+      } catch (error) {
+        console.error('Error handling client disconnection:', error);
+      }
     };
 
     // Listen for new logs
@@ -357,21 +372,21 @@ const ExtensionManager = () => {
                 <div className="flex items-center gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-green-600 font-medium">{clients.filter(c => c.status === 'online').length}</span>
+                    <span className="text-green-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'online').length : 0}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                    <span className="text-yellow-600 font-medium">{clients.filter(c => c.status === 'maybe-online').length}</span>
+                    <span className="text-yellow-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'maybe-online').length : 0}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="text-red-600 font-medium">{clients.filter(c => c.status === 'offline').length}</span>
+                    <span className="text-red-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'offline').length : 0}</span>
                   </div>
                 </div>
               </div>
               
               <Flex vertical gap={4}>
-                {clients.length > 0 &&
+                {Array.isArray(clients) && clients.length > 0 &&
                   clients?.map((client) => (
                     <button
                       key={client.clientId}
