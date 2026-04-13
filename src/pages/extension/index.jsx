@@ -140,8 +140,10 @@ const ExtensionManager = () => {
       const response = await getAllClient();
       if (response.status === 200) {
         console.log("CHECK :",response)
-        // Đảm bảo data luôn là array - access clients property from response
-        const clientsData = Array.isArray(response.data?.clients) ? response.data.clients : [];
+        console.log("CHECK response.data:", response.data)
+        // Đảm bảo data luôn là array - dữ liệu nằm trực tiếp trong response.data
+        const clientsData = Array.isArray(response.data) ? response.data : [];
+        console.log("CHECK clientsData:", clientsData)
         setClients(clientsData);
       }
     } catch (error) {
@@ -172,6 +174,10 @@ const ExtensionManager = () => {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    console.log("Clients state updated:", clients);
+  }, [clients]);
 
   useEffect(() => {
     fetchAllClients();
