@@ -19,13 +19,24 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [socketRetryCount, setSocketRetryCount] = useState(0);
+  const [usePollingFallback, setUsePollingFallback] = useState(false);
 
-  // Socket.IO connection for real-time updates
-  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
+  // Socket.IO connection for real-time updates với fallback
+  const socketConfig = {
     auth: {
       token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
-    }
-  });
+    },
+    transports: usePollingFallback ? ['polling'] : ['websocket', 'polling'],
+    timeout: 20000,
+    forceNew: true,
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    maxReconnectionAttempts: 5
+  };
+
+  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', socketConfig);
 
   // Helper functions for status display
   const getStatusColor = (status) => {
@@ -249,6 +260,28 @@ const ExtensionManager = () => {
     };
   }, [socket, connected, selectedClient?.machineId]);
 
+  // Handle Socket.IO connection errors và retry logic
+  useEffect(() => {
+    if (socketError && socketRetryCount < 3) {
+      console.log(`Socket error, retry attempt ${socketRetryCount + 1}:`, socketError);
+      
+      // Sau 3 lần thử websocket, chuyển sang polling only
+      if (socketRetryCount >= 2) {
+        setUsePollingFallback(true);
+        toast.warning('Switching to polling mode due to connection issues');
+      }
+      
+      setTimeout(() => {
+        setSocketRetryCount(prev => prev + 1);
+      }, 2000 * (socketRetryCount + 1)); // Exponential backoff
+    }
+    
+    if (connected) {
+      setSocketRetryCount(0); // Reset retry count on successful connection
+      setUsePollingFallback(false);
+    }
+  }, [socketError, connected, socketRetryCount]);
+
   useEffect(() => {
     if (!selectedClient?.machineId) return;
     const fetchData = () => {
@@ -278,13 +311,31 @@ const ExtensionManager = () => {
           </h1>
           
           {/* Socket Connection Status */}
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-            <span className="text-sm text-slate-600">
-              {connected ? 'Real-time Connected' : 'Disconnected'}
-            </span>
-            {socketError && (
-              <span className="text-xs text-red-500">({socketError})</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+              <span className="text-sm text-slate-600">
+                {connected ? 'Real-time Connected' : socketRetryCount > 0 ? `Reconnecting... (${socketRetryCount}/3)` : 'Disconnected'}
+              </span>
+              {usePollingFallback && (
+                <span className="text-xs text-orange-500">(Polling Mode)</span>
+              )}
+              {socketError && (
+                <span className="text-xs text-red-500">({socketError})</span>
+              )}
+            </div>
+            
+            {!connected && (
+              <button
+                onClick={() => {
+                  setSocketRetryCount(0);
+                  setUsePollingFallback(false);
+                  window.location.reload(); // Force reconnect
+                }}
+                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+              >
+                Reconnect
+              </button>
             )}
           </div>
         </div>
