@@ -59,7 +59,7 @@ const LogManager = () => {
   const [loading, setLoading] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState('all');
   const [filters, setFilters] = useState({
-    limit: 50,
+    limit: 100,
     hours: 24,
     logType: '',
     level: '',
@@ -493,7 +493,7 @@ const LogManager = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <Select
               placeholder="Chọn Shop"
               value={selectedMachine}
@@ -510,6 +510,17 @@ const LogManager = () => {
                   </Option>
                 );
               })}
+            </Select>
+
+            <Select
+              placeholder="Limit"
+              value={filters.limit}
+              onChange={(value) => handleFilterChange('limit', value)}
+              style={{ width: '100%' }}
+            >
+              <Option value={50}>50 logs</Option>
+              <Option value={100}>100 logs</Option>
+              <Option value={500}>500 logs</Option>
             </Select>
 
             <Select
@@ -606,8 +617,12 @@ const LogManager = () => {
             pagination={{
               pageSize: filters.limit,
               showSizeChanger: true,
+              pageSizeOptions: ['50', '100', '500'],
               showQuickJumper: true,
-              showTotal: (total) => `Tổng ${total} logs`,
+              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} logs (Limit: ${filters.limit})`,
+              onShowSizeChange: (current, size) => {
+                handleFilterChange('limit', size);
+              }
             }}
             scroll={{ x: 1200 }}
           />
