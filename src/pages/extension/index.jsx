@@ -11,6 +11,7 @@ import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcAlarmClock } from 'react-icons/fc';
 import useSocketIO from '../../hooks/useSocketIO';
 import { useAuth } from '../../context/AuthContext';
+import { getAllShop } from '../../apis/shop';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
@@ -21,19 +22,30 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [shopId, setShopId] = useState(null);
 
-  // Lấy shopId từ user context hoặc fallback từ localStorage
-  const authStored = (() => {
-    try { return JSON.parse(localStorage.getItem('auth')); } catch { return null; }
-  })();
-  console.log('[DEBUG] user object:', user, '| auth stored:', authStored);
-  const shopId = user?.shopId ?? user?.shop_id ?? user?.shop?.id ?? authStored?.user?.shopId ?? authStored?.user?.shop_id;
+  // Lấy shopId từ API
+  useEffect(() => {
+    const fetchShopId = async () => {
+      try {
+        const res = await getAllShop();
+        console.log("RES: ",res)
+        if (res.status === 200) {
+          const shops = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+          if (shops.length > 0) setShopId(shops[0]._id ?? shops[0].id);
+        }
+      } catch (err) {
+        console.log('fetchShopId error:', err);
+      }
+    };
+    fetchShopId();
+  }, []);
 
   // Socket.IO connection for real-time updates
   const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
     auth: {
       token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, ''),
-      ...(shopId && { shopId }),
+      shopId,
     }
   });
 
@@ -159,8 +171,8 @@ const ExtensionManager = () => {
       if (response.status === 200) {
         console.log("CHECK :", response);
         const data = response.data;
-        // Đảm bảo luôn là array dù API trả về dạng nào
-        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        // API trả về { ok: true, clients: [...] }
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.clients) ? data.clients : (Array.isArray(data?.data) ? data.data : []));
         setClients(list);
       }
     } catch (error) {
