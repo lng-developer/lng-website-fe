@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RightOutlined, ThunderboltOutlined, CloudDownloadOutlined } from '@ant-design/icons';
+import { RightOutlined, DollarOutlined, ThunderboltOutlined, ClockCircleFilled, CloudDownloadOutlined } from '@ant-design/icons';
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Flex, Spin, Switch } from 'antd';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { FcLinux } from 'react-icons/fc';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcAlarmClock } from 'react-icons/fc';
+import useSocketIO from '../../hooks/useSocketIO';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
@@ -18,6 +19,13 @@ const ExtensionManager = () => {
   const [isLoadingImportOrder, setIsLoadingImportOrder] = useState(false);
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
+
+  // Socket.IO connection for real-time updates
+  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
+    auth: {
+      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
+    }
+  });
 
   // Helper functions for status display
   const getStatusColor = (status) => {
@@ -140,16 +148,10 @@ const ExtensionManager = () => {
       const response = await getAllClient();
       if (response.status === 200) {
         console.log("CHECK :",response)
-        console.log("CHECK response.data:", response.data)
-        // Đảm bảo data luôn là array - dữ liệu nằm trực tiếp trong response.data
-        const clientsData = Array.isArray(response.data) ? response.data : [];
-        console.log("CHECK clientsData:", clientsData)
-        setClients(clientsData);
+        setClients(response.data);
       }
     } catch (error) {
       console.log(error);
-      // Set empty array khi có lỗi
-      setClients([]);
     }
   };
 
@@ -176,12 +178,76 @@ const ExtensionManager = () => {
   };
 
   useEffect(() => {
-    console.log("Clients state updated:", clients);
-  }, [clients]);
-
-  useEffect(() => {
     fetchAllClients();
   }, []);
+
+  // Socket.IO event listeners for real-time updates
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    // Listen for client status changes
+    const handleClientStatusUpdate = (data) => {
+      console.log('Client status update:', data);
+      setClients(prevClients => {
+        return prevClients.map(client => {
+          if (client.clientId === data.clientId) {
+            return { ...client, ...data };
+          }
+          return client;
+        });
+      });
+      
+      // Update selected client if it's the one that changed
+      setSelectedClient(prevSelected => {
+        if (prevSelected.clientId === data.clientId) {
+          return { ...prevSelected, ...data };
+        }
+        return prevSelected;
+      });
+    };
+
+    // Listen for new client connections
+    const handleClientConnected = (data) => {
+      console.log('Client connected:', data);
+      toast.success(`${data.label} connected`);
+      fetchAllClients(); // Refresh the list
+    };
+
+    // Listen for client disconnections
+    const handleClientDisconnected = (data) => {
+      console.log('Client disconnected:', data);
+      toast.info(`${data.label} disconnected`);
+      setClients(prevClients => {
+        return prevClients.map(client => {
+          if (client.clientId === data.clientId) {
+            return { ...client, status: 'offline' };
+          }
+          return client;
+        });
+      });
+    };
+
+    // Listen for new logs
+    const handleNewLog = (logData) => {
+      if (selectedClient?.machineId === logData.machineId) {
+        setLogs(prevLogs => [logData, ...prevLogs].slice(0, 100)); // Keep only latest 100 logs
+      }
+    };
+
+    // Register event listeners
+    socket.on('client:status-update', handleClientStatusUpdate);
+    socket.on('client:connected', handleClientConnected);
+    socket.on('client:disconnected', handleClientDisconnected);
+    socket.on('extension:log', handleNewLog);
+
+    // Cleanup
+    return () => {
+      socket.off('client:status-update', handleClientStatusUpdate);
+      socket.off('client:connected', handleClientConnected);
+      socket.off('client:disconnected', handleClientDisconnected);
+      socket.off('extension:log', handleNewLog);
+    };
+  }, [socket, connected, selectedClient?.machineId]);
 
   useEffect(() => {
     if (!selectedClient?.machineId) return;
@@ -210,6 +276,17 @@ const ExtensionManager = () => {
           <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
             Manage Clients
           </h1>
+          
+          {/* Socket Connection Status */}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+            <span className="text-sm text-slate-600">
+              {connected ? 'Real-time Connected' : 'Disconnected'}
+            </span>
+            {socketError && (
+              <span className="text-xs text-red-500">({socketError})</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -229,21 +306,21 @@ const ExtensionManager = () => {
                 <div className="flex items-center gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-green-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'online').length : 0}</span>
+                    <span className="text-green-600 font-medium">{clients.filter(c => c.status === 'online').length}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                    <span className="text-yellow-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'maybe-online').length : 0}</span>
+                    <span className="text-yellow-600 font-medium">{clients.filter(c => c.status === 'maybe-online').length}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="text-red-600 font-medium">{Array.isArray(clients) ? clients.filter(c => c.status === 'offline').length : 0}</span>
+                    <span className="text-red-600 font-medium">{clients.filter(c => c.status === 'offline').length}</span>
                   </div>
                 </div>
               </div>
               
               <Flex vertical gap={4}>
-                {Array.isArray(clients) && clients.length > 0 &&
+                {clients.length > 0 &&
                   clients?.map((client) => (
                     <button
                       key={client.clientId}
