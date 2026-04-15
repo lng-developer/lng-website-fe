@@ -127,7 +127,7 @@ const OrderEtsy = () => {
     (page, pageSize) => {
       updateFilter({ page, perPage: pageSize });
       setCurrentPage(page);
-      
+
       // Scroll tới vị trí table khi đổi trang
       setTimeout(() => {
         const tableElement = document.querySelector('.ant-table-tbody');
@@ -190,7 +190,7 @@ const OrderEtsy = () => {
         }
       } catch (error) {
         console.log(error);
-        toast.error('Erorr System!');
+        toast.error('Error System!');
       } finally {
         setLoading(false);
         updateLastUpdatedAt();
@@ -284,13 +284,13 @@ const OrderEtsy = () => {
       if (status === 'All')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'NoCostCenter')
-        return updateFilter({ status: '', isNoCostCenter: true,  invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'invalidAddress')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true,  openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, page: 1 });
       if (status === 'openCase')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true,  noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true, noPsd: false, page: 1 });
       if (status === 'noPsd')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true,  page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, page: 1 });
       // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
       updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
     },
@@ -455,9 +455,7 @@ const OrderEtsy = () => {
         ),
         created: (
           <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">
-              {item?.createdAt ? formatDate(item.createdAt) : '—'}
-            </span>
+            <span className="font-medium whitespace-nowrap">{item?.createdAt ? formatDate(item.createdAt) : '—'}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
               {item?.createdAt
                 ? `(${formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })
@@ -469,9 +467,7 @@ const OrderEtsy = () => {
         ),
         order_date: (
           <Flex vertical={true}>
-            <span className="font-medium whitespace-nowrap">
-              {item?.purchase_date ? formatDate(item.purchase_date) : '—'}
-            </span>
+            <span className="font-medium whitespace-nowrap">{item?.purchase_date ? formatDate(item.purchase_date) : '—'}</span>
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
               {item?.purchase_date
                 ? `(${formatDistanceToNow(new Date(item.purchase_date), { addSuffix: true })
@@ -503,9 +499,7 @@ const OrderEtsy = () => {
             </span>
           </div>
         ),
-        base_cost: (
-          <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />
-        ),
+        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
         replace: (
           <div
             className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
@@ -549,23 +543,21 @@ const OrderEtsy = () => {
             />
           ),
           customer: (
-            <SubItemCustomEtsy
-              items={itemSub?.version3Data}
-              customUrl={itemSub?.customized_url}
-              linkImage={itemSub?.snapshotImage}
-            />
+            <SubItemCustomEtsy items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
           ),
           quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-          cost_center: <SubItemCost 
-            data={itemSub?.cost_center} 
-            fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
-            orderId={item?.orderId}
-            orderItemId={itemSub?.orderItemId}
-            onProductChange={handleProductChange}
-            onSizeChange={handleSizeChange}
-            onColorChange={handleColorChange}
-            onVariantDataChange={handleVariantDataChange}
-          />,
+          cost_center: (
+            <SubItemCost
+              data={itemSub?.cost_center}
+              fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+              orderId={item?.orderId}
+              orderItemId={itemSub?.orderItemId}
+              onProductChange={handleProductChange}
+              onSizeChange={handleSizeChange}
+              onColorChange={handleColorChange}
+              onVariantDataChange={handleVariantDataChange}
+            />
+          ),
           tracking_note: (
             <SubItemTracking
               tracking_info={itemSub?.tracking_info}
@@ -798,7 +790,7 @@ const OrderEtsy = () => {
             </Tooltip>
           </div>
           <div>
-                      <Pagination
+            <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
               pageSize={filters.perPage}
