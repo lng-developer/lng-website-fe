@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { MdOutlineRefresh } from 'react-icons/md';
@@ -13,22 +13,33 @@ import ItemCustom from './table/ItemCustom';
 import ItemCostCenter from './table/ItemCostCenter';
 import ItemOrderInfo from './table/ItemOrderInfo';
 import TextArea from 'antd/es/input/TextArea';
-import ItemAction from './table/ItemAction';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
-import { getAllCountStatusScale, getAllFulfillScale, getALlShop } from '../../apis/order';
+import { assignOrderToCs, getAllCountStatusScale, getAllFulfillScale, getALlShop } from '../../apis/order';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
+import { getAllUsers } from '../../apis/user';
+import { useAuth } from '../../context/AuthContext';
 const LAST_UPDATED_KEY = 'orders_fulfill_last_updated_at';
 const PAGE_SIZE = 10;
+const fulfillmentFilterTabs = [
+  dataFilterStatusFulfillment[0],
+  {
+    key: 'CSUnassigned',
+    title: 'CSUnassigned',
+    status: 'CSUnassigned',
+  },
+  ...dataFilterStatusFulfillment.slice(1),
+];
 
 const FulfillmentScale = () => {
+  const { user } = useAuth();
   const { collapsed } = useOutletContext();
-  const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusFulfillment[0]);
+  const [isActiveFilter, setIsActivefilter] = useState(fulfillmentFilterTabs[0]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [dataSource, setDataSource] = useState([]);
@@ -36,9 +47,11 @@ const FulfillmentScale = () => {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [tableHeight, setTableHeight] = useState(0);
-  const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
+  const [tabFilter, setTabFilter] = useState(fulfillmentFilterTabs);
   const [shops, setShops] = useState([]);
+  const [csUsers, setCsUsers] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [assigningOrderId, setAssigningOrderId] = useState('');
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
     return saved ? new Date(saved) : null;
@@ -47,11 +60,13 @@ const FulfillmentScale = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     scale_status: '',
+    unassigned: false,
     from: defaultFrom,
     to: defaultTo,
     search: '',
     shopName: '',
   });
+  const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader';
 
   const updateLastUpdatedAt = useCallback(() => {
     const now = new Date();
@@ -63,6 +78,17 @@ const FulfillmentScale = () => {
     if (!lastUpdatedAt) return 'Last updated: —';
     return `Last updated at ${dayjs(lastUpdatedAt).format('HH:mm')}`;
   }, [lastUpdatedAt]);
+
+  const getAssignErrorMessage = useCallback((error) => {
+    const responseData = error?.response?.data;
+
+    if (responseData?.message === 'Selected user is not Customer Service') {
+      const roleName = responseData?.debug?.role_name;
+      return roleName ? `${responseData.message} (${roleName})` : responseData.message;
+    }
+
+    return responseData?.message || 'Assign CS failed';
+  }, []);
 
   // ====== Callbacks & Memos ======
   const updateFilter = useCallback((newValues) => {
@@ -78,7 +104,7 @@ const FulfillmentScale = () => {
     (page, pageSize) => {
       updateFilter({ page, perPage: pageSize });
       setCurrentPage(page);
-      
+
       // Scroll tới vị trí table khi đổi trang
       setTimeout(() => {
         const tableElement = document.querySelector('.ant-table-tbody');
@@ -115,7 +141,14 @@ const FulfillmentScale = () => {
       { title: <span style={{ color: dataColors.title }}>Order Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'orderOwner', key: 'orderOwner', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Assign CS</span>,
+        dataIndex: 'assignCS',
+        key: 'assignCS',
+        align: 'center',
+        width: 260,
+      },
+      { title: <span style={{ color: dataColors.title }}>CS Status</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
     ],
     []
   );
@@ -153,7 +186,7 @@ const FulfillmentScale = () => {
     try {
       const response = await getAllCountStatusScale(filters);
       if (response.status === 200) {
-        const resultTabFilter = dataFilterStatusFulfillment.map(({ key, title, status }) => ({
+        const resultTabFilter = fulfillmentFilterTabs.map(({ key, title, status }) => ({
           key,
           title,
           status,
@@ -166,13 +199,61 @@ const FulfillmentScale = () => {
     }
   }, [filters]);
 
+  const handleAssignCs = useCallback(
+    async (order, csUserId) => {
+      if (!canAssignCs) {
+        toast.error('Access denied: insufficient permissions');
+        return;
+      }
+
+      if (!order?.orderId) {
+        toast.error('Order not found');
+        return;
+      }
+
+      if (!csUserId) {
+        toast.error('Please select a CS user');
+        return;
+      }
+
+      const currentCsUserId = order?.cs_assignee?._id || order?.csAssigneeId;
+      if (currentCsUserId === csUserId) {
+        return;
+      }
+
+      setAssigningOrderId(order.orderId);
+      try {
+        const response = await assignOrderToCs(order.orderId, { csUserId });
+
+        if (response.status === 200) {
+          toast.success(response.data?.message || 'Assigned order to CS successfully');
+          fetchAllFulfill(filters);
+          fetchCountStatus();
+        } else {
+          toast.error(response.data?.message || 'Assign CS failed');
+        }
+      } catch (error) {
+        toast.error(getAssignErrorMessage(error));
+      } finally {
+        setAssigningOrderId('');
+      }
+    },
+    [canAssignCs, fetchAllFulfill, fetchCountStatus, filters, getAssignErrorMessage]
+  );
+
   const handleFilterForStatus = useCallback(
     (status) => {
       if (status === 'All') {
-        updateFilter({ scale_status: '', page: 1 });
+        updateFilter({ scale_status: '', unassigned: false, page: 1 });
         return;
       }
-      updateFilter({ scale_status: status, page: 1 });
+
+      if (status === 'CSUnassigned') {
+        updateFilter({ scale_status: '', unassigned: true, page: 1 });
+        return;
+      }
+
+      updateFilter({ scale_status: status, unassigned: false, page: 1 });
     },
     [updateFilter]
   );
@@ -185,6 +266,22 @@ const FulfillmentScale = () => {
       }
     } catch (error) {
       console.log(error);
+    }
+  }, []);
+
+  const fetchCsUsers = useCallback(async () => {
+    try {
+      const result = await getAllUsers({ all: true, perPage: 1000 });
+      const users = Array.isArray(result.data) ? result.data : result.data?.data || [];
+      const filteredCsUsers = users.filter((item) => {
+        const roleName = item?.role_name || item?.role_id?.name || item?.role?.name;
+        return roleName === 'Customer Service';
+      });
+
+      setCsUsers(filteredCsUsers);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load CS users');
     }
   }, []);
 
@@ -275,7 +372,36 @@ const FulfillmentScale = () => {
       orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
       scaleBy: <StatusComponent title={item?.scaleBy || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
       scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
-      actions: <ItemAction />,
+      assignCS: (
+        <Select
+          className="min-w-[220px] text-left"
+          placeholder="Select customer service"
+          value={item?.cs_assignee?._id || item?.csAssigneeId}
+          onChange={(value) => handleAssignCs(item, value)}
+          options={csUsers.map((userItem) => ({
+            value: userItem?._id,
+            label: `${userItem?.full_name || userItem?.email || 'Unknown'} - ${userItem?.email || 'No email'}`,
+          }))}
+          showSearch
+          optionFilterProp="label"
+          loading={assigningOrderId === item?.orderId}
+          disabled={!canAssignCs || assigningOrderId === item?.orderId}
+        />
+      ),
+      actions: (
+        <Flex vertical align="center" gap={6}>
+          <StatusComponent
+            title={item?.cs_assignee?.full_name || item?.cs_assignment_status || 'Unassigned'}
+            color={item?.cs_assignee?.full_name ? dataColors.process : dataColors.default}
+            isDefault={!item?.cs_assignee?.full_name}
+          />
+          {/* <StatusComponent
+            title={item?.cs_assignment_status || 'Unassigned'}
+            color={item?.cs_assignment_status === 'Assigned' ? dataColors.process : dataColors.default}
+            isDefault={item?.cs_assignment_status !== 'Assigned'}
+          /> */}
+        </Flex>
+      ),
       subItems: (item?.items || []).map((itemSub, indexItem) => ({
         key: `${index}-${indexItem}`,
         product_info: (
@@ -322,7 +448,7 @@ const FulfillmentScale = () => {
       })),
     }));
     return results;
-  }, [dataSource, fetchAllFulfill, filters, convertToArr]);
+  }, [assigningOrderId, canAssignCs, csUsers, dataSource, fetchAllFulfill, filters, convertToArr, handleAssignCs, handleCopy]);
 
   // ====== Effects ======
   useEffect(() => {
@@ -333,6 +459,12 @@ const FulfillmentScale = () => {
   useEffect(() => {
     fetchAllShop();
   }, [fetchAllShop]);
+
+  useEffect(() => {
+    if (canAssignCs) {
+      fetchCsUsers();
+    }
+  }, [canAssignCs, fetchCsUsers]);
 
   useEffect(() => {
     const handleResize = () => {

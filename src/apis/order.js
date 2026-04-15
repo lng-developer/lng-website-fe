@@ -120,6 +120,10 @@ const replaceOrder = (id, payload) => {
   return instance.post(`/order/${id}/replace`, payload);
 };
 
+const assignOrderToCs = (orderId, payload) => {
+  return instance.put(`/scale/orders/${orderId}/assign-cs`, payload);
+};
+
 const importAsyncOrder = (payload) => {
   return instance.post('/admin/run-now', payload);
 };
@@ -166,6 +170,7 @@ export {
   getAllCountStatusScaleForDesign,
   updateOrder,
   replaceOrder,
+  assignOrderToCs,
   importAsyncOrder,
   ChangeTimeAutoOrder,
 };
