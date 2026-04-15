@@ -159,8 +159,11 @@ const ExtensionManager = () => {
     try {
       const response = await getAllClient();
       if (response.status === 200) {
-        console.log("CHECK :",response)
-        setClients(response.data);
+        console.log("CHECK :", response);
+        const data = response.data;
+        // Đảm bảo luôn là array dù API trả về dạng nào
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        setClients(list);
       }
     } catch (error) {
       console.log(error);
