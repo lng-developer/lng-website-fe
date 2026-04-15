@@ -11,6 +11,7 @@ const useSocketIO = (url, options = {}) => {
     // Create socket connection
     const newSocket = io(url, {
       autoConnect: true,
+      path: '/ws',
       ...options
     });
 
