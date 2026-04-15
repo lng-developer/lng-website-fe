@@ -12,6 +12,7 @@ const useSocketIO = (url, options = {}) => {
     const newSocket = io(url, {
       autoConnect: true,
       path: '/ws',
+      transports: ['websocket'], //     bỏ qua polling, dùng thẳng websocket
       ...options
     });
 

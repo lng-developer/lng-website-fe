@@ -10,9 +10,11 @@ import { FcLinux } from 'react-icons/fc';
 import { FcCurrencyExchange } from 'react-icons/fc';
 import { FcAlarmClock } from 'react-icons/fc';
 import useSocketIO from '../../hooks/useSocketIO';
+import { useAuth } from '../../context/AuthContext';
 
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
+  const { user } = useAuth();
   const [selectedClient, setSelectedClient] = useState({});
   const [dateInput, setDateInput] = useState('');
   const [clients, setClients] = useState([]);
@@ -20,10 +22,20 @@ const ExtensionManager = () => {
   const [isLoadingImportAds, setIsLoadingImportAds] = useState(false);
   const [logs, setLogs] = useState([]);
 
+  // Lấy shopId từ user context hoặc fallback từ localStorage
+  const shopId = user?.shopId ?? (() => {
+    try {
+      return JSON.parse(localStorage.getItem('auth'))?.user?.shopId;
+    } catch {
+      return undefined;
+    }
+  })();
+
   // Socket.IO connection for real-time updates
   const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
     auth: {
-      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, '')
+      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, ''),
+      ...(shopId && { shopId }),
     }
   });
 
