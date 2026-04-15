@@ -23,13 +23,11 @@ const ExtensionManager = () => {
   const [logs, setLogs] = useState([]);
 
   // Lấy shopId từ user context hoặc fallback từ localStorage
-  const shopId = user?.shopId ?? (() => {
-    try {
-      return JSON.parse(localStorage.getItem('auth'))?.user?.shopId;
-    } catch {
-      return undefined;
-    }
+  const authStored = (() => {
+    try { return JSON.parse(localStorage.getItem('auth')); } catch { return null; }
   })();
+  console.log('[DEBUG] user object:', user, '| auth stored:', authStored);
+  const shopId = user?.shopId ?? user?.shop_id ?? user?.shop?.id ?? authStored?.user?.shopId ?? authStored?.user?.shop_id;
 
   // Socket.IO connection for real-time updates
   const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
