@@ -8,9 +8,14 @@ const useSocketIO = (url, options = {}) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
+    // Chờ shopId có giá trị mới connect
+    if (!options?.auth?.shopId) return;
+
     // Create socket connection
     const newSocket = io(url, {
       autoConnect: true,
+      path: '/ws',
+      transports: ['websocket'],
       ...options
     });
 
@@ -39,7 +44,7 @@ const useSocketIO = (url, options = {}) => {
     return () => {
       newSocket.close();
     };
-  }, [url]);
+  }, [url, options?.auth?.shopId]);
 
   const emit = (event, data) => {
     if (socket && connected) {
