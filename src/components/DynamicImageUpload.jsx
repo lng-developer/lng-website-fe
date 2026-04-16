@@ -30,6 +30,7 @@ export default function DynamicImageUploadBatch({
   maxSlots = 5,
   initialKinds = [], // ví dụ: ['front']
   disabled = false,
+  hideAddButton = false, // NEW: ẩn nút Add khi đã có ảnh
   orderId,
   orderItemId,
   fetchAllFulfill,
@@ -128,9 +129,11 @@ export default function DynamicImageUploadBatch({
         <Button icon={<CloudUploadOutlined />} type="default" onClick={uploadAll} disabled={disabled || !itemsReady.length}>
           Upload
         </Button>
-        <Button type="dashed" icon={<MdAdd />} onClick={addSlot} disabled={!canAdd || disabled}>
-          Add
-        </Button>
+        {!hideAddButton && (
+          <Button type="dashed" icon={<MdAdd />} onClick={addSlot} disabled={!canAdd || disabled}>
+            Add
+          </Button>
+        )}
       </div>
 
       <div

@@ -435,6 +435,7 @@ const FulfillmentScale = () => {
             orderItemId={itemSub?.orderItemId}
             fetchAllFulfill={fetchAllFulfill}
             filters={filters}
+            hideAddButton={itemSub?.fulfillment_file && Object.keys(itemSub?.fulfillment_file || {}).length > 0}
           />
         ),
         order_info: (
