@@ -1,401 +1,279 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Table, Switch, Button, Modal, Form, Input, Select, InputNumber, Checkbox, Badge, Tooltip, message } from 'antd';
-import { EditOutlined, SettingOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
-import { toast } from 'sonner';
 import { getConfigAutos, updateConfigAuto } from '../../apis/configAuto';
+import { toast } from 'sonner';
 
-const { Option } = Select;
-const { TextArea } = Input;
+const TYPE_META = {
+  IMPORT_ORDER:    { label: 'Import Order',    icon: '📥', color: '#3b82f6', bg: '#eff6ff' },
+  PULL_TRACKING:   { label: 'Pull Tracking',   icon: '🔄', color: '#8b5cf6', bg: '#f5f3ff' },
+  UPLOAD_TRACKING: { label: 'Upload Tracking', icon: '📤', color: '#10b981', bg: '#ecfdf5' },
+  IMPORT_FBM:      { label: 'Import FBM',      icon: '📦', color: '#f59e0b', bg: '#fffbeb' },
+  IMPORT_ADS:      { label: 'Import Ads',      icon: '📊', color: '#ef4444', bg: '#fef2f2' },
+};
+
+const Toggle = ({ checked, onChange, disabled }) => (
+  <button
+    onClick={onChange}
+    disabled={disabled}
+    style={{
+      width: 44, height: 24, borderRadius: 999, border: 'none',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      position: 'relative', padding: 0, flexShrink: 0,
+      background: checked ? '#22c55e' : '#cbd5e1',
+      transition: 'background 0.25s',
+      opacity: disabled ? 0.5 : 1,
+    }}
+  >
+    <div style={{
+      position: 'absolute', top: 2,
+      width: 20, height: 20, borderRadius: '50%',
+      background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+      transition: 'transform 0.25s',
+      transform: checked ? 'translateX(22px)' : 'translateX(2px)',
+    }} />
+  </button>
+);
 
 const ConfigAuto = () => {
   const { collapsed } = useOutletContext();
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedConfig, setSelectedConfig] = useState(null);
-  const [form] = Form.useForm();
+  const [updating, setUpdating] = useState(null);
 
-  // Preset thời gian
-  const timePresets = [
-    { label: "Mỗi 5 phút", value: "*/5 * * * *" },
-    { label: "Mỗi 15 phút", value: "*/15 * * * *" },
-    { label: "Mỗi 30 phút", value: "*/30 * * * *" },
-    { label: "Mỗi giờ", value: "0 * * * *" },
-    { label: "Mỗi 2 giờ", value: "0 */2 * * *" },
-    { label: "8AM, 2PM, 8PM", value: "0 8,14,20 * * *" },
-    { label: "Hàng ngày 2AM", value: "0 2 * * *" },
-    { label: "Custom", value: "custom" }
-  ];
+  useEffect(() => { fetchData(); }, []);
 
-  // Utility functions
-  const cronToText = useCallback((cronPattern) => {
-    const patterns = {
-      '*/5 * * * *': 'Mỗi 5 phút',
-      '*/15 * * * *': 'Mỗi 15 phút', 
-      '*/30 * * * *': 'Mỗi 30 phút',
-      '0 * * * *': 'Mỗi giờ',
-      '0 */2 * * *': 'Mỗi 2 giờ',
-      '0 8,14,20 * * *': '3 lần/ngày (8AM, 2PM, 8PM)',
-      '0 2 * * *': 'Hàng ngày lúc 2AM',
-      '0 8 * * *': 'Hàng ngày lúc 8AM'
-    };
-    
-    return patterns[cronPattern] || cronPattern;
-  }, []);
-
-  const formatRelativeTime = useCallback((dateString) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffHours < 1) return 'Vừa xong';
-    if (diffHours < 24) return `${diffHours}h trước`;
-    return `${diffDays}d trước`;
-  }, []);
-
-  const formatStatus = useCallback((status, lastRunStatus) => {
-    if (!status) return { text: '🔴 TẮT', color: 'error' };
-    
-    if (lastRunStatus === 'success') return { text: '🟢 BẬT', color: 'success' };
-    if (lastRunStatus === 'error') return { text: '🟡 BẬT (Lỗi)', color: 'warning' };
-    if (lastRunStatus === 'running') return { text: '🔵 BẬT (Đang chạy)', color: 'processing' };
-    
-    return { text: '🟢 BẬT', color: 'success' };
-  }, []);
-
-  // API calls
-  const fetchConfigs = useCallback(async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
-      const response = await getConfigAutos({ type: 'vendorSyncBatch' });
-      if (response.status === 200) {
-        setConfigs(response.data.data || []);
-      } else {
-        toast.error('Không thể tải danh sách config');
-      }
-    } catch (error) {
-      console.error('Failed to fetch configs:', error);
-      toast.error('Lỗi hệ thống khi tải config');
+      setLoading(true);
+      const res = await getConfigAutos();
+      setConfigs(res.data?.data || []);
+    } catch {
+      toast.error('Không thể tải cấu hình');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const handleToggle = useCallback(async (id, newStatus) => {
+  const groupedByShop = configs.reduce((acc, cfg) => {
+    if (!acc[cfg.shopId]) acc[cfg.shopId] = { shopId: cfg.shopId, shopName: cfg.shopName, items: [] };
+    acc[cfg.shopId].items.push(cfg);
+    return acc;
+  }, {});
+
+  const handleToggle = useCallback(async (cfg) => {
+    setUpdating(cfg._id);
     try {
-      const response = await updateConfigAuto(id, { status: newStatus });
-      if (response.status === 200) {
-        // Update local state
-        setConfigs(prev => prev.map(config => 
-          config.id === id ? { ...config, status: newStatus } : config
-        ));
-        toast.success(`Config ${newStatus ? 'đã bật' : 'đã tắt'}`);
-      } else {
-        toast.error('Không thể cập nhật trạng thái');
-      }
-    } catch (error) {
-      console.error('Failed to toggle config:', error);
-      toast.error('Lỗi hệ thống khi cập nhật');
+      await updateConfigAuto(cfg._id, { status: !cfg.status });
+      setConfigs(prev => prev.map(c => c._id === cfg._id ? { ...c, status: !c.status } : c));
+      toast.success(`${TYPE_META[cfg.type]?.label || cfg.type} đã ${!cfg.status ? 'bật' : 'tắt'}`);
+    } catch {
+      toast.error('Cập nhật thất bại');
+    } finally {
+      setUpdating(null);
     }
   }, []);
 
-  const handleEdit = useCallback((config) => {
-    setSelectedConfig(config);
-    form.setFieldsValue({
-      status: config.status,
-      autoTime: timePresets.find(p => p.value === config.autoTime) ? config.autoTime : 'custom',
-      customCron: timePresets.find(p => p.value === config.autoTime) ? '' : config.autoTime,
-      description: config.description,
-      maxOrders: config.config?.maxOrders || 100,
-      dryRun: config.config?.dryRun || false
-    });
-    setEditModalOpen(true);
-  }, [form, timePresets]);
-
-  const handleSave = useCallback(async (values) => {
+  const handleTimeChange = useCallback(async (cfg, newTime) => {
+    setUpdating(cfg._id);
     try {
-      const cronPattern = values.autoTime === 'custom' ? values.customCron : values.autoTime;
-      
-      const updateData = {
-        status: values.status,
-        autoTime: cronPattern,
-        description: values.description,
-        config: {
-          maxOrders: values.maxOrders,
-          dryRun: values.dryRun
-        }
-      };
-
-      const response = await updateConfigAuto(selectedConfig.id, updateData);
-      if (response.status === 200) {
-        toast.success('Cập nhật config thành công');
-        setEditModalOpen(false);
-        fetchConfigs(); // Refresh data
-      } else {
-        toast.error('Không thể cập nhật config');
-      }
-    } catch (error) {
-      console.error('Failed to save config:', error);
-      toast.error('Lỗi hệ thống khi lưu config');
+      await updateConfigAuto(cfg._id, { time: newTime });
+      setConfigs(prev => prev.map(c => c._id === cfg._id ? { ...c, time: newTime } : c));
+      toast.success('Đã cập nhật thời gian');
+    } catch {
+      toast.error('Cập nhật thất bại');
+    } finally {
+      setUpdating(null);
     }
-  }, [selectedConfig, fetchConfigs]);
+  }, []);
 
-  // Table columns
-  const columns = [
-    {
-      title: 'Config ID',
-      dataIndex: 'id',
-      key: 'id',
-      render: (text, record) => (
-        <div>
-          <div className="font-medium">{text}</div>
-          <div className="text-sm text-gray-500">{record.description}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      render: (text) => (
-        <Badge color="blue" text={text} />
-      ),
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status, record) => {
-        const statusInfo = formatStatus(status, record.stats?.lastRunStatus);
-        return (
-          <div className="flex items-center gap-2">
-            <Badge status={statusInfo.color} text={statusInfo.text} />
-            <Switch
-              size="small"
-              checked={status}
-              onChange={(checked) => handleToggle(record.id, checked)}
-            />
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Lịch chạy',
-      dataIndex: 'autoTime',
-      key: 'autoTime',
-      render: (cronPattern) => (
-        <div>
-          <div className="font-mono text-sm">{cronPattern}</div>
-          <div className="text-xs text-gray-500">{cronToText(cronPattern)}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Thống kê',
-      key: 'stats',
-      render: (_, record) => (
-        <div>
-          <div className="text-sm">Runs: {record.stats?.totalRuns || 0}</div>
-          {record.stats?.lastRunAt && (
-            <div className="text-xs text-gray-500">
-              {record.stats.lastRunStatus === 'success' ? '✅' : '❌'} 
-              {' '}{formatRelativeTime(record.stats.lastRunAt)}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Cấu hình',
-      key: 'config',
-      render: (_, record) => (
-        <div className="text-xs">
-          <div>Max: {record.config?.maxOrders || 100}</div>
-          {record.config?.dryRun && <div className="text-orange-500">Test Mode</div>}
-        </div>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-        </div>
-      ),
-    },
-  ];
-
-  // Effects
-  useEffect(() => {
-    fetchConfigs();
-  }, [fetchConfigs]);
+  const shops = Object.values(groupedByShop);
+  const totalActive = configs.filter(c => c.status).length;
 
   return (
-    <div>
-      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
-        <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
-          <h1 className="text-2xl !mb-0 flex items-center gap-2" style={{ color: 'black' }}>
-            <SettingOutlined />
-            Auto Config Management
-          </h1>
-          <div className="flex items-center gap-2">
-            <Button 
-              type="primary" 
-              icon={<PlayCircleOutlined />}
-              onClick={fetchConfigs}
-            >
-              Refresh
-            </Button>
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+      {/* Header */}
+      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white border-b border-gray-100 transition-all duration-300`}
+        style={{ boxShadow: '0 1px 8px rgba(15,23,42,0.06)' }}>
+        <div className="h-[60px] px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚙️</div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>Cấu hình tự động</h1>
+              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{totalActive} tác vụ đang chạy · {configs.length} tổng cộng</p>
+            </div>
           </div>
+          <button onClick={fetchData} disabled={loading} style={S.refreshBtn}>
+            <span style={{ fontSize: 14 }}>{loading ? '⏳' : '🔄'}</span>
+            {loading ? 'Đang tải...' : 'Làm mới'}
+          </button>
         </div>
       </div>
 
-      <div className="mt-[60px] px-8 py-4 h-full">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="text-2xl font-bold text-blue-600">{configs.length}</div>
-            <div className="text-sm text-gray-500">Tổng configs</div>
+      <div style={{ marginTop: 60, padding: '24px 32px' }}>
+        {loading ? (
+          <div style={S.empty}>Đang tải cấu hình...</div>
+        ) : shops.length === 0 ? (
+          <div style={S.empty}>Không có cấu hình nào</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {shops.map(shop => {
+              const activeCount = shop.items.filter(i => i.status).length;
+              return (
+                <div key={shop.shopId} style={S.card}>
+                  {/* Shop title row */}
+                  <div style={S.cardHeader}>
+                    <div style={S.avatar}>{shop.shopName?.charAt(0)?.toUpperCase()}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>{shop.shopName}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>
+                        {activeCount}/{shop.items.length} tác vụ đang bật
+                      </div>
+                    </div>
+                    <span style={{
+                      padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                      background: activeCount > 0 ? '#dcfce7' : '#f1f5f9',
+                      color: activeCount > 0 ? '#16a34a' : '#64748b',
+                    }}>
+                      {activeCount > 0 ? '● Active' : '○ Inactive'}
+                    </span>
+                  </div>
+
+                  {/* Table */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={S.table}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc' }}>
+                          <th style={S.th}>Tác vụ</th>
+                          <th style={S.th}>Mô tả</th>
+                          <th style={{ ...S.th, textAlign: 'center' }}>Chu kỳ</th>
+                          <th style={{ ...S.th, textAlign: 'center' }}>Cập nhật lần cuối</th>
+                          <th style={{ ...S.th, textAlign: 'center' }}>Trạng thái</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shop.items.map((cfg, idx) => {
+                          const meta = TYPE_META[cfg.type] || { label: cfg.type, icon: '⚙️', color: '#64748b', bg: '#f8fafc' };
+                          const isUpdating = updating === cfg._id;
+                          return (
+                            <tr key={cfg._id} style={{
+                              background: idx % 2 === 0 ? '#fff' : '#fafafa',
+                              opacity: isUpdating ? 0.6 : 1,
+                              transition: 'opacity 0.2s',
+                            }}>
+                              {/* Type */}
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 32, height: 32, borderRadius: 8,
+                                    background: meta.bg, fontSize: 16,
+                                  }}>{meta.icon}</span>
+                                  <span style={{ fontWeight: 600, fontSize: 13, color: meta.color }}>{meta.label}</span>
+                                </div>
+                              </td>
+
+                              {/* Describe */}
+                              <td style={{ ...S.td, color: '#64748b', fontSize: 13 }}>{cfg.describe || '—'}</td>
+
+                              {/* Time */}
+                              <td style={{ ...S.td, textAlign: 'center' }}>
+                                <select
+                                  value={cfg.time}
+                                  disabled={isUpdating}
+                                  onChange={(e) => handleTimeChange(cfg, Number(e.target.value))}
+                                  style={S.select}
+                                >
+                                  {[5, 60, 120, 240, 720].map(t => (
+                                    <option key={t} value={t}>{t} phút</option>
+                                  ))}
+                                </select>
+                              </td>
+
+                              {/* Updated at */}
+                              <td style={{ ...S.td, textAlign: 'center', fontSize: 12, color: '#94a3b8' }}>
+                                {cfg.updated_at ? new Date(cfg.updated_at).toLocaleString('vi-VN') : '—'}
+                              </td>
+
+                              {/* Toggle */}
+                              <td style={{ ...S.td, textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                  <span style={{ fontSize: 11, color: cfg.status ? '#16a34a' : '#94a3b8', fontWeight: 600, minWidth: 28 }}>
+                                    {cfg.status ? 'ON' : 'OFF'}
+                                  </span>
+                                  <Toggle
+                                    checked={cfg.status}
+                                    onChange={() => handleToggle(cfg)}
+                                    disabled={isUpdating}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="text-2xl font-bold text-green-600">
-              {configs.filter(c => c.status).length}
-            </div>
-            <div className="text-sm text-gray-500">Đang bật</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="text-2xl font-bold text-orange-600">
-              {configs.reduce((sum, c) => sum + (c.stats?.totalRuns || 0), 0)}
-            </div>
-            <div className="text-sm text-gray-500">Tổng runs</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="text-2xl font-bold text-purple-600">
-              {configs.filter(c => c.stats?.lastRunStatus === 'success').length}
-            </div>
-            <div className="text-sm text-gray-500">Success gần nhất</div>
-          </div>
-        </div>
-
-        {/* Main Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <Table
-            columns={columns}
-            dataSource={configs}
-            loading={loading}
-            rowKey="id"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `Tổng ${total} configs`,
-            }}
-          />
-        </div>
-
-        {/* Edit Modal */}
-        <Modal
-          title="Chỉnh sửa Auto Config"
-          open={editModalOpen}
-          onCancel={() => setEditModalOpen(false)}
-          footer={null}
-          width={600}
-        >
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSave}
-          >
-            <Form.Item
-              name="status"
-              label="Trạng thái"
-              valuePropName="checked"
-            >
-              <Switch checkedChildren="BẬT" unCheckedChildren="TẮT" />
-            </Form.Item>
-
-            <Form.Item
-              name="autoTime"
-              label="Lịch chạy"
-              rules={[{ required: true, message: 'Vui lòng chọn lịch chạy' }]}
-            >
-              <Select placeholder="Chọn lịch chạy">
-                {timePresets.map(preset => (
-                  <Option key={preset.value} value={preset.value}>
-                    {preset.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) => 
-                prevValues.autoTime !== currentValues.autoTime
-              }
-            >
-              {({ getFieldValue }) =>
-                getFieldValue('autoTime') === 'custom' ? (
-                  <Form.Item
-                    name="customCron"
-                    label="Custom Cron Pattern"
-                    rules={[{ required: true, message: 'Vui lòng nhập cron pattern' }]}
-                  >
-                    <Input placeholder="*/30 * * * *" />
-                  </Form.Item>
-                ) : null
-              }
-            </Form.Item>
-
-            <Form.Item
-              name="description"
-              label="Mô tả"
-            >
-              <TextArea rows={2} placeholder="Mô tả config này..." />
-            </Form.Item>
-
-            <Form.Item
-              name="maxOrders"
-              label="Số orders tối đa mỗi lần chạy"
-              rules={[{ required: true, message: 'Vui lòng nhập số orders' }]}
-            >
-              <InputNumber min={1} max={1000} style={{ width: '100%' }} />
-            </Form.Item>
-
-            <Form.Item
-              name="dryRun"
-              label="Chế độ test"
-              valuePropName="checked"
-            >
-              <Checkbox>Chạy thử (không thực hiện thật)</Checkbox>
-            </Form.Item>
-
-            <Form.Item className="mb-0 flex justify-end">
-              <div className="flex gap-2">
-                <Button onClick={() => setEditModalOpen(false)}>
-                  Hủy
-                </Button>
-                <Button type="primary" htmlType="submit">
-                  Lưu
-                </Button>
-              </div>
-            </Form.Item>
-          </Form>
-        </Modal>
+        )}
       </div>
     </div>
   );
+};
+
+const S = {
+  card: {
+    background: '#fff',
+    borderRadius: 16,
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 2px 12px rgba(15,23,42,0.05)',
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    display: 'flex', alignItems: 'center', gap: 12,
+    padding: '16px 20px',
+    borderBottom: '1px solid #f1f5f9',
+    background: 'linear-gradient(135deg,#f8fafc,#eef2ff)',
+  },
+  avatar: {
+    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontWeight: 700, fontSize: 16,
+  },
+  table: {
+    width: '100%', borderCollapse: 'collapse',
+  },
+  th: {
+    padding: '10px 20px', fontSize: 12, fontWeight: 700,
+    color: '#64748b', textAlign: 'left',
+    borderBottom: '1px solid #f1f5f9',
+    whiteSpace: 'nowrap',
+  },
+  td: {
+    padding: '14px 20px',
+    borderBottom: '1px solid #f8fafc',
+    verticalAlign: 'middle',
+  },
+  select: {
+    border: '1px solid #e2e8f0', borderRadius: 8,
+    padding: '5px 10px', fontSize: 12,
+    color: '#334155', background: '#fff',
+    cursor: 'pointer', outline: 'none',
+  },
+  refreshBtn: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    border: '1px solid #e2e8f0', borderRadius: 10,
+    padding: '8px 16px', background: '#fff',
+    color: '#334155', fontWeight: 600,
+    cursor: 'pointer', fontSize: 13,
+  },
+  empty: {
+    textAlign: 'center', padding: 80,
+    color: '#94a3b8', fontSize: 15,
+  },
 };
 
 export default ConfigAuto;

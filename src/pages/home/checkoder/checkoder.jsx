@@ -354,26 +354,36 @@ const CheckOder = () => {
 
             const data = await response.json();
 
+            if (!response.ok) {
+                throw new Error(data?.message || 'Đẩy đơn thất bại');
+            }
+
             alert(`Đẩy đơn thành công: ${selectedOrders.length} đơn`);
-            window.location.reload();
+            
             // Cập nhật trạng thái local thay vì reload toàn bộ
-            // setOrders(prevOrders => 
-            //     prevOrders.map(order => {
-            //         const isSubmitted = selectedOrders.some(
-            //             selected => selected.orderId === order.orderId && selected.shopId === order.shopId
-            //         );
-            //         return isSubmitted ? { ...order, submittedToAmazon: true } : order;
-            //     })
-            // );
+            setOrders(prevOrders => 
+                prevOrders.map(order => {
+                    const isSubmitted = selectedOrders.some(
+                        selected => selected.orderId === order.orderId && selected.shopId === order.shopId
+                    );
+                    return isSubmitted ? { ...order, submittedToAmazon: true } : order;
+                })
+            );
             
-            // // Cập nhật stats
-            // setStats(prevStats => ({
-            //     ...prevStats,
-            //     totalSubmitted: (prevStats.totalSubmitted || 0) + selectedOrders.length,
-            //     totalNotSubmitted: (prevStats.totalNotSubmitted || 0) - selectedOrders.length
-            // }));
+            // Cập nhật stats
+            setStats(prevStats => ({
+                ...prevStats,
+                totalSubmitted: (prevStats.totalSubmitted || 0) + selectedOrders.length,
+                totalNotSubmitted: (prevStats.totalNotSubmitted || 0) - selectedOrders.length
+            }));
             
-            // setSelectedOrders([]);
+            setSelectedOrders([]);
+            
+            // Hỏi user có muốn reload để cập nhật dữ liệu mới nhất không
+            const shouldReload = window.confirm('Đẩy đơn thành công! Bạn có muốn tải lại dữ liệu để cập nhật trạng thái mới nhất không?');
+            if (shouldReload) {
+                fetchData();
+            }
         } catch (err) {
             console.error('Push orders error:', err);
             alert(err.message || 'Có lỗi khi đẩy đơn');
