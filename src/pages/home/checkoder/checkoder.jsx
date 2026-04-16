@@ -400,6 +400,22 @@ const CheckOder = () => {
         );
     }
 
+    // Chưa chọn shop lần đầu
+    if (!selectedShop && !showShopModal) {
+        return (
+            <div style={styles.page}>
+                <div style={styles.emptyShopBox}>
+                    <div style={styles.emptyShopIcon}>🏪</div>
+                    <div style={styles.emptyShopTitle}>Vui lòng chọn shop để xem tracking</div>
+                    <div style={styles.emptyShopSub}>Bạn cần chọn một shop để bắt đầu theo dõi trạng thái đơn hàng</div>
+                    <button onClick={() => setShowShopModal(true)} style={styles.emptyShopBtn}>
+                        Chọn shop
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={styles.page}>
             {/* Loading Overlay */}
@@ -415,7 +431,15 @@ const CheckOder = () => {
             {showShopModal && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalContent}>
-                        <h3 style={styles.modalTitle}>Chọn Shop</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <h3 style={styles.modalTitle}>Chọn Shop</h3>
+                            <button
+                                onClick={() => setShowShopModal(false)}
+                                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}
+                            >
+                                ✕
+                            </button>
+                        </div>
                         <p style={styles.modalSubtitle}>Vui lòng chọn shop để tiếp tục</p>
 
                         {loadingShops ? (
@@ -449,7 +473,15 @@ const CheckOder = () => {
                             </div>
                         )}
 
-                        <div style={styles.modalActions}>
+                        <div style={{ ...styles.modalActions, justifyContent: 'space-between' }}>
+                            {selectedShop && (
+                                <button
+                                    onClick={() => setShowShopModal(false)}
+                                    style={styles.cancelButton}
+                                >
+                                    Huỷ
+                                </button>
+                            )}
                             <button
                                 onClick={handleConfirmShop}
                                 disabled={!tempSelectedShop || loadingShops}
@@ -1146,6 +1178,48 @@ const styles = {
         fontSize: '12px',
         fontWeight: 600,
         cursor: 'pointer'
+    },
+    cancelButton: {
+        border: '1px solid #e2e8f0',
+        borderRadius: '12px',
+        padding: '12px 24px',
+        background: '#fff',
+        color: '#64748b',
+        fontWeight: 600,
+        cursor: 'pointer',
+    },
+    emptyShopBox: {
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+    },
+    emptyShopIcon: {
+        fontSize: '64px',
+        marginBottom: '8px',
+    },
+    emptyShopTitle: {
+        fontSize: '20px',
+        fontWeight: 700,
+        color: '#0f172a',
+    },
+    emptyShopSub: {
+        fontSize: '14px',
+        color: '#64748b',
+        marginBottom: '8px',
+    },
+    emptyShopBtn: {
+        border: 'none',
+        borderRadius: '12px',
+        padding: '12px 28px',
+        background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+        color: '#fff',
+        fontWeight: 600,
+        cursor: 'pointer',
+        fontSize: '15px',
+        boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)',
     },
     disabledCheckbox: {
         color: '#9ca3af',
