@@ -129,11 +129,12 @@ export default function DynamicImageUploadBatch({
         <Button icon={<CloudUploadOutlined />} type="default" onClick={uploadAll} disabled={disabled || !itemsReady.length}>
           Upload
         </Button>
-        {!hideAddButton && (
+        {
+          // !hideAddButton &&
           <Button type="dashed" icon={<MdAdd />} onClick={addSlot} disabled={!canAdd || disabled}>
             Add
           </Button>
-        )}
+        }
       </div>
 
       <div
