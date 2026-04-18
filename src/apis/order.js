@@ -76,6 +76,10 @@ const trackingOrder = (orderId, orderItemId, payload) => {
   return instance.put(`/order/${orderId}/items/${orderItemId}/tracking`, payload);
 };
 
+const updateOrderItemQuantity = (orderId, orderItemId, payload) => {
+  return instance.patch(`/order/${orderId}/items/${orderItemId}/quantity`, payload);
+};
+
 const uploadScale = (orderId, orderItemId, payload) => {
   return instance.post(`/scale/orders/${orderId}/items/${orderItemId}/fulfillment-file`, payload, {
     headers: {
@@ -160,6 +164,7 @@ export {
   updateImage,
   retestBasecode,
   trackingOrder,
+  updateOrderItemQuantity,
   uploadScale,
   scaleFulfill,
   getAllQC,

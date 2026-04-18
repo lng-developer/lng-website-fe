@@ -526,6 +526,11 @@ const Home = () => {
     }
   }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchCountStatus, filters]);
 
+  const handleQuantityUpdated = useCallback(() => {
+    fetchAllOrder(filters);
+    fetchCountStatus();
+  }, [fetchAllOrder, fetchCountStatus, filters]);
+
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
     try {
@@ -737,7 +742,15 @@ const Home = () => {
           />
         ),
         customer: <SubItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
-        quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
+        quantity: (
+          <SubItemQuantity
+            quantity={itemSub?.quantity}
+            orderId={item?.orderId}
+            orderItemId={itemSub?.orderItemId}
+            editable={true}
+            onUpdated={handleQuantityUpdated}
+          />
+        ),
         cost_center: (
           <SubItemCost
             data={itemSub?.cost_center}
@@ -780,6 +793,7 @@ const Home = () => {
     appliedOrders,
     editingOrders,
     handleProductChange,
+    handleQuantityUpdated,
     handleSizeChange,
     handleColorChange,
     handleVariantDataChange,
