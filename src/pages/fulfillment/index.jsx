@@ -66,7 +66,7 @@ const FulfillmentScale = () => {
     search: '',
     shopName: '',
   });
-  const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader';
+  const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader' || user?.role === 'Design';
 
   const updateLastUpdatedAt = useCallback(() => {
     const now = new Date();
@@ -273,9 +273,10 @@ const FulfillmentScale = () => {
     try {
       const result = await getAllUsers({ all: true, perPage: 1000 });
       const users = Array.isArray(result.data) ? result.data : result.data?.data || [];
+      const assignableRoles = ['Customer Service', 'Designer', 'Design Leader'];
       const filteredCsUsers = users.filter((item) => {
         const roleName = item?.role_name || item?.role_id?.name || item?.role?.name;
-        return roleName === 'Customer Service';
+        return assignableRoles.includes(roleName);
       });
 
       setCsUsers(filteredCsUsers);
@@ -375,12 +376,12 @@ const FulfillmentScale = () => {
       assignCS: (
         <Select
           className="min-w-[220px] text-left"
-          placeholder="Select customer service"
+          placeholder="Select assignee"
           value={item?.cs_assignee?._id || item?.csAssigneeId}
           onChange={(value) => handleAssignCs(item, value)}
           options={csUsers.map((userItem) => ({
             value: userItem?._id,
-            label: `${userItem?.full_name || userItem?.email || 'Unknown'} - ${userItem?.email || 'No email'}`,
+            label: `${userItem?.full_name || userItem?.email || 'Unknown'} - ${userItem?.role_name || userItem?.role_id?.name || userItem?.role?.name || 'No role'}`,
           }))}
           showSearch
           optionFilterProp="label"
