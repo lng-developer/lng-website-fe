@@ -183,7 +183,7 @@ const ConfigAuto = () => {
                                   onChange={(e) => handleTimeChange(cfg, Number(e.target.value))}
                                   style={S.select}
                                 >
-                                  {[5, 60, 120, 240, 720].map(t => (
+                                  {[5,30, 60, 120, 240, 720].map(t => (
                                     <option key={t} value={t}>{t} phút</option>
                                   ))}
                                 </select>
