@@ -1,8 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
 import { getAllShop } from '../../../apis/shop';
-import ExcelJS from 'exceljs';
+import { checkOrdersStatus, createShippingBatchFromOrders } from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
+
+const getCarrierInfo = (tracking) => {
+    const t = (tracking || '').toUpperCase();
+    if (t.startsWith('4PX')) {
+        return { carrierCode: '4PX', shipMethod: '4PX-Global Express' };
+    }
+    if (t.startsWith('UK') || t.startsWith('UL')) {
+        return { carrierCode: 'Yanwen', shipMethod: 'Yanwen Air Economy Mail General' };
+    }
+    if (t.startsWith('YT')) {
+        return {
+            carrierCode: 'Yun Express',
+            shipMethod: 'YunExpress Global Direct line (standard )-Tracked'
+        };
+    }
+    return { carrierCode: 'USPS', shipMethod: 'USPS First Class' };
+};
+
+const formatShipDate = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
 
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
@@ -14,7 +32,6 @@ const CheckOder = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
 
-    // Shop selection states
     const [shops, setShops] = useState([]);
     const [selectedShop, setSelectedShop] = useState(null);
     const [showShopModal, setShowShopModal] = useState(true);
@@ -25,26 +42,12 @@ const CheckOder = () => {
     const [submitting, setSubmitting] = useState(false);
     const [exporting, setExporting] = useState(false);
 
-    // Add CSS animation for spinner
-    useEffect(() => {
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-        return () => document.head.removeChild(style);
-    }, []);
-
     useEffect(() => {
         getShop();
     }, []);
 
     useEffect(() => {
         if (selectedShop && !showShopModal) {
-            console.log('Selected shop changed, fetching data...');
             fetchData();
         }
     }, [selectedShop, limit]);
@@ -53,7 +56,6 @@ const CheckOder = () => {
         try {
             setLoadingShops(true);
             const res = await getAllShop();
-            console.log("SHOP RES :", res);
             setShops(res.data || []);
         } catch (error) {
             console.error('Lỗi khi lấy danh sách shop:', error);
@@ -67,7 +69,6 @@ const CheckOder = () => {
         if (tempSelectedShop) {
             setSelectedShop(tempSelectedShop);
             setShowShopModal(false);
-            // Reset states khi chọn shop mới
             setOrders([]);
             setStats({});
             setSelectedOrders([]);
@@ -75,17 +76,14 @@ const CheckOder = () => {
             setFilterTracking('all');
             setFilterAmazon('all');
             setSearchTerm('');
-            // Sẽ tự động call fetchData thông qua useEffect
         }
     };
 
     const handleChangeShop = () => {
         setShowShopModal(true);
         setTempSelectedShop(selectedShop);
-        // Reset error khi mở modal chọn shop
         setError(null);
     };
-
 
     const fetchData = async () => {
         if (!selectedShop) {
@@ -98,15 +96,11 @@ const CheckOder = () => {
             setLoading(true);
             setError(null);
 
-            console.log('Fetching data for shop:', selectedShop.name, 'ID:', selectedShop._id);
+            const res = await checkOrdersStatus({
+                machineId: selectedShop._id,
+                limit
+            });
 
-            const res = await axios.get(
-                `https://api.lngmerch.co/api/shipping-batch/check-orders-status?machineId=${encodeURIComponent(
-                    selectedShop._id
-                )}&limit=${limit}`
-            );
-
-            console.log("CHECK RES :", res);
             setOrders(res.data.orders || []);
             setStats(res.data.stats || {});
             setSelectedOrders([]);
@@ -152,23 +146,17 @@ const CheckOder = () => {
     const handleSelectOrder = (order) => {
         if (!order.orderId || !order.shopId || order.submittedToAmazon) return;
 
-        const payload = {
-            orderId: order.orderId,
-            shopId: order.shopId
-        };
+        const payload = { orderId: order.orderId, shopId: order.shopId };
 
         setSelectedOrders((prev) => {
             const exists = prev.some(
                 (item) => item.orderId === payload.orderId && item.shopId === payload.shopId
             );
-
             if (exists) {
                 return prev.filter(
-                    (item) =>
-                        !(item.orderId === payload.orderId && item.shopId === payload.shopId)
+                    (item) => !(item.orderId === payload.orderId && item.shopId === payload.shopId)
                 );
             }
-
             return [...prev, payload];
         });
     };
@@ -186,10 +174,7 @@ const CheckOder = () => {
     const handleSelectAllFiltered = () => {
         const validFilteredOrders = filteredOrders
             .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon)
-            .map((order) => ({
-                orderId: order.orderId,
-                shopId: order.shopId
-            }));
+            .map((order) => ({ orderId: order.orderId, shopId: order.shopId }));
 
         if (isAllFilteredSelected) {
             setSelectedOrders((prev) =>
@@ -205,120 +190,49 @@ const CheckOder = () => {
         } else {
             setSelectedOrders((prev) => {
                 const merged = [...prev];
-
                 validFilteredOrders.forEach((item) => {
                     const exists = merged.some(
                         (x) => x.orderId === item.orderId && x.shopId === item.shopId
                     );
                     if (!exists) merged.push(item);
                 });
-
                 return merged;
             });
         }
     };
 
-    const handleExportExcel = async () => {
-        if (filteredOrders.length === 0) {
-            alert('Không có dữ liệu để xuất');
+    const handleExportTxt = async () => {
+        const rows = filteredOrders.filter((o) => o.orderId && o.tracking);
+
+        if (rows.length === 0) {
+            alert('Không có đơn có tracking để xuất');
             return;
         }
 
         try {
             setExporting(true);
 
-            const wb = new ExcelJS.Workbook();
-            const ws = wb.addWorksheet('Kiểm tra đơn hàng', {
-                properties: { defaultRowHeight: 18 }
+            const shipDate = formatShipDate(new Date());
+            const header = ['order-id', 'ship-date', 'carrier-code', 'tracking-number', 'ship-method'].join('\t');
+
+            const lines = rows.map((o) => {
+                const { carrierCode, shipMethod } = getCarrierInfo(o.tracking);
+                return [o.orderId, shipDate, carrierCode, o.tracking, shipMethod].join('\t');
             });
 
-            // Header row
-            const headers = [
-                'Order ID',
-                'Tên Shop',
-                'Shop ID',
-                'Trạng thái',
-                'Ngày tạo',
-                'Có Tracking',
-                'Mã Tracking',
-                'Up to AMZ',
-                'Số lượng',
-                'Fulfillment',
-                'Updated At'
-            ];
+            const content = [header, ...lines].join('\n') + '\n';
 
-            ws.addRow(headers);
-
-            // Style header
-            const headerRow = ws.getRow(1);
-            headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
-            headerRow.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '2563eb' }
-            };
-            headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-
-            // Add data rows
-            filteredOrders.forEach((order) => {
-                ws.addRow([
-                    order.orderId || '',
-                    order.shopName || '',
-                    order.shopId || '',
-                    order.status || '',
-                    order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : '',
-                    order.hasTracking ? 'Có' : 'Không',
-                    order.tracking || '',
-                    order.submittedToAmazon ? 'Có' : 'Không',
-                    order.itemsCount || 0,
-                    order.trackingInfo?.fulfillment || '',
-                    order.trackingInfo?.updated_at
-                        ? new Date(order.trackingInfo.updated_at).toLocaleString('vi-VN')
-                        : ''
-                ]);
-            });
-
-            // Auto-fit columns
-            ws.columns.forEach((column) => {
-                let maxLength = 0;
-                column.eachCell({ includeEmpty: true }, (cell) => {
-                    const columnLength = cell.value ? cell.value.toString().length : 10;
-                    if (columnLength > maxLength) {
-                        maxLength = columnLength;
-                    }
-                });
-                column.width = Math.min(maxLength + 2, 50);
-            });
-
-            // Add borders
-            ws.eachRow((row) => {
-                row.eachCell((cell) => {
-                    cell.border = {
-                        top: { style: 'thin' },
-                        left: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        right: { style: 'thin' }
-                    };
-                });
-            });
-
-            // Generate filename with timestamp and shop name
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
             const shopName = selectedShop?.name || 'AllShops';
-            const filename = `CheckOrder_${shopName}_${timestamp}.xlsx`;
+            const filename = `ConfirmShip_${shopName}_${timestamp}.txt`;
 
-            // Save file
-            const buffer = await wb.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             saveAs(blob, filename);
 
-            alert(`Xuất Excel thành công: ${filteredOrders.length} đơn hàng`);
-
+            alert(`Xuất TXT thành công: ${rows.length} đơn hàng`);
         } catch (error) {
-            console.error('Export Excel error:', error);
-            alert('Có lỗi khi xuất Excel');
+            console.error('Export TXT error:', error);
+            alert('Có lỗi khi xuất TXT');
         } finally {
             setExporting(false);
         }
@@ -329,7 +243,6 @@ const CheckOder = () => {
             alert('Vui lòng chọn shop.');
             return;
         }
-
         if (selectedOrders.length === 0) {
             alert('Vui lòng chọn ít nhất 1 đơn hàng.');
             return;
@@ -337,56 +250,40 @@ const CheckOder = () => {
 
         try {
             setSubmitting(true);
-
-            const response = await fetch(
-                'https://api.lngmerch.co/api/shipping-batch/create-from-orders',
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        machineId: selectedShop._id,
-                        orders: selectedOrders,
-                        label: 'Manual Upload',
-                        autoUpload: true
-                    })
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data?.message || 'Đẩy đơn thất bại');
-            }
+            await createShippingBatchFromOrders({
+                machineId: selectedShop._id,
+                orders: selectedOrders,
+                label: 'Manual Upload',
+                autoUpload: true
+            });
 
             alert(`Đẩy đơn thành công: ${selectedOrders.length} đơn`);
-            
-            // Cập nhật trạng thái local thay vì reload toàn bộ
-            setOrders(prevOrders => 
-                prevOrders.map(order => {
+
+            setOrders((prevOrders) =>
+                prevOrders.map((order) => {
                     const isSubmitted = selectedOrders.some(
-                        selected => selected.orderId === order.orderId && selected.shopId === order.shopId
+                        (selected) =>
+                            selected.orderId === order.orderId && selected.shopId === order.shopId
                     );
                     return isSubmitted ? { ...order, submittedToAmazon: true } : order;
                 })
             );
-            
-            // Cập nhật stats
-            setStats(prevStats => ({
+
+            setStats((prevStats) => ({
                 ...prevStats,
                 totalSubmitted: (prevStats.totalSubmitted || 0) + selectedOrders.length,
                 totalNotSubmitted: (prevStats.totalNotSubmitted || 0) - selectedOrders.length
             }));
-            
+
             setSelectedOrders([]);
-            
-            // Hỏi user có muốn reload để cập nhật dữ liệu mới nhất không
-            const shouldReload = window.confirm('Đẩy đơn thành công! Bạn có muốn tải lại dữ liệu để cập nhật trạng thái mới nhất không?');
-            if (shouldReload) {
-                fetchData();
-            }
+
+            const shouldReload = window.confirm(
+                'Đẩy đơn thành công! Bạn có muốn tải lại dữ liệu để cập nhật trạng thái mới nhất không?'
+            );
+            if (shouldReload) fetchData();
         } catch (err) {
             console.error('Push orders error:', err);
-            alert(err.message || 'Có lỗi khi đẩy đơn');
+            alert(err.response?.data?.message || err.message || 'Có lỗi khi đẩy đơn');
         } finally {
             setSubmitting(false);
         }
@@ -394,21 +291,29 @@ const CheckOder = () => {
 
     if (error) {
         return (
-            <div style={styles.page}>
-                <div style={{ ...styles.centerBox, color: '#dc2626' }}>{error}</div>
+            <div className="h-screen bg-white flex items-center justify-center p-4">
+                <div className="text-neutral-900 text-base font-medium">{error}</div>
             </div>
         );
     }
 
-    // Chưa chọn shop lần đầu
     if (!selectedShop && !showShopModal) {
         return (
-            <div style={styles.page}>
-                <div style={styles.emptyShopBox}>
-                    <div style={styles.emptyShopIcon}>🏪</div>
-                    <div style={styles.emptyShopTitle}>Vui lòng chọn shop để xem tracking</div>
-                    <div style={styles.emptyShopSub}>Bạn cần chọn một shop để bắt đầu theo dõi trạng thái đơn hàng</div>
-                    <button onClick={() => setShowShopModal(true)} style={styles.emptyShopBtn}>
+            <div className="h-screen bg-white flex items-center justify-center p-4">
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-3xl font-bold">
+                        S
+                    </div>
+                    <div className="text-xl font-bold text-neutral-900 mt-2">
+                        Vui lòng chọn shop để xem tracking
+                    </div>
+                    <div className="text-sm text-neutral-500 mb-2">
+                        Bạn cần chọn một shop để bắt đầu theo dõi trạng thái đơn hàng
+                    </div>
+                    <button
+                        onClick={() => setShowShopModal(true)}
+                        className="px-6 py-3 rounded-xl bg-neutral-900 !text-white font-semibold hover:bg-neutral-800 hover:!text-white transition-colors"
+                    >
                         Chọn shop
                     </button>
                 </div>
@@ -417,79 +322,118 @@ const CheckOder = () => {
     }
 
     return (
-        <div style={styles.page}>
+        <div className="h-screen overflow-hidden bg-neutral-50 p-3 box-border">
             {/* Loading Overlay */}
             {loading && selectedShop && (
-                <div style={styles.loadingOverlay}>
-                    <div style={styles.loadingContent}>
-                        <div style={styles.spinner}></div>
-                        <div style={styles.loadingText}>Đang tải dữ liệu đơn hàng...</div>
+                <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-[2000]">
+                    <div className="flex flex-col items-center gap-4 bg-white rounded-2xl px-8 py-7 shadow-xl border border-neutral-200">
+                        <div className="w-10 h-10 border-[3px] border-neutral-200 border-t-neutral-900 rounded-full animate-spin"></div>
+                        <div className="text-sm font-semibold text-neutral-900">
+                            Đang tải dữ liệu đơn hàng...
+                        </div>
                     </div>
                 </div>
             )}
+
             {/* Shop Selection Modal */}
             {showShopModal && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <h3 style={styles.modalTitle}>Chọn Shop</h3>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-xl max-h-[80vh] overflow-auto shadow-2xl border border-neutral-200">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-2xl font-bold text-neutral-900 m-0">Chọn Shop</h3>
                             <button
                                 onClick={() => setShowShopModal(false)}
-                                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}
+                                className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors flex items-center justify-center text-lg"
                             >
                                 ✕
                             </button>
                         </div>
-                        <p style={styles.modalSubtitle}>Vui lòng chọn shop để tiếp tục</p>
+                        <p className="text-sm text-neutral-500 mb-5">
+                            Vui lòng chọn shop để tiếp tục
+                        </p>
 
                         {loadingShops ? (
-                            <div style={styles.modalLoading}>Đang tải danh sách shop...</div>
+                            <div className="text-center py-10 text-neutral-500">
+                                Đang tải danh sách shop...
+                            </div>
                         ) : (
-                            <div style={styles.shopList}>
-                                {shops.map((shop) => (
-                                    <div
-                                        key={shop._id}
-                                        onClick={() => setTempSelectedShop(shop)}
-                                        style={{
-                                            ...styles.shopItem,
-                                            ...(tempSelectedShop?._id === shop._id ? styles.shopItemSelected : {})
-                                        }}
-                                    >
-                                        <div style={styles.shopInfo}>
-                                            <div style={styles.shopName}>{shop.name}</div>
-                                            <div style={styles.shopStore}>{shop.store} - {shop.merchant}</div>
-                                            <div style={styles.shopStatus}>
-                                                <span style={{
-                                                    ...styles.statusBadge,
-                                                    backgroundColor: shop.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                    color: shop.status === 'Active' ? '#166534' : '#991b1b'
-                                                }}>
+                            <div className="grid gap-2 mb-6 max-h-[400px] overflow-auto pr-1">
+                                {shops.map((shop) => {
+                                    const isSelected = tempSelectedShop?._id === shop._id;
+                                    return (
+                                        <div
+                                            key={shop._id}
+                                            onClick={() => setTempSelectedShop(shop)}
+                                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                                                isSelected
+                                                    ? 'border-neutral-900 bg-neutral-900 text-white'
+                                                    : 'border-neutral-200 bg-white hover:border-neutral-400'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
+                                                        isSelected
+                                                            ? 'bg-white text-neutral-900'
+                                                            : 'bg-neutral-900 text-white'
+                                                    }`}
+                                                >
+                                                    {shop.name?.charAt(0).toUpperCase() || '?'}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-semibold text-base truncate">
+                                                        {shop.name}
+                                                    </div>
+                                                    <div
+                                                        className={`text-xs truncate ${
+                                                            isSelected
+                                                                ? 'text-neutral-300'
+                                                                : 'text-neutral-500'
+                                                        }`}
+                                                    >
+                                                        {shop.store} - {shop.merchant}
+                                                    </div>
+                                                </div>
+                                                <span
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                        isSelected
+                                                            ? 'bg-white/10 text-white'
+                                                            : shop.status === 'Active'
+                                                            ? 'bg-neutral-900 text-white'
+                                                            : 'bg-neutral-200 text-neutral-600'
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`w-1.5 h-1.5 rounded-full ${
+                                                            shop.status === 'Active'
+                                                                ? 'bg-green-400'
+                                                                : 'bg-neutral-400'
+                                                        }`}
+                                                    ></span>
                                                     {shop.status}
                                                 </span>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 
-                        <div style={{ ...styles.modalActions, justifyContent: 'space-between' }}>
-                            {selectedShop && (
+                        <div className="flex justify-between gap-3">
+                            {selectedShop ? (
                                 <button
                                     onClick={() => setShowShopModal(false)}
-                                    style={styles.cancelButton}
+                                    className="px-6 py-3 rounded-xl border border-neutral-200 bg-white text-neutral-900 font-semibold hover:bg-neutral-100 transition-colors"
                                 >
                                     Huỷ
                                 </button>
+                            ) : (
+                                <div />
                             )}
                             <button
                                 onClick={handleConfirmShop}
                                 disabled={!tempSelectedShop || loadingShops}
-                                style={{
-                                    ...styles.confirmButton,
-                                    opacity: !tempSelectedShop || loadingShops ? 0.6 : 1,
-                                    cursor: !tempSelectedShop || loadingShops ? 'not-allowed' : 'pointer'
-                                }}
+                                className="px-6 py-3 rounded-xl bg-neutral-900 !text-white font-semibold hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Xác nhận
                             </button>
@@ -498,124 +442,130 @@ const CheckOder = () => {
                 </div>
             )}
 
-            <div style={styles.container}>
-                <div style={styles.header}>
-                    <div>
-                        <h2 style={styles.title}>Kiểm tra trạng thái đơn hàng</h2>
-                        <p style={styles.subtitle}>
-                            Theo dõi đơn hàng, trạng thái tracking và hiệu suất quét
-                        </p>
+            <div className="h-full flex flex-col gap-2 overflow-hidden">
+                {/* Toolbar: title + stats + shop + limit + reload */}
+                <div className="flex items-center gap-3 bg-white border border-neutral-200 rounded-xl px-4 py-2">
+                    <div className="flex items-center gap-2 pr-3 border-r border-neutral-200">
+                        <div>
+                            <h2 className="m-0 text-sm font-bold text-neutral-900 leading-tight">
+                                Kiểm tra đơn hàng
+                            </h2>
+                            <p className="m-0 text-[11px] text-neutral-500 leading-tight">
+                                Tracking & hiệu suất
+                            </p>
+                        </div>
                     </div>
 
-                    <div style={styles.headerActions}>
-                        <div style={styles.limitBox}>
-                            <span style={styles.limitLabel}>Shop</span>
-                            <span style={styles.shopDisplay}>
+                    {/* Inline stats */}
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
+                        {[
+                            { label: 'Tổng', value: stats.totalScanned || 0, dark: true },
+                            { label: 'Có tracking', value: stats.totalWithTracking || 0, dot: 'bg-green-500' },
+                            { label: 'Không tracking', value: stats.totalWithoutTracking || 0, dot: 'bg-neutral-400' },
+                            { label: 'Đã submit', value: stats.totalSubmitted || 0, dot: 'bg-neutral-900' },
+                            { label: 'Chưa submit', value: stats.totalNotSubmitted || 0, dot: 'bg-neutral-300' }
+                        ].map((s, i) => (
+                            <div
+                                key={i}
+                                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border whitespace-nowrap ${
+                                    s.dark
+                                        ? 'bg-neutral-900 border-neutral-900 text-white'
+                                        : 'bg-neutral-50 border-neutral-200 text-neutral-900'
+                                }`}
+                            >
+                                {s.dot && <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span>}
+                                <span className={`text-[11px] font-semibold ${s.dark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                                    {s.label}
+                                </span>
+                                <span className="text-sm font-bold">{s.value}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Shop</span>
+                            <span className="text-xs text-neutral-900 font-semibold max-w-[120px] truncate">
                                 {selectedShop ? selectedShop.name : 'Chưa chọn'}
                             </span>
-                            <button onClick={handleChangeShop} style={styles.changeShopButton}>
+                            <button
+                                onClick={handleChangeShop}
+                                className="border border-neutral-300 rounded px-1.5 py-0.5 bg-white text-neutral-900 text-[10px] font-semibold hover:bg-neutral-100 hover:border-neutral-400 transition-colors"
+                            >
                                 Đổi
                             </button>
                         </div>
 
-                        <div style={styles.limitBox}>
-                            <span style={styles.limitLabel}>Limit</span>
-                            <select
-                                value={limit}
-                                onChange={(e) => setLimit(Number(e.target.value))}
-                                style={styles.limitSelect}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                                <option value={500}>500</option>
-                                <option value={1000}>1000</option>
-                            </select>
-                        </div>
+                        <select
+                            value={limit}
+                            onChange={(e) => setLimit(Number(e.target.value))}
+                            className="bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1.5 text-xs text-neutral-900 font-semibold cursor-pointer outline-none"
+                        >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                            <option value={500}>500</option>
+                            <option value={1000}>1000</option>
+                        </select>
 
                         <button
                             onClick={fetchData}
                             disabled={!selectedShop || loading}
-                            style={{
-                                ...styles.primaryButton,
-                                opacity: !selectedShop || loading ? 0.6 : 1,
-                                cursor: !selectedShop || loading ? 'not-allowed' : 'pointer'
-                            }}
+                            className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {loading ? 'Đang tải...' : 'Tải lại'}
+                            {loading ? '...' : 'Tải lại'}
                         </button>
                     </div>
                 </div>
 
-                <div style={styles.statsGrid}>
-                    <div style={styles.statCard}>
-                        <div style={styles.statLabel}>Tổng quét</div>
-                        <div style={styles.statValue}>{stats.totalScanned || 0}</div>
+                {/* Filter Bar */}
+                <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
+                    <div className="relative flex-1 min-w-0">
+                        <svg
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-1.5 text-xs bg-neutral-50 outline-none focus:bg-white focus:border-neutral-900 transition-colors"
+                        />
                     </div>
-                    <div style={styles.statCard}>
-                        <div style={styles.statLabel}>Có tracking</div>
-                        <div style={{ ...styles.statValue, color: '#16a34a' }}>
-                            {stats.totalWithTracking || 0}
-                        </div>
-                    </div>
-                    <div style={styles.statCard}>
-                        <div style={styles.statLabel}>Không tracking</div>
-                        <div style={{ ...styles.statValue, color: '#dc2626' }}>
-                            {stats.totalWithoutTracking || 0}
-                        </div>
-                    </div>
-                    <div style={styles.statCard}>
-                        <div style={styles.statLabel}>Đã submit</div>
-                        <div style={styles.statValue}>{stats.totalSubmitted || 0}</div>
-                    </div>
-                    <div style={styles.statCard}>
-                        <div style={styles.statLabel}>Chưa submit</div>
-                        <div style={styles.statValue}>{stats.totalNotSubmitted || 0}</div>
-                    </div>
-                </div>
 
-                <div style={styles.filterBar}>
-                    <input
-                        type="text"
-                        placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={styles.searchInput}
-                    />
-
-                    <div style={styles.filterButtons}>
-                        {/* Tracking Filter Dropdown */}
-                        <div style={styles.filterGroup}>
-                            <span style={styles.filterLabel}>Tracking:</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Tracking</span>
                             <select
                                 value={filterTracking}
                                 onChange={(e) => setFilterTracking(e.target.value)}
                                 disabled={loading}
-                                style={{
-                                    ...styles.filterSelect,
-                                    opacity: loading ? 0.6 : 1,
-                                    cursor: loading ? 'not-allowed' : 'pointer'
-                                }}
+                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
                             >
                                 <option value="all">Tất cả</option>
-                                <option value="yes">Có tracking</option>
-                                <option value="no">Không tracking</option>
+                                <option value="yes">Có</option>
+                                <option value="no">Không</option>
                             </select>
                         </div>
 
-                        {/* Amazon Filter Dropdown */}
-                        <div style={styles.filterGroup}>
-                            <span style={styles.filterLabel}>Up to AMZ:</span>
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">AMZ</span>
                             <select
                                 value={filterAmazon}
                                 onChange={(e) => setFilterAmazon(e.target.value)}
                                 disabled={loading}
-                                style={{
-                                    ...styles.filterSelect,
-                                    opacity: loading ? 0.6 : 1,
-                                    cursor: loading ? 'not-allowed' : 'pointer'
-                                }}
+                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
                             >
                                 <option value="all">Tất cả</option>
                                 <option value="yes">Đã submit</option>
@@ -624,646 +574,190 @@ const CheckOder = () => {
                         </div>
 
                         <button
-                            onClick={handleExportExcel}
+                            onClick={handleExportTxt}
                             disabled={exporting || filteredOrders.length === 0 || loading}
-                            style={{
-                                ...styles.exportButton,
-                                opacity: exporting || filteredOrders.length === 0 || loading ? 0.6 : 1,
-                                cursor: exporting || filteredOrders.length === 0 || loading ? 'not-allowed' : 'pointer'
-                            }}
+                            className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-semibold text-xs hover:bg-neutral-100 hover:border-neutral-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {exporting ? 'Đang xuất...' : `Xuất Excel (${filteredOrders.length})`}
+                            {exporting ? '...' : `Xuất TXT (${filteredOrders.filter((o) => o.orderId && o.tracking).length})`}
                         </button>
 
                         <button
                             onClick={handlePushOrders}
                             disabled={submitting || selectedOrders.length === 0 || loading}
-                            style={{
-                                ...styles.pushButton,
-                                opacity: submitting || selectedOrders.length === 0 || loading ? 0.6 : 1,
-                                cursor:
-                                    submitting || selectedOrders.length === 0 || loading
-                                        ? 'not-allowed'
-                                        : 'pointer'
-                            }}
+                            className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {submitting
-                                ? 'Đang đẩy...'
-                                : `Đẩy đơn (${selectedOrders.length})`}
+                            {submitting ? '...' : `Đẩy đơn (${selectedOrders.length})`}
                         </button>
                     </div>
                 </div>
 
-                <div style={styles.tableCard}>
-                    <div style={styles.tableInfo}>
-                        <span>
-                            Shop: <strong>{selectedShop ? selectedShop.name : '-'}</strong> | Hiển thị{' '}
-                            <strong>{filteredOrders.length}</strong> đơn hàng | Đã chọn{' '}
-                            <strong>{selectedOrders.length}</strong>
-                        </span>
-                    </div>
-
-                    <div style={styles.tableScroll}>
-                        <table style={styles.table}>
+                {/* Table Card */}
+                <div className="flex-1 min-h-0 flex flex-col bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                    <div className="flex-1 min-h-0 overflow-auto">
+                        <table className="w-full border-separate border-spacing-0 text-xs">
                             <thead>
                                 <tr>
-                                    <th style={styles.thCheckbox}>
+                                    <th className="sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-center px-2 py-2 border-b border-neutral-200 w-10">
                                         <input
                                             type="checkbox"
                                             checked={isAllFilteredSelected}
                                             onChange={handleSelectAllFiltered}
-                                            disabled={loading || filteredOrders.filter(order => order.orderId && order.shopId && !order.submittedToAmazon).length === 0}
+                                            disabled={
+                                                loading ||
+                                                filteredOrders.filter(
+                                                    (o) => o.orderId && o.shopId && !o.submittedToAmazon
+                                                ).length === 0
+                                            }
+                                            className="accent-neutral-900 cursor-pointer"
                                         />
                                     </th>
-                                    <th style={styles.th}>Order ID</th>
-                                    <th style={styles.th}>Tên Shop</th>
-                                    <th style={styles.th}>Shop ID</th>
-                                    <th style={styles.th}>Trạng thái</th>
-                                    <th style={styles.th}>Ngày tạo</th>
-                                    <th style={styles.th}>Tracking</th>
-                                    <th style={styles.th}>Mã tracking</th>
-                                    <th style={styles.th}>Up to AMZ</th>
-                                    <th style={styles.th}>Số lượng</th>
-                                    <th style={styles.th}>Fulfillment</th>
-                                    <th style={styles.th}>Updated At</th>
+                                    {[
+                                        'Order ID',
+                                        'Tên Shop',
+                                        'Shop ID',
+                                        'Trạng thái',
+                                        'Ngày tạo',
+                                        'Tracking',
+                                        'Mã tracking',
+                                        'AMZ',
+                                        'SL',
+                                        'Fulfillment',
+                                        'Updated At'
+                                    ].map((h) => (
+                                        <th
+                                            key={h}
+                                            className="sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-left px-3 py-2 border-b border-neutral-200 whitespace-nowrap"
+                                        >
+                                            {h}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="12" style={styles.emptyCell}>
+                                        <td colSpan="12" className="text-center py-10 text-neutral-500">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
                                 ) : filteredOrders.length > 0 ? (
-                                    filteredOrders.map((order) => (
-                                        <tr key={getOrderKey(order)} style={styles.tr}>
-                                            <td style={styles.tdCheckbox}>
-                                                {order.submittedToAmazon ? (
-                                                    <span style={styles.disabledCheckbox}>-</span>
-                                                ) : (
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isOrderSelected(order)}
-                                                        onChange={() => handleSelectOrder(order)}
-                                                        disabled={!order.orderId || !order.shopId}
-                                                    />
-                                                )}
-                                            </td>
-                                            <td style={styles.tdStrong}>{order.orderId || '-'}</td>
-                                            <td style={styles.td}>{order.shopName || '-'}</td>
-                                            <td style={styles.td}>{order.shopId || '-'}</td>
-                                            <td style={styles.td}>
-                                                <span style={styles.statusBadge}>
-                                                    {order.status || '-'}
-                                                </span>
-                                            </td>
-                                            <td style={styles.td}>
-                                                {order.createdAt
-                                                    ? new Date(order.createdAt).toLocaleString()
-                                                    : '-'}
-                                            </td>
-                                            <td style={styles.td}>
-                                                <span
-                                                    style={{
-                                                        ...styles.trackingBadge,
-                                                        backgroundColor: order.hasTracking
-                                                            ? '#dcfce7'
-                                                            : '#fee2e2',
-                                                        color: order.hasTracking
-                                                            ? '#166534'
-                                                            : '#991b1b'
-                                                    }}
-                                                >
-                                                    {order.hasTracking ? 'Có' : 'Không'}
-                                                </span>
-                                            </td>
-                                            <td style={styles.td}>{order.tracking || 'N/A'}</td>
-                                            <td style={styles.td}>
-                                                <span
-                                                    style={{
-                                                        ...styles.trackingBadge,
-                                                        backgroundColor: order.submittedToAmazon
-                                                            ? '#dcfce7'
-                                                            : '#fee2e2',
-                                                        color: order.submittedToAmazon
-                                                            ? '#166534'
-                                                            : '#991b1b'
-                                                    }}
-                                                >
-                                                    {order.submittedToAmazon ? 'Có' : 'Không'}
-                                                </span>
-                                            </td>
-                                            <td style={styles.td}>{order.itemsCount || 0}</td>
-                                            <td style={styles.td}>
-                                                {order.trackingInfo?.fulfillment || 'N/A'}
-                                            </td>
-                                            <td style={styles.td}>
-                                                {order.trackingInfo?.updated_at
-                                                    ? new Date(order.trackingInfo.updated_at).toLocaleString()
-                                                    : 'N/A'}
-                                            </td>
-                                        </tr>
-                                    ))
+                                    filteredOrders.map((order) => {
+                                        const selected = isOrderSelected(order);
+                                        return (
+                                            <tr
+                                                key={getOrderKey(order)}
+                                                className={`transition-colors ${
+                                                    selected
+                                                        ? 'bg-neutral-100'
+                                                        : 'hover:bg-neutral-50'
+                                                }`}
+                                            >
+                                                <td className="px-2 py-2 border-b border-neutral-100 text-center">
+                                                    {order.submittedToAmazon ? (
+                                                        <span className="text-neutral-300 font-bold">–</span>
+                                                    ) : (
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selected}
+                                                            onChange={() => handleSelectOrder(order)}
+                                                            disabled={!order.orderId || !order.shopId}
+                                                            className="accent-neutral-900 cursor-pointer"
+                                                        />
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold whitespace-nowrap">
+                                                    {order.orderId || '-'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 max-w-[180px] truncate">
+                                                    {order.shopName || '-'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.shopId || '-'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200 whitespace-nowrap">
+                                                        {order.status || '-'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.createdAt
+                                                        ? new Date(order.createdAt).toLocaleString()
+                                                        : '-'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                                                            order.hasTracking
+                                                                ? 'bg-neutral-900 text-white'
+                                                                : 'bg-white text-neutral-500 border border-neutral-300'
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`w-1.5 h-1.5 rounded-full ${
+                                                                order.hasTracking ? 'bg-green-400' : 'bg-neutral-400'
+                                                            }`}
+                                                        ></span>
+                                                        {order.hasTracking ? 'Có' : 'Không'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 font-mono whitespace-nowrap">
+                                                    {order.tracking || 'N/A'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                                                            order.submittedToAmazon
+                                                                ? 'bg-neutral-900 text-white'
+                                                                : 'bg-white text-neutral-500 border border-neutral-300'
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`w-1.5 h-1.5 rounded-full ${
+                                                                order.submittedToAmazon ? 'bg-green-400' : 'bg-neutral-400'
+                                                            }`}
+                                                        ></span>
+                                                        {order.submittedToAmazon ? 'Có' : 'Không'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold">
+                                                    {order.itemsCount || 0}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.trackingInfo?.fulfillment || 'N/A'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.trackingInfo?.updated_at
+                                                        ? new Date(order.trackingInfo.updated_at).toLocaleString()
+                                                        : 'N/A'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
-                                        <td colSpan="12" style={styles.emptyCell}>
-                                            {selectedShop ? 'Không có dữ liệu phù hợp' : 'Vui lòng chọn shop để xem dữ liệu'}
+                                        <td colSpan="12" className="text-center py-12 text-neutral-500">
+                                            {selectedShop
+                                                ? 'Không có dữ liệu phù hợp'
+                                                : 'Vui lòng chọn shop để xem dữ liệu'}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
+                    <div className="px-3 py-1.5 border-t border-neutral-200 text-[11px] text-neutral-500 flex items-center gap-3 bg-neutral-50">
+                        <span>
+                            Hiển thị <strong className="text-neutral-900">{filteredOrders.length}</strong>
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-neutral-300"></span>
+                        <span>
+                            Đã chọn <strong className="text-neutral-900">{selectedOrders.length}</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     );
-};
-
-const styles = {
-    page: {
-        height: '100vh',
-        overflow: 'hidden',
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)',
-        padding: '16px',
-        boxSizing: 'border-box'
-    },
-    container: {
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        overflow: 'hidden'
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '16px',
-        background: '#ffffffcc',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid #e5e7eb',
-        borderRadius: '20px',
-        padding: '20px 24px',
-        boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)'
-    },
-    title: {
-        margin: 0,
-        fontSize: '28px',
-        fontWeight: 700,
-        color: '#0f172a'
-    },
-    subtitle: {
-        margin: '6px 0 0',
-        fontSize: '14px',
-        color: '#64748b'
-    },
-    headerActions: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        flexWrap: 'wrap'
-    },
-    limitBox: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        padding: '8px 12px'
-    },
-    limitLabel: {
-        fontSize: '14px',
-        color: '#334155',
-        fontWeight: 600,
-        whiteSpace: 'nowrap'
-    },
-    limitSelect: {
-        border: 'none',
-        outline: 'none',
-        background: 'transparent',
-        fontSize: '14px',
-        color: '#0f172a',
-        cursor: 'pointer',
-        minWidth: '60px'
-    },
-    primaryButton: {
-        border: 'none',
-        borderRadius: '12px',
-        padding: '11px 18px',
-        background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
-        color: '#fff',
-        fontWeight: 600,
-        cursor: 'pointer',
-        boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)'
-    },
-    pushButton: {
-        border: 'none',
-        borderRadius: '12px',
-        padding: '10px 16px',
-        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-        color: '#fff',
-        fontWeight: 700,
-        boxShadow: '0 8px 20px rgba(22, 163, 74, 0.25)'
-    },
-    exportButton: {
-        border: 'none',
-        borderRadius: '12px',
-        padding: '10px 16px',
-        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-        color: '#fff',
-        fontWeight: 700,
-        boxShadow: '0 8px 20px rgba(5, 150, 105, 0.25)',
-        cursor: 'pointer'
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-        gap: '8px'
-    },
-    statCard: {
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: '12px',
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
-    },
-    statLabel: {
-        fontSize: '11px',
-        color: '#64748b',
-        marginBottom: '4px',
-        fontWeight: 500
-    },
-    statValue: {
-        fontSize: '20px',
-        fontWeight: 700,
-        color: '#0f172a'
-    },
-    filterBar: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '16px',
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: '18px',
-        padding: '14px 16px',
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)'
-    },
-    searchInput: {
-        flex: 1,
-        minWidth: 0,
-        border: '1px solid #dbeafe',
-        outline: 'none',
-        borderRadius: '12px',
-        padding: '12px 14px',
-        fontSize: '14px',
-        background: '#f8fbff'
-    },
-    filterButtons: {
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'center',
-        flexWrap: 'wrap'
-    },
-    filterGroup: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 12px',
-        background: '#f8fafc',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0'
-    },
-    filterLabel: {
-        fontSize: '12px',
-        color: '#64748b',
-        fontWeight: 600,
-        whiteSpace: 'nowrap'
-    },
-    filterSelect: {
-        border: 'none',
-        outline: 'none',
-        background: 'transparent',
-        fontSize: '14px',
-        color: '#0f172a',
-        cursor: 'pointer',
-        minWidth: '100px',
-        fontWeight: 500
-    },
-    filterButton: {
-        border: '1px solid #dbeafe',
-        background: '#fff',
-        color: '#334155',
-        borderRadius: '12px',
-        padding: '10px 14px',
-        fontWeight: 600,
-        cursor: 'pointer'
-    },
-    filterButtonActive: {
-        background: '#2563eb',
-        color: '#fff',
-        border: '1px solid #2563eb'
-    },
-    tableCard: {
-        flex: 1,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: '20px',
-        boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
-        overflow: 'hidden'
-    },
-    tableInfo: {
-        padding: '14px 18px',
-        borderBottom: '1px solid #f1f5f9',
-        color: '#475569',
-        fontSize: '14px'
-    },
-    tableScroll: {
-        flex: 1,
-        minHeight: 0,
-        overflow: 'auto'
-    },
-    table: {
-        width: '100%',
-        borderCollapse: 'separate',
-        borderSpacing: 0
-    },
-    th: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 2,
-        background: '#f8fafc',
-        color: '#334155',
-        textAlign: 'left',
-        fontSize: '13px',
-        fontWeight: 700,
-        padding: '14px 16px',
-        borderBottom: '1px solid #e2e8f0',
-        whiteSpace: 'nowrap'
-    },
-    thCheckbox: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 2,
-        background: '#f8fafc',
-        color: '#334155',
-        textAlign: 'center',
-        fontSize: '13px',
-        fontWeight: 700,
-        padding: '14px 12px',
-        borderBottom: '1px solid #e2e8f0',
-        width: '56px'
-    },
-    tr: {
-        transition: 'all 0.2s ease'
-    },
-    td: {
-        padding: '14px 16px',
-        borderBottom: '1px solid #f1f5f9',
-        color: '#334155',
-        fontSize: '14px',
-        verticalAlign: 'top'
-    },
-    tdStrong: {
-        padding: '14px 16px',
-        borderBottom: '1px solid #f1f5f9',
-        color: '#0f172a',
-        fontSize: '14px',
-        fontWeight: 700,
-        verticalAlign: 'top'
-    },
-    tdCheckbox: {
-        padding: '14px 12px',
-        borderBottom: '1px solid #f1f5f9',
-        textAlign: 'center',
-        verticalAlign: 'top'
-    },
-    statusBadge: {
-        display: 'inline-block',
-        padding: '6px 10px',
-        borderRadius: '999px',
-        background: '#eff6ff',
-        color: '#1d4ed8',
-        fontSize: '12px',
-        fontWeight: 700
-    },
-    trackingBadge: {
-        display: 'inline-block',
-        padding: '6px 10px',
-        borderRadius: '999px',
-        fontSize: '12px',
-        fontWeight: 700
-    },
-    emptyCell: {
-        textAlign: 'center',
-        padding: '40px 16px',
-        color: '#64748b'
-    },
-    centerBox: {
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '16px',
-        color: '#334155'
-    },
-    // Modal styles
-    modalOverlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-    },
-    modalContent: {
-        background: '#fff',
-        borderRadius: '20px',
-        padding: '24px',
-        width: '90%',
-        maxWidth: '600px',
-        maxHeight: '80vh',
-        overflow: 'auto',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
-    },
-    modalTitle: {
-        margin: '0 0 8px 0',
-        fontSize: '24px',
-        fontWeight: 700,
-        color: '#0f172a'
-    },
-    modalSubtitle: {
-        margin: '0 0 20px 0',
-        fontSize: '14px',
-        color: '#64748b'
-    },
-    modalLoading: {
-        textAlign: 'center',
-        padding: '40px',
-        color: '#64748b'
-    },
-    shopList: {
-        display: 'grid',
-        gap: '12px',
-        marginBottom: '24px',
-        maxHeight: '400px',
-        overflow: 'auto'
-    },
-    shopItem: {
-        border: '2px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: '16px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        background: '#fff'
-    },
-    shopItemSelected: {
-        borderColor: '#2563eb',
-        backgroundColor: '#eff6ff'
-    },
-    shopInfo: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px'
-    },
-    shopName: {
-        fontSize: '16px',
-        fontWeight: 600,
-        color: '#0f172a'
-    },
-    shopStore: {
-        fontSize: '14px',
-        color: '#64748b'
-    },
-    shopStatus: {
-        marginTop: '4px'
-    },
-    modalActions: {
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '12px'
-    },
-    confirmButton: {
-        border: 'none',
-        borderRadius: '12px',
-        padding: '12px 24px',
-        background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
-        color: '#fff',
-        fontWeight: 600,
-        cursor: 'pointer',
-        boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)'
-    },
-    shopDisplay: {
-        fontSize: '14px',
-        color: '#0f172a',
-        fontWeight: 600,
-        minWidth: '120px'
-    },
-    changeShopButton: {
-        border: '1px solid #e2e8f0',
-        borderRadius: '8px',
-        padding: '4px 8px',
-        background: '#fff',
-        color: '#334155',
-        fontSize: '12px',
-        fontWeight: 600,
-        cursor: 'pointer'
-    },
-    cancelButton: {
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        padding: '12px 24px',
-        background: '#fff',
-        color: '#64748b',
-        fontWeight: 600,
-        cursor: 'pointer',
-    },
-    emptyShopBox: {
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-    },
-    emptyShopIcon: {
-        fontSize: '64px',
-        marginBottom: '8px',
-    },
-    emptyShopTitle: {
-        fontSize: '20px',
-        fontWeight: 700,
-        color: '#0f172a',
-    },
-    emptyShopSub: {
-        fontSize: '14px',
-        color: '#64748b',
-        marginBottom: '8px',
-    },
-    emptyShopBtn: {
-        border: 'none',
-        borderRadius: '12px',
-        padding: '12px 28px',
-        background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
-        color: '#fff',
-        fontWeight: 600,
-        cursor: 'pointer',
-        fontSize: '15px',
-        boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)',
-    },
-    disabledCheckbox: {
-        color: '#9ca3af',
-        fontSize: '14px',
-        fontWeight: 600
-    },
-    // Loading overlay styles
-    loadingOverlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000
-    },
-    loadingContent: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '16px',
-        background: '#fff',
-        borderRadius: '16px',
-        padding: '32px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #e5e7eb'
-    },
-    spinner: {
-        width: '40px',
-        height: '40px',
-        border: '4px solid #f3f4f6',
-        borderTop: '4px solid #2563eb',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite'
-    },
-    loadingText: {
-        fontSize: '16px',
-        color: '#334155',
-        fontWeight: 600
-    }
 };
 
 export default CheckOder;
