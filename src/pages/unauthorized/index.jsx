@@ -15,17 +15,13 @@ export default function UnauthorizedPage() {
         <div className="max-w-md w-full mt-20">
           {/* Icon và animation */}
           <div className="text-center mb-8">
-            <Image
-              preview={false}
-              src="https://res.cloudinary.com/debr5x898/image/upload/v1755767667/lmao_lmao_r8nd5i.png"
-              className="mb-4"
-            />
+            <Image preview={false} src="https://i.pinimg.com/736x/3b/d4/4c/3bd44c6dad2fa3592e2697860b558123.jpg" className="mb-4" />
 
             {/* Mã lỗi */}
             {/* <div className="text-6xl font-bold text-red-600 mb-2 animate-bounce">401</div> */}
 
             {/* Tiêu đề chính */}
-            <h1 className="text-2xl font-bold text-gray-800 mb-3">Vào đây làm gì hả em?</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-3">You do not have permissions.</h1>
 
             {/* Mô tả */}
             {/* <p className="text-gray-600 mb-8 leading-relaxed">

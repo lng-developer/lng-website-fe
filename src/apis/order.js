@@ -30,6 +30,10 @@ const updateCustomerInfor = (orderId, customer_infor) => {
   });
 };
 
+const markAddressValid = (orderId) => {
+  return instance.put(`/order/${orderId}/mark-address-valid`);
+};
+
 const manualMapping = (payload) => {
   return instance.put('/order/manual-mapping', payload);
 };
@@ -154,6 +158,7 @@ export {
   getALlShop,
   importOrderByFile,
   updateCustomerInfor,
+  markAddressValid,
   manualMapping,
   updateBaseCost,
   getAllCountStatus,

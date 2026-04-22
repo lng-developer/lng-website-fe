@@ -1,10 +1,19 @@
-import { Col, Flex, Input, Modal } from 'antd';
-import { useState } from 'react';
-import { updateCustomerInfor } from '../../apis/order';
+import { Button, Col, Flex, Input, Modal } from 'antd';
+import { useEffect, useState } from 'react';
+import { markAddressValid, updateCustomerInfor } from '../../apis/order';
 import isEqual from 'lodash.isequal';
 import { toast } from 'sonner';
 
-const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, orderId, fetchAllOrder, filters }) => {
+const ModalUpdateCustomer = ({
+  isModalOpen,
+  setIsModalOpen,
+  customerInfor,
+  orderId,
+  fetchAllOrder,
+  fetchCountStatus,
+  filters,
+  showMarkValidButton = false,
+}) => {
   const [formData, setFormData] = useState({
     name: customerInfor?.name,
     email: customerInfor?.email,
@@ -16,6 +25,22 @@ const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, order
     state: customerInfor?.state,
     country: customerInfor?.country,
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isMarkingValid, setIsMarkingValid] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      name: customerInfor?.name,
+      email: customerInfor?.email,
+      phone_number: customerInfor?.phone_number,
+      address: customerInfor?.address,
+      address_2: customerInfor?.address_2,
+      city: customerInfor?.city,
+      zip_code: customerInfor?.zip_code,
+      state: customerInfor?.state,
+      country: customerInfor?.country,
+    });
+  }, [customerInfor, isModalOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,15 +56,37 @@ const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, order
 
   const handleOk = async () => {
     try {
+      setIsSaving(true);
       const response = await updateCustomerInfor(orderId, formData);
       if (response.status === 200) {
         toast.success(response.data?.message);
         fetchAllOrder(filters);
+        fetchCountStatus?.();
         setIsModalOpen(false);
       }
     } catch (error) {
       console.log(error);
       toast.error('Update error!');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleMarkAddressValid = async () => {
+    try {
+      setIsMarkingValid(true);
+      const response = await markAddressValid(orderId);
+      if (response.status === 200) {
+        toast.success(response.data?.message || 'Address marked as valid');
+        fetchAllOrder(filters);
+        fetchCountStatus?.();
+        setIsModalOpen(false);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error?.response?.data?.message || 'Mark address valid error!');
+    } finally {
+      setIsMarkingValid(false);
     }
   };
 
@@ -50,9 +97,26 @@ const ModalUpdateCustomer = ({ isModalOpen, setIsModalOpen, customerInfor, order
       closable={{ 'aria-label': 'Custom Close Button' }}
       open={isModalOpen}
       onOk={handleOk}
-      okButtonProps={{ disabled: isEqual(formData, customerInfor) }}
+      okButtonProps={{ disabled: isEqual(formData, customerInfor), loading: isSaving }}
       width={680}
       onCancel={handleCancel}
+      confirmLoading={isSaving}
+      cancelButtonProps={{ disabled: isSaving || isMarkingValid }}
+      footer={(_, { OkBtn, CancelBtn }) => (
+        <div className="flex items-center justify-between">
+          <div>
+            {showMarkValidButton ? (
+              <Button type="primary" ghost onClick={handleMarkAddressValid} loading={isMarkingValid} disabled={isSaving}>
+                Valid Address
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <CancelBtn />
+            <OkBtn />
+          </div>
+        </div>
+      )}
     >
       <div className="py-2">
         <div className="flex justify-between">
