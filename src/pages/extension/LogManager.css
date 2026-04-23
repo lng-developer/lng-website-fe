@@ -1,191 +1,508 @@
-/* LogManager.css */
-.log-manager-container {
-  padding: 20px;
+/* LogManager.css - Monochrome theme */
+.log-manager {
+  --lm-bg: #ffffff;
+  --lm-surface: #fafafa;
+  --lm-surface-2: #f4f4f5;
+  --lm-border: #e5e7eb;
+  --lm-border-strong: #d4d4d8;
+  --lm-text: #0a0a0a;
+  --lm-text-muted: #6b7280;
+  --lm-text-subtle: #9ca3af;
+  --lm-hover: #f5f5f5;
+  --lm-black: #000000;
+  --lm-accent-success: #16a34a;
+  --lm-accent-danger: #dc2626;
+  --lm-accent-warn: #d97706;
+  --lm-accent-info: #2563eb;
+  color: var(--lm-text);
+  background: var(--lm-bg);
 }
 
-.log-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+/* Layout - chỉ cho Table body scroll */
+.log-manager .lm-content {
+  height: calc(100vh - 48px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px !important;
+}
+.log-manager .lm-content > *:not(:last-child) {
+  flex-shrink: 0;
+}
+.log-manager .lm-content > div:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.log-manager .lm-table-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.log-manager .lm-table-card > .ant-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.log-manager .lm-table-card .ant-spin-nested-loading,
+.log-manager .lm-table-card .ant-spin-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.log-filters-card {
-  margin-bottom: 16px;
+/* Header - compact 48px */
+.log-manager .lm-header {
+  background: var(--lm-bg);
+  border-bottom: 1px solid var(--lm-border);
+  box-shadow: none;
+  height: 48px !important;
+  padding: 0 16px !important;
 }
 
-.log-filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.extension-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.extension-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
-  background: white;
-}
-
-.log-level-tag {
-  display: inline-flex;
+.log-manager .lm-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--lm-text);
+  margin: 0;
+  display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  line-height: 1;
+}
+.log-manager .lm-title .anticon {
+  font-size: 16px;
 }
 
-.log-type-tag {
+/* Buttons - monochrome */
+.log-manager .lm-btn-primary.ant-btn,
+.log-manager .lm-btn-primary.ant-btn-primary {
+  background: var(--lm-black);
+  border-color: var(--lm-black);
+  color: #ffffff;
+  box-shadow: none;
+}
+.log-manager .lm-btn-primary.ant-btn:hover,
+.log-manager .lm-btn-primary.ant-btn-primary:hover {
+  background: #262626;
+  border-color: #262626;
+  color: #ffffff;
+}
+
+.log-manager .lm-btn-ghost.ant-btn {
+  background: var(--lm-bg);
+  border-color: var(--lm-border-strong);
+  color: var(--lm-text);
+}
+.log-manager .lm-btn-ghost.ant-btn:hover {
+  background: var(--lm-hover);
+  border-color: var(--lm-black);
+  color: var(--lm-text);
+}
+
+/* Quick filter chip buttons */
+.log-manager .lm-chip.ant-btn {
+  border-radius: 999px;
+  border-color: var(--lm-border-strong);
+  background: var(--lm-bg);
+  color: var(--lm-text);
+  font-weight: 500;
+  height: 24px;
+  padding: 0 10px;
   font-size: 11px;
-  padding: 2px 6px;
+}
+.log-manager .lm-chip.ant-btn:hover {
+  border-color: var(--lm-black);
+  color: var(--lm-text);
+}
+.log-manager .lm-chip.lm-chip-active.ant-btn {
+  background: var(--lm-black);
+  border-color: var(--lm-black);
+  color: #ffffff;
+}
+.log-manager .lm-chip .lm-chip-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.log-manager .lm-chip-dot-danger { background: var(--lm-accent-danger); }
+.log-manager .lm-chip-dot-success { background: var(--lm-accent-success); }
+.log-manager .lm-chip-dot-warn { background: var(--lm-accent-warn); }
+.log-manager .lm-chip-dot-info { background: var(--lm-accent-info); }
+
+/* Cards - compact */
+.log-manager .lm-card.ant-card {
+  background: var(--lm-bg);
+  border: 1px solid var(--lm-border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.log-manager .lm-card .ant-card-head {
+  border-bottom: 1px solid var(--lm-border);
+  min-height: 32px;
+  padding: 0 10px;
+}
+.log-manager .lm-card .ant-card-head-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lm-text);
+  padding: 6px 0;
+}
+.log-manager .lm-card > .ant-card-body {
+  padding: 8px 10px;
 }
 
-.log-message-cell {
-  max-width: 300px;
+/* Stats cards with colored accent bar */
+.log-manager .lm-stat.ant-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--lm-border);
+  border-radius: 8px;
+  box-shadow: none;
 }
-
-.log-performance-cell {
-  font-size: 11px;
+.log-manager .lm-stat > .ant-card-body {
+  padding: 6px 10px 6px 14px;
+}
+.log-manager .lm-stat::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--lm-black);
+}
+.log-manager .lm-stat-total::before { background: var(--lm-black); }
+.log-manager .lm-stat-error::before { background: var(--lm-accent-danger); }
+.log-manager .lm-stat-success::before { background: var(--lm-accent-success); }
+.log-manager .lm-stat-tasks::before { background: var(--lm-accent-info); }
+.log-manager .lm-stat .ant-statistic-title {
+  color: var(--lm-text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+.log-manager .lm-stat .ant-statistic-content {
+  color: var(--lm-text);
+  font-weight: 600;
+  font-size: 18px;
   line-height: 1.2;
 }
 
-.log-detail-modal .ant-tabs-content {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.log-detail-section {
-  margin-bottom: 16px;
-}
-
-.log-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.log-message-box {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+/* Inputs / Selects - compact */
+.log-manager .ant-select:not(.ant-select-disabled):not(.ant-select-customize-input):not(.ant-pagination-size-changer) .ant-select-selector,
+.log-manager .ant-input,
+.log-manager .ant-input-affix-wrapper {
+  border-color: var(--lm-border-strong);
+  background: var(--lm-bg);
   border-radius: 6px;
-  padding: 12px;
-  margin-top: 8px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 13px;
+}
+.log-manager .lm-filters-grid .ant-select .ant-select-selector,
+.log-manager .lm-filters-grid .ant-input,
+.log-manager .lm-filters-grid .ant-input-affix-wrapper {
+  height: 28px;
+  font-size: 12px;
+}
+.log-manager .lm-filters-grid .ant-select-single .ant-select-selector .ant-select-selection-item,
+.log-manager .lm-filters-grid .ant-select-single .ant-select-selector .ant-select-selection-placeholder {
+  line-height: 26px;
+}
+.log-manager .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.log-manager .ant-input:hover,
+.log-manager .ant-input-affix-wrapper:hover {
+  border-color: var(--lm-black);
+}
+.log-manager .ant-select-focused:not(.ant-select-disabled) .ant-select-selector,
+.log-manager .ant-input:focus,
+.log-manager .ant-input-affix-wrapper-focused {
+  border-color: var(--lm-black) !important;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.06) !important;
 }
 
-.error-stack-trace {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+/* Extension cards (active overview) */
+.log-manager .lm-ext-card {
+  border: 1px solid var(--lm-border);
   border-radius: 6px;
-  padding: 12px;
-  margin-top: 8px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  padding: 6px 8px;
+  background: var(--lm-bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.log-manager .lm-ext-card:hover {
+  border-color: var(--lm-black);
+  background: var(--lm-surface);
+}
+.log-manager .lm-ext-title {
+  font-weight: 600;
   font-size: 11px;
-  max-height: 200px;
+  color: var(--lm-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.3;
+}
+.log-manager .lm-ext-sub {
+  font-size: 10px;
+  color: var(--lm-text-muted);
+  line-height: 1.3;
+}
+.log-manager .lm-ext-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--lm-surface-2);
+  color: var(--lm-text);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.log-manager .lm-ext-time {
+  font-size: 10px;
+  color: var(--lm-text-subtle);
+  line-height: 1.3;
+}
+.log-manager .lm-ext-status {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--lm-accent-success);
+  margin-right: 6px;
+}
+.log-manager .lm-ext-status-off {
+  background: var(--lm-border-strong);
+}
+
+/* Table - dense */
+.log-manager .ant-table {
+  background: var(--lm-bg);
+  font-size: 12px;
+}
+.log-manager .ant-table-thead > tr > th {
+  background: var(--lm-surface) !important;
+  color: var(--lm-text-muted) !important;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--lm-border) !important;
+  padding: 6px 10px !important;
+  line-height: 1.3;
+}
+.log-manager .ant-table-tbody > tr > td {
+  padding: 5px 10px !important;
+  border-bottom: 1px solid var(--lm-border);
+  line-height: 1.35;
+}
+.log-manager .ant-table-tbody > tr:hover > td {
+  background: var(--lm-hover) !important;
+}
+.log-manager .ant-table-cell::before {
+  display: none !important;
+}
+
+/* Pagination - compact */
+.log-manager .ant-pagination {
+  margin: 8px 10px !important;
+  font-size: 12px;
+}
+.log-manager .ant-pagination .ant-pagination-item,
+.log-manager .ant-pagination .ant-pagination-prev,
+.log-manager .ant-pagination .ant-pagination-next {
+  min-width: 24px;
+  height: 24px;
+  line-height: 22px;
+}
+
+/* Tags - keep colored but flat */
+.log-manager .ant-tag {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 6px;
+  line-height: 20px;
+  border: 1px solid transparent;
+}
+
+/* Cell helpers - compact */
+.log-manager .lm-cell-time {
+  font-size: 11px;
+  color: var(--lm-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.log-manager .lm-cell-machine {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--lm-text);
+  line-height: 1.3;
+}
+.log-manager .lm-cell-shop {
+  font-size: 10px;
+  color: var(--lm-text-muted);
+  line-height: 1.3;
+}
+.log-manager .lm-cell-message {
+  font-size: 12px;
+  color: var(--lm-text);
+  line-height: 1.35;
+}
+.log-manager .lm-cell-task-link {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--lm-text);
+  text-decoration: underline;
+  text-decoration-color: var(--lm-border-strong);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.log-manager .lm-cell-task-link:hover {
+  text-decoration-color: var(--lm-black);
+}
+.log-manager .lm-cell-batch {
+  font-size: 10px;
+  color: var(--lm-text-subtle);
+  font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+  line-height: 1.3;
+}
+.log-manager .lm-cell-perf {
+  font-size: 10px;
+  color: var(--lm-text-muted);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Modal */
+.log-manager-modal .ant-modal-content {
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+}
+.log-manager-modal .ant-modal-header {
+  border-bottom: 1px solid var(--lm-border, #e5e7eb);
+  border-radius: 12px 12px 0 0;
+}
+.log-manager-modal .ant-tabs-content {
+  max-height: 420px;
   overflow-y: auto;
 }
-
-.task-timeline-item {
-  margin-bottom: 12px;
-}
-
-.task-timeline-timestamp {
+.log-manager-modal .lm-detail-label {
   color: #6b7280;
   font-size: 11px;
-  margin-bottom: 4px;
-}
-
-.task-timeline-type {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   font-weight: 500;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+.log-manager-modal .lm-detail-value {
+  color: #0a0a0a;
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-word;
+}
+.log-manager-modal .lm-message-box {
+  margin-top: 8px;
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0a0a0a;
+  line-height: 1.5;
+}
+.log-manager-modal .lm-code-box {
+  margin-top: 8px;
+  padding: 12px;
+  background: #0a0a0a;
+  color: #f5f5f5;
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow: auto;
+  max-height: 260px;
+  white-space: pre;
+}
+.log-manager-modal .lm-code-box-light {
+  background: #f4f4f5;
+  color: #0a0a0a;
+  border: 1px solid #e5e7eb;
 }
 
-.task-timeline-message {
+/* Drawer / Timeline */
+.log-manager-drawer .ant-drawer-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+.log-manager-drawer .ant-drawer-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.log-manager-drawer .lm-tl-time {
+  font-size: 11px;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+.log-manager-drawer .lm-tl-type {
+  font-weight: 600;
+  font-size: 12px;
+  color: #0a0a0a;
+  margin-top: 2px;
+}
+.log-manager-drawer .lm-tl-msg {
   font-size: 13px;
   color: #374151;
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .log-filters-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .log-detail-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .extension-overview-grid {
-    grid-template-columns: 1fr;
+  .log-manager .lm-filters-grid {
+    grid-template-columns: 1fr 1fr !important;
   }
 }
-
 @media (max-width: 480px) {
-  .log-manager-container {
-    padding: 12px;
-  }
-  
-  .log-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .log-manager .lm-filters-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
-/* Custom scrollbar for timeline */
-.ant-drawer-body::-webkit-scrollbar {
-  width: 6px;
+/* Scrollbar */
+.log-manager ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.log-manager ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.log-manager ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+.log-manager ::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
 }
 
-.ant-drawer-body::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* Pagination */
+.log-manager .ant-pagination .ant-pagination-item-active {
+  background: var(--lm-black);
+  border-color: var(--lm-black);
 }
-
-.ant-drawer-body::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.ant-drawer-body::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Table customization */
-.ant-table-tbody > tr > td {
-  padding: 8px 12px;
-}
-
-.ant-table-thead > tr > th {
-  padding: 8px 12px;
-  font-weight: 600;
-}
-
-/* Progress bar in upload info */
-.ant-progress-line {
-  margin: 0;
-}
-
-/* Timeline customization */
-.ant-timeline-item-content {
-  margin-left: 8px;
-}
-
-/* Modal tabs */
-.ant-tabs-tab {
-  font-size: 13px;
-}
-
-/* Badge customization */
-.ant-badge-status-text {
-  font-size: 12px;
-}
-
-/* Card title */
-.ant-card-head-title {
-  font-size: 16px;
-  font-weight: 600;
+.log-manager .ant-pagination .ant-pagination-item-active a {
+  color: #ffffff;
 }

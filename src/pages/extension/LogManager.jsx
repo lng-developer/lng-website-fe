@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { 
-  Table, 
-  Select, 
-  Input, 
-  DatePicker, 
-  Button, 
-  Card, 
-  Statistic, 
-  Badge, 
-  Tag, 
-  Tooltip, 
+import {
+  Table,
+  Select,
+  Input,
+  DatePicker,
+  Button,
+  Card,
+  Statistic,
+  Badge,
+  Tag,
+  Tooltip,
   Modal,
   Tabs,
   Timeline,
@@ -18,10 +18,10 @@ import {
   Space,
   Drawer
 } from 'antd';
-import { 
-  ReloadOutlined, 
-  SearchOutlined, 
-  FilterOutlined, 
+import {
+  ReloadOutlined,
+  SearchOutlined,
+  FilterOutlined,
   DownloadOutlined,
   EyeOutlined,
   DeleteOutlined,
@@ -33,13 +33,13 @@ import {
 } from '@ant-design/icons';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
-import { 
-  getExtensionLogs, 
-  getExtensionStats, 
-  getAllExtensionLogs, 
-  getLogsByTask, 
+import {
+  getExtensionLogs,
+  getExtensionStats,
+  getAllExtensionLogs,
+  getLogsByTask,
   getLogsByBatch,
-  cleanupLogs 
+  cleanupLogs
 } from '../../apis/extensionLogs';
 import { getALlShop } from '../../apis/order';
 import './LogManager.css';
@@ -50,7 +50,7 @@ const { TabPane } = Tabs;
 
 const LogManager = () => {
   const { collapsed } = useOutletContext();
-  
+
   // States
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState(null);
@@ -59,7 +59,7 @@ const LogManager = () => {
   const [loading, setLoading] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState('all');
   const [filters, setFilters] = useState({
-    limit: 100,
+    limit: 500,
     hours: 24,
     logType: '',
     level: '',
@@ -71,11 +71,13 @@ const LogManager = () => {
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [taskLogs, setTaskLogs] = useState([]);
+  const tableWrapRef = useRef(null);
+  const [tableBodyHeight, setTableBodyHeight] = useState(400);
 
   // Constants
   const LOG_TYPES = {
     'task_received': 'Extension nhận task từ server',
-    'task_processing': 'Đang xử lý task', 
+    'task_processing': 'Đang xử lý task',
     'task_completed': 'Hoàn thành task',
     'task_failed': 'Task thất bại',
     'upload_started': 'Bắt đầu upload',
@@ -143,7 +145,7 @@ const LogManager = () => {
       } else {
         // Kiểm tra xem selectedMachine là shopId hay machineId
         const isShopId = shops.some(shop => shop._id === selectedMachine);
-        
+
         if (isShopId) {
           // Nếu là shopId, gọi API với filter shopId
           const shopFilters = { ...filters, shopId: selectedMachine };
@@ -152,7 +154,7 @@ const LogManager = () => {
           // Nếu là machineId, gọi API theo machineId
           response = await getExtensionLogs(selectedMachine, filters);
         }
-        
+
         if (response.data?.success) {
           setLogs(response.data.message.logs || []);
         }
@@ -167,12 +169,12 @@ const LogManager = () => {
 
   const fetchStats = useCallback(async () => {
     if (selectedMachine === 'all') return;
-    
+
     try {
       // Kiểm tra xem selectedMachine là shopId hay machineId
       const isShopId = shops.some(shop => shop._id === selectedMachine);
       let response;
-      
+
       if (isShopId) {
         // Nếu là shopId, gọi API stats với filter shopId
         const statsFilters = { hours: filters.hours, shopId: selectedMachine };
@@ -242,12 +244,12 @@ const LogManager = () => {
       onOk: async () => {
         try {
           const isShopId = shops.some(shop => shop._id === selectedMachine);
-          const cleanupData = { 
+          const cleanupData = {
             days: 30,
-            ...(selectedMachine === 'all' ? {} : 
-                isShopId ? { shopId: selectedMachine } : { machineId: selectedMachine })
+            ...(selectedMachine === 'all' ? {} :
+              isShopId ? { shopId: selectedMachine } : { machineId: selectedMachine })
           };
-          
+
           const response = await cleanupLogs(cleanupData);
           if (response.data?.success) {
             toast.success(`Đã xóa ${response.data.message.deletedCount} logs`);
@@ -268,7 +270,7 @@ const LogManager = () => {
       key: 'timestamp',
       width: 150,
       render: (timestamp) => (
-        <div className="text-xs">
+        <div className="lm-cell-time">
           {formatTimestamp(timestamp)}
         </div>
       ),
@@ -279,14 +281,14 @@ const LogManager = () => {
       title: 'Machine/Shop',
       dataIndex: 'machineId',
       key: 'machineId',
-      width: 140,
+      width: 200,
       render: (machineId, record) => {
         // Tìm shop tương ứng từ danh sách shops
         const shop = shops.find(s => s._id === record.shopId);
         return (
           <div>
-            <div className="font-medium text-xs">🖥️ {machineId}</div>
-            <div className="text-xs text-gray-500">🏪 {shop?.name || record.shopName || 'Unknown Shop'}</div>
+            <div className="lm-cell-machine">{machineId}</div>
+            <div className="lm-cell-shop">{shop?.name || record.shopName || 'Unknown Shop'}</div>
           </div>
         );
       }
@@ -323,15 +325,15 @@ const LogManager = () => {
       ellipsis: true,
       render: (message, record) => (
         <div>
-          <div className="text-sm">{message}</div>
+          <div className="lm-cell-message">{message}</div>
           {record.taskInfo?.taskId && (
-            <div className="text-xs text-blue-500 cursor-pointer" 
-                 onClick={() => handleViewTask(record.taskInfo.taskId)}>
+            <div className="lm-cell-task-link"
+              onClick={() => handleViewTask(record.taskInfo.taskId)}>
               Task: {record.taskInfo.taskId}
             </div>
           )}
           {record.taskInfo?.batchId && (
-            <div className="text-xs text-gray-500">
+            <div className="lm-cell-batch">
               Batch: {record.taskInfo.batchId}
             </div>
           )}
@@ -343,17 +345,17 @@ const LogManager = () => {
       key: 'performance',
       width: 100,
       render: (_, record) => {
-        if (!record.performance) return '—';
+        if (!record.performance) return <span className="lm-cell-perf">—</span>;
         return (
-          <div className="text-xs">
+          <div className="lm-cell-perf">
             {record.performance.duration && (
-              <div>⏱️ {record.performance.duration}ms</div>
+              <div>{record.performance.duration} ms</div>
             )}
             {record.performance.memoryUsage && (
-              <div>💾 {record.performance.memoryUsage}MB</div>
+              <div>{record.performance.memoryUsage} MB</div>
             )}
             {record.performance.cpuUsage && (
-              <div>🖥️ {record.performance.cpuUsage}%</div>
+              <div>{record.performance.cpuUsage}% CPU</div>
             )}
           </div>
         );
@@ -389,10 +391,23 @@ const LogManager = () => {
     }
   }, [fetchStats]);
 
+  useLayoutEffect(() => {
+    const update = () => {
+      if (!tableWrapRef.current) return;
+      const rect = tableWrapRef.current.getBoundingClientRect();
+      // Trừ header của table (~30px) + pagination (~48px) + padding
+      const reserved = 30 + 48 + 16;
+      setTableBodyHeight(Math.max(220, Math.floor(window.innerHeight - rect.top - reserved)));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [selectedMachine, stats, activeExtensions.length]);
+
   // Memoized values
   const statsCards = useMemo(() => {
     if (!stats) return [];
-    
+
     return [
       {
         title: 'Total Logs',
@@ -417,24 +432,30 @@ const LogManager = () => {
     ];
   }, [stats]);
 
+  const statAccentClass = ['lm-stat-total', 'lm-stat-error', 'lm-stat-success', 'lm-stat-tasks'];
+
   return (
-    <div>
-      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
-        <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
-          <h1 className="text-2xl !mb-0 flex items-center gap-2" style={{ color: 'black' }}>
+    <div className="log-manager">
+      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 transition-all duration-300`}>
+        <div className="lm-header sticky top-0 flex items-center justify-between">
+          <h1 className="lm-title">
             <BarChartOutlined />
             Extension Log Manager
           </h1>
           <div className="flex items-center gap-2">
-            <Button 
-              type="primary" 
+            <Button
+              className="lm-btn-primary"
+              type="primary"
+              size="small"
               icon={<ReloadOutlined />}
               onClick={fetchLogs}
               loading={loading}
             >
               Refresh
             </Button>
-            <Button 
+            <Button
+              className="lm-btn-ghost"
+              size="small"
               icon={<DeleteOutlined />}
               onClick={handleCleanup}
             >
@@ -444,16 +465,15 @@ const LogManager = () => {
         </div>
       </div>
 
-      <div className="mt-[60px] px-8 py-4 h-full">
+      <div className="lm-content mt-[48px]">
         {/* Stats Cards */}
         {selectedMachine !== 'all' && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {statsCards.map((stat, index) => (
-              <Card key={index} size="small">
+              <Card key={index} className={`lm-stat ${statAccentClass[index] || ''}`} size="small">
                 <Statistic
                   title={stat.title}
                   value={stat.value}
-                  valueStyle={{ color: stat.color }}
                 />
               </Card>
             ))}
@@ -461,52 +481,57 @@ const LogManager = () => {
         )}
 
         {/* Quick Filters */}
-        <Card className="mb-4" size="small">
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button 
-              size="small" 
-              type={filters.level === 'error' ? 'primary' : 'default'}
+        <Card className="lm-card" size="small">
+          <div className="flex flex-wrap gap-2 mb-2">
+            <Button
+              size="small"
+              className={`lm-chip ${filters.level === 'error' ? 'lm-chip-active' : ''}`}
               onClick={() => handleFilterChange('level', filters.level === 'error' ? '' : 'error')}
             >
-              🔴 Errors Only
+              <span className="lm-chip-dot lm-chip-dot-danger" />
+              Errors Only
             </Button>
-            <Button 
-              size="small" 
-              type={filters.logType === 'task_failed' ? 'primary' : 'default'}
+            <Button
+              size="small"
+              className={`lm-chip ${filters.logType === 'task_failed' ? 'lm-chip-active' : ''}`}
               onClick={() => handleFilterChange('logType', filters.logType === 'task_failed' ? '' : 'task_failed')}
             >
-              ❌ Failed Tasks
+              <span className="lm-chip-dot lm-chip-dot-danger" />
+              Failed Tasks
             </Button>
-            <Button 
-              size="small" 
-              type={filters.logType === 'upload_completed' ? 'primary' : 'default'}
+            <Button
+              size="small"
+              className={`lm-chip ${filters.logType === 'upload_completed' ? 'lm-chip-active' : ''}`}
               onClick={() => handleFilterChange('logType', filters.logType === 'upload_completed' ? '' : 'upload_completed')}
             >
-              ✅ Upload Success
+              <span className="lm-chip-dot lm-chip-dot-success" />
+              Upload Success
             </Button>
-            <Button 
-              size="small" 
-              type={filters.hours === 1 ? 'primary' : 'default'}
+            <Button
+              size="small"
+              className={`lm-chip ${filters.hours === 1 ? 'lm-chip-active' : ''}`}
               onClick={() => handleFilterChange('hours', filters.hours === 1 ? 24 : 1)}
             >
-              ⏰ Last Hour
+              <span className="lm-chip-dot lm-chip-dot-info" />
+              Last Hour
             </Button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+
+          <div className="lm-filters-grid grid grid-cols-2 md:grid-cols-5 gap-2">
             <Select
               placeholder="Chọn Shop"
               value={selectedMachine}
               onChange={handleMachineChange}
               style={{ width: '100%' }}
             >
-              <Option value="all">🌐 Tất cả Shops</Option>
+              <Option value="all">Tất cả Shops</Option>
               {shops.map(shop => {
                 // Kiểm tra xem shop này có active extension không
                 const activeExt = activeExtensions.find(ext => ext.shopId === shop._id);
                 return (
                   <Option key={shop._id} value={shop._id}>
-                    🏪 {shop.name} {activeExt ? '🟢' : '⚪'}
+                    <span className={`lm-ext-status ${activeExt ? '' : 'lm-ext-status-off'}`} />
+                    {shop.name}
                   </Option>
                 );
               })}
@@ -518,9 +543,9 @@ const LogManager = () => {
               onChange={(value) => handleFilterChange('limit', value)}
               style={{ width: '100%' }}
             >
-              <Option value={50}>50 logs</Option>
-              <Option value={100}>100 logs</Option>
               <Option value={500}>500 logs</Option>
+              <Option value={1000}>1000 logs</Option>
+              <Option value={2000}>2000 logs</Option>
             </Select>
 
             <Select
@@ -557,46 +582,34 @@ const LogManager = () => {
               <Option value={168}>7 ngày</Option>
             </Select>
 
-            <Input
-              placeholder="Task ID"
-              value={filters.taskType}
-              onChange={(e) => handleFilterChange('taskType', e.target.value)}
-              prefix={<SearchOutlined />}
-            />
-
-            <Input
-              placeholder="Batch ID"
-              value={filters.batchId}
-              onChange={(e) => handleFilterChange('batchId', e.target.value)}
-              prefix={<SearchOutlined />}
-            />
           </div>
         </Card>
 
         {/* Active Extensions Overview */}
         {selectedMachine === 'all' && activeExtensions.length > 0 && (
-          <Card title={`Active Extensions (${activeExtensions.length})`} className="mb-4" size="small">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Card title={`Active Extensions (${activeExtensions.length})`} className="lm-card" size="small">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {activeExtensions.map(ext => {
                 // Tìm shop tương ứng từ danh sách shops
                 const shop = shops.find(s => s._id === ext.shopId || s._id === ext._id);
                 return (
-                  <div key={ext._id} className="border rounded p-3 hover:bg-gray-50 cursor-pointer"
-                       onClick={() => handleMachineChange(ext.shopId || ext._id)}>
+                  <div key={ext._id} className="lm-ext-card"
+                    onClick={() => handleMachineChange(ext.shopId || ext._id)}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium text-sm">
-                          🖥️ {ext._id}
+                        <div className="lm-ext-title">
+                          <span className="lm-ext-status" />
+                          {ext._id}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          🏪 {shop?.name || ext.shopName || 'Unknown Shop'}
+                        <div className="lm-ext-sub">
+                          {shop?.name || ext.shopName || 'Unknown Shop'}
                         </div>
-                        <div className="text-xs text-blue-600 mt-1">
-                          📊 {ext.logCount} logs
+                        <div className="lm-ext-count">
+                          {ext.logCount} logs
                         </div>
                       </div>
-                      <div className="text-xs text-gray-400">
-                        <div>🕒 {formatTimestamp(ext.lastActivity)}</div>
+                      <div className="lm-ext-time">
+                        {formatTimestamp(ext.lastActivity)}
                       </div>
                     </div>
                   </div>
@@ -607,7 +620,8 @@ const LogManager = () => {
         )}
 
         {/* Main Table */}
-        <Card>
+        <div ref={tableWrapRef}>
+        <Card className="lm-card lm-table-card">
           <Table
             columns={columns}
             dataSource={logs}
@@ -617,19 +631,21 @@ const LogManager = () => {
             pagination={{
               pageSize: filters.limit,
               showSizeChanger: true,
-              pageSizeOptions: ['50', '100', '500'],
+              pageSizeOptions: [ '500','1000', '2000'],
               showQuickJumper: true,
               showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} logs (Limit: ${filters.limit})`,
               onShowSizeChange: (current, size) => {
                 handleFilterChange('limit', size);
               }
             }}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1200, y: 500 }}
           />
         </Card>
+        </div>
 
         {/* Detail Modal */}
         <Modal
+          className="log-manager-modal"
           title="Chi tiết Log"
           open={detailModalOpen}
           onCancel={() => setDetailModalOpen(false)}
@@ -642,33 +658,40 @@ const LogManager = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <strong>Machine ID:</strong> {selectedLog.machineId}
+                      <div className="lm-detail-label">Machine ID</div>
+                      <div className="lm-detail-value">{selectedLog.machineId}</div>
                     </div>
                     <div>
-                      <strong>Shop:</strong> {(() => {
+                      <div className="lm-detail-label">Shop</div>
+                      <div className="lm-detail-value">{(() => {
                         const shop = shops.find(s => s._id === selectedLog.shopId);
                         return shop?.name || selectedLog.shopName || 'Unknown Shop';
-                      })()}
+                      })()}</div>
                     </div>
                     <div>
-                      <strong>Timestamp:</strong> {formatTimestamp(selectedLog.timestamp)}
+                      <div className="lm-detail-label">Timestamp</div>
+                      <div className="lm-detail-value">{formatTimestamp(selectedLog.timestamp)}</div>
                     </div>
                     <div>
-                      <strong>Level:</strong> 
-                      <Tag color={LOG_LEVELS[selectedLog.level]?.color} className="ml-2">
-                        {selectedLog.level?.toUpperCase()}
-                      </Tag>
+                      <div className="lm-detail-label">Level</div>
+                      <div>
+                        <Tag color={LOG_LEVELS[selectedLog.level]?.color}>
+                          {selectedLog.level?.toUpperCase()}
+                        </Tag>
+                      </div>
                     </div>
                     <div>
-                      <strong>Type:</strong>
-                      <Tag color={getLogTypeColor(selectedLog.logType)} className="ml-2">
-                        {selectedLog.logType}
-                      </Tag>
+                      <div className="lm-detail-label">Type</div>
+                      <div>
+                        <Tag color={getLogTypeColor(selectedLog.logType)}>
+                          {selectedLog.logType}
+                        </Tag>
+                      </div>
                     </div>
                   </div>
                   <div>
-                    <strong>Message:</strong>
-                    <div className="mt-2 p-3 bg-gray-50 rounded">
+                    <div className="lm-detail-label">Message</div>
+                    <div className="lm-message-box">
                       {selectedLog.message}
                     </div>
                   </div>
@@ -677,36 +700,36 @@ const LogManager = () => {
 
               {selectedLog.taskInfo && (
                 <TabPane tab="Task Info" key="2">
-                  <div className="space-y-2">
-                    <div><strong>Task ID:</strong> {selectedLog.taskInfo.taskId}</div>
-                    <div><strong>Task Type:</strong> {selectedLog.taskInfo.taskType}</div>
-                    <div><strong>Batch ID:</strong> {selectedLog.taskInfo.batchId}</div>
-                    <div><strong>Orders Count:</strong> {selectedLog.taskInfo.ordersCount}</div>
-                    <div><strong>Filename:</strong> {selectedLog.taskInfo.filename}</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><div className="lm-detail-label">Task ID</div><div className="lm-detail-value">{selectedLog.taskInfo.taskId}</div></div>
+                    <div><div className="lm-detail-label">Task Type</div><div className="lm-detail-value">{selectedLog.taskInfo.taskType}</div></div>
+                    <div><div className="lm-detail-label">Batch ID</div><div className="lm-detail-value">{selectedLog.taskInfo.batchId}</div></div>
+                    <div><div className="lm-detail-label">Orders Count</div><div className="lm-detail-value">{selectedLog.taskInfo.ordersCount}</div></div>
+                    <div><div className="lm-detail-label">Filename</div><div className="lm-detail-value">{selectedLog.taskInfo.filename}</div></div>
                   </div>
                 </TabPane>
               )}
 
               {selectedLog.uploadInfo && (
                 <TabPane tab="Upload Info" key="3">
-                  <div className="space-y-2">
-                    <div><strong>Filename:</strong> {selectedLog.uploadInfo.filename}</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><div className="lm-detail-label">Filename</div><div className="lm-detail-value">{selectedLog.uploadInfo.filename}</div></div>
                     {selectedLog.uploadInfo.fileSize && (
-                      <div><strong>File Size:</strong> {selectedLog.uploadInfo.fileSize} bytes</div>
+                      <div><div className="lm-detail-label">File Size</div><div className="lm-detail-value">{selectedLog.uploadInfo.fileSize} bytes</div></div>
                     )}
                     {selectedLog.uploadInfo.ordersUploaded !== undefined && (
-                      <div><strong>Orders Uploaded:</strong> {selectedLog.uploadInfo.ordersUploaded}</div>
+                      <div><div className="lm-detail-label">Orders Uploaded</div><div className="lm-detail-value">{selectedLog.uploadInfo.ordersUploaded}</div></div>
                     )}
                     {selectedLog.uploadInfo.carrier && (
-                      <div><strong>Carrier:</strong> {selectedLog.uploadInfo.carrier}</div>
+                      <div><div className="lm-detail-label">Carrier</div><div className="lm-detail-value">{selectedLog.uploadInfo.carrier}</div></div>
                     )}
                     {selectedLog.uploadInfo.shipMethod && (
-                      <div><strong>Ship Method:</strong> {selectedLog.uploadInfo.shipMethod}</div>
+                      <div><div className="lm-detail-label">Ship Method</div><div className="lm-detail-value">{selectedLog.uploadInfo.shipMethod}</div></div>
                     )}
                     {selectedLog.uploadInfo.progress !== undefined && (
-                      <div>
-                        <strong>Progress:</strong>
-                        <Progress percent={selectedLog.uploadInfo.progress} className="ml-2" />
+                      <div className="col-span-2">
+                        <div className="lm-detail-label">Progress</div>
+                        <Progress percent={selectedLog.uploadInfo.progress} strokeColor="#0a0a0a" />
                       </div>
                     )}
                   </div>
@@ -715,15 +738,15 @@ const LogManager = () => {
 
               {selectedLog.performance && (
                 <TabPane tab="Performance" key="4">
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-4">
                     {selectedLog.performance.duration && (
-                      <div><strong>Duration:</strong> {selectedLog.performance.duration}ms</div>
+                      <div><div className="lm-detail-label">Duration</div><div className="lm-detail-value">{selectedLog.performance.duration} ms</div></div>
                     )}
                     {selectedLog.performance.memoryUsage && (
-                      <div><strong>Memory Usage:</strong> {selectedLog.performance.memoryUsage}MB</div>
+                      <div><div className="lm-detail-label">Memory</div><div className="lm-detail-value">{selectedLog.performance.memoryUsage} MB</div></div>
                     )}
                     {selectedLog.performance.cpuUsage && (
-                      <div><strong>CPU Usage:</strong> {selectedLog.performance.cpuUsage}%</div>
+                      <div><div className="lm-detail-label">CPU</div><div className="lm-detail-value">{selectedLog.performance.cpuUsage}%</div></div>
                     )}
                   </div>
                 </TabPane>
@@ -731,23 +754,19 @@ const LogManager = () => {
 
               {selectedLog.errorInfo && (
                 <TabPane tab="Error Info" key="5">
-                  <div className="space-y-2">
-                    <div><strong>Error Code:</strong> {selectedLog.errorInfo.errorCode}</div>
-                    <div><strong>Error Message:</strong> {selectedLog.errorInfo.errorMessage}</div>
+                  <div className="space-y-3">
+                    <div><div className="lm-detail-label">Error Code</div><div className="lm-detail-value">{selectedLog.errorInfo.errorCode}</div></div>
+                    <div><div className="lm-detail-label">Error Message</div><div className="lm-detail-value">{selectedLog.errorInfo.errorMessage}</div></div>
                     {selectedLog.errorInfo.stackTrace && (
                       <div>
-                        <strong>Stack Trace:</strong>
-                        <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-auto">
-                          {selectedLog.errorInfo.stackTrace}
-                        </pre>
+                        <div className="lm-detail-label">Stack Trace</div>
+                        <pre className="lm-code-box">{selectedLog.errorInfo.stackTrace}</pre>
                       </div>
                     )}
                     {selectedLog.errorInfo.context && (
                       <div>
-                        <strong>Context:</strong>
-                        <pre className="mt-2 p-3 bg-gray-50 rounded text-xs">
-                          {JSON.stringify(selectedLog.errorInfo.context, null, 2)}
-                        </pre>
+                        <div className="lm-detail-label">Context</div>
+                        <pre className="lm-code-box lm-code-box-light">{JSON.stringify(selectedLog.errorInfo.context, null, 2)}</pre>
                       </div>
                     )}
                   </div>
@@ -756,37 +775,29 @@ const LogManager = () => {
 
               {selectedLog.rawData && (
                 <TabPane tab="Raw Data" key="6">
-                  <div className="space-y-2">
-                    <strong>Raw Data:</strong>
-                    <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-auto max-h-64">
-                      {JSON.stringify(selectedLog.rawData, null, 2)}
-                    </pre>
-                  </div>
+                  <div className="lm-detail-label">Raw Data</div>
+                  <pre className="lm-code-box">{JSON.stringify(selectedLog.rawData, null, 2)}</pre>
                 </TabPane>
               )}
 
               {selectedLog.metadata && (
                 <TabPane tab="Metadata" key="7">
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-4 mb-3">
                     {selectedLog.metadata.extensionVersion && (
-                      <div><strong>Extension Version:</strong> {selectedLog.metadata.extensionVersion}</div>
+                      <div><div className="lm-detail-label">Extension Version</div><div className="lm-detail-value">{selectedLog.metadata.extensionVersion}</div></div>
                     )}
                     {selectedLog.metadata.browserInfo && (
-                      <div><strong>Browser Info:</strong> {selectedLog.metadata.browserInfo}</div>
+                      <div><div className="lm-detail-label">Browser Info</div><div className="lm-detail-value">{selectedLog.metadata.browserInfo}</div></div>
                     )}
                     {selectedLog.metadata.userAgent && (
-                      <div><strong>User Agent:</strong> {selectedLog.metadata.userAgent}</div>
+                      <div className="col-span-2"><div className="lm-detail-label">User Agent</div><div className="lm-detail-value">{selectedLog.metadata.userAgent}</div></div>
                     )}
                     {selectedLog.metadata.sessionId && (
-                      <div><strong>Session ID:</strong> {selectedLog.metadata.sessionId}</div>
+                      <div><div className="lm-detail-label">Session ID</div><div className="lm-detail-value">{selectedLog.metadata.sessionId}</div></div>
                     )}
-                    <div>
-                      <strong>Full Metadata:</strong>
-                      <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-auto">
-                        {JSON.stringify(selectedLog.metadata, null, 2)}
-                      </pre>
-                    </div>
                   </div>
+                  <div className="lm-detail-label">Full Metadata</div>
+                  <pre className="lm-code-box lm-code-box-light">{JSON.stringify(selectedLog.metadata, null, 2)}</pre>
                 </TabPane>
               )}
             </Tabs>
@@ -795,6 +806,7 @@ const LogManager = () => {
 
         {/* Task Drawer */}
         <Drawer
+          className="log-manager-drawer"
           title={`Task Logs: ${selectedTaskId}`}
           placement="right"
           onClose={() => setTaskDrawerOpen(false)}
@@ -808,11 +820,9 @@ const LogManager = () => {
                 color={getLogTypeColor(log.logType)}
                 dot={LOG_LEVELS[log.level]?.icon}
               >
-                <div className="text-xs text-gray-500">
-                  {formatTimestamp(log.timestamp)}
-                </div>
-                <div className="font-medium">{log.logType}</div>
-                <div className="text-sm">{log.message}</div>
+                <div className="lm-tl-time">{formatTimestamp(log.timestamp)}</div>
+                <div className="lm-tl-type">{log.logType}</div>
+                <div className="lm-tl-msg">{log.message}</div>
               </Timeline.Item>
             ))}
           </Timeline>
