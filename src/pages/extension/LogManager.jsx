@@ -638,7 +638,7 @@ const LogManager = () => {
                 handleFilterChange('limit', size);
               }
             }}
-            scroll={{ x: 1200, y: 650 }}
+            scroll={{ x: 1200, y: 600 }}
           />
         </Card>
         </div>
