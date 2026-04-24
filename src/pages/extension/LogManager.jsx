@@ -467,7 +467,7 @@ const LogManager = () => {
 
       <div className="lm-content mt-[48px]">
         {/* Stats Cards */}
-        {selectedMachine !== 'all' && stats && (
+        {/* {selectedMachine !== 'all' && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {statsCards.map((stat, index) => (
               <Card key={index} className={`lm-stat ${statAccentClass[index] || ''}`} size="small">
@@ -478,7 +478,7 @@ const LogManager = () => {
               </Card>
             ))}
           </div>
-        )}
+        )} */}
 
         {/* Quick Filters */}
         <Card className="lm-card" size="small">
@@ -638,7 +638,7 @@ const LogManager = () => {
                 handleFilterChange('limit', size);
               }
             }}
-            scroll={{ x: 1200, y: 500 }}
+            scroll={{ x: 1200, y: 650 }}
           />
         </Card>
         </div>
