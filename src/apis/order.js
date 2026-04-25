@@ -45,6 +45,10 @@ const updateBaseCost = (orderId, base_cost) => {
   });
 };
 
+const resetBaseCost = (payload) => {
+  return instance.put('/reset-base-cost', payload);
+};
+
 const getAllCountStatus = (params) => {
   return instance.get('/order/statistic', { params });
 };
@@ -161,6 +165,7 @@ export {
   markAddressValid,
   manualMapping,
   updateBaseCost,
+  resetBaseCost,
   getAllCountStatus,
   updateShippingType,
   getAllCaseByOrder,
