@@ -46,7 +46,7 @@ const updateBaseCost = (orderId, base_cost) => {
 };
 
 const resetBaseCost = (payload) => {
-  return instance.put('/reset-base-cost', payload);
+  return instance.put('/order/reset-base-cost', payload);
 };
 
 const getAllCountStatus = (params) => {
