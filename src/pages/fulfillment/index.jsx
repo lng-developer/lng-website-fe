@@ -421,8 +421,17 @@ const FulfillmentScale = () => {
           <div className="mb-1 w-45">
             <div className="font-semibold text-gray-800 mb-1">CS note: </div>
             <TextArea
-              value={itemSub?.tracking_info?.note}
+              value={itemSub?.tracking_info?.note || ''}
               placeholder="CS note"
+              readOnly
+              spellCheck={false}
+              style={{ color: dataColors.cancelled, fontWeight: 500 }}
+            />
+            <div className="font-semibold text-gray-800 mb-1 mt-3">QC note: </div>
+            <TextArea
+              value={itemSub?.qc_note || ''}
+              placeholder="QC note"
+              readOnly
               spellCheck={false}
               style={{ color: dataColors.cancelled, fontWeight: 500 }}
             />
