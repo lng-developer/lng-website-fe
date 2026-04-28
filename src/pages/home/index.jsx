@@ -624,8 +624,10 @@ const Home = () => {
           customerInfor={item?.customer_infor}
           orderId={item?.orderId}
           fetchAllOrder={fetchAllOrder}
+          fetchCountStatus={fetchCountStatus}
           filters={filters}
           address_validation={item?.address_validation}
+          showMarkValidButton={true}
         />
       ),
       status: (

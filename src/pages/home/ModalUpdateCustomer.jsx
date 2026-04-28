@@ -27,6 +27,7 @@ const ModalUpdateCustomer = ({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isMarkingValid, setIsMarkingValid] = useState(false);
+  const [isConfirmMarkValidOpen, setIsConfirmMarkValidOpen] = useState(false);
 
   useEffect(() => {
     setFormData({
@@ -72,7 +73,7 @@ const ModalUpdateCustomer = ({
     }
   };
 
-  const handleMarkAddressValid = async () => {
+  const markAddressAsValid = async () => {
     try {
       setIsMarkingValid(true);
       const response = await markAddressValid(orderId);
@@ -80,6 +81,7 @@ const ModalUpdateCustomer = ({
         toast.success(response.data?.message || 'Address marked as valid');
         fetchAllOrder(filters);
         fetchCountStatus?.();
+        setIsConfirmMarkValidOpen(false);
         setIsModalOpen(false);
       }
     } catch (error) {
@@ -90,80 +92,102 @@ const ModalUpdateCustomer = ({
     }
   };
 
-  return (
-    <Modal
-      title="Update Customer"
-      okText="Save changes"
-      closable={{ 'aria-label': 'Custom Close Button' }}
-      open={isModalOpen}
-      onOk={handleOk}
-      okButtonProps={{ disabled: isEqual(formData, customerInfor), loading: isSaving }}
-      width={680}
-      onCancel={handleCancel}
-      confirmLoading={isSaving}
-      cancelButtonProps={{ disabled: isSaving || isMarkingValid }}
-      footer={(_, { OkBtn, CancelBtn }) => (
-        <div className="flex items-center justify-between">
-          <div>
-            {showMarkValidButton ? (
-              <Button type="primary" ghost onClick={handleMarkAddressValid} loading={isMarkingValid} disabled={isSaving}>
-                Valid Address
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <CancelBtn />
-            <OkBtn />
-          </div>
-        </div>
-      )}
-    >
-      <div className="py-2">
-        <div className="flex justify-between">
-          <Flex gap={5} vertical={true}>
-            <div className="w-[300px]">
-              <span className="font-medium">Name</span>
-              <Input name="name" value={formData.name} onChange={handleChange} placeholder="Name" />
-            </div>
-            <div>
-              <span className="font-medium">Address</span>
-              <Input name="address" value={formData.address} onChange={handleChange} placeholder="Address" />
-            </div>
-            <div>
-              <span className="font-medium">State</span>
-              <Input name="state" value={formData.state} onChange={handleChange} placeholder="State" />
-            </div>
-            <div>
-              <span className="font-medium">Country</span>
-              <Input name="country" value={formData.country} onChange={handleChange} placeholder="Country" />
-            </div>
-            <div>
-              <span className="font-medium">Phone Number</span>
-              <Input name="phone_number" value={formData.phone_number} onChange={handleChange} placeholder="Phone Number" />
-            </div>
-          </Flex>
+  const handleMarkAddressValid = () => setIsConfirmMarkValidOpen(true);
 
-          <Flex gap={5} vertical={true}>
-            <div className="w-[300px]">
-              <span className="font-medium">Email</span>
-              <Input name="email" value={formData.email} onChange={handleChange} placeholder="Email" />
+  return (
+    <>
+      <Modal
+        title="Update Customer"
+        okText="Save changes"
+        closable={{ 'aria-label': 'Custom Close Button' }}
+        open={isModalOpen}
+        onOk={handleOk}
+        okButtonProps={{ disabled: isEqual(formData, customerInfor), loading: isSaving }}
+        width={680}
+        onCancel={handleCancel}
+        confirmLoading={isSaving}
+        cancelButtonProps={{ disabled: isSaving || isMarkingValid }}
+        footer={(_originNode, footerButtons) => {
+          const { OkBtn, CancelBtn } = footerButtons;
+          return (
+            <div className="flex items-center justify-between">
+              <div>
+                {showMarkValidButton ? (
+                  <Button type="primary" ghost onClick={handleMarkAddressValid} loading={isMarkingValid} disabled={isSaving}>
+                    Mark Address As Valid
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <CancelBtn />
+                <OkBtn />
+              </div>
             </div>
-            <div>
-              <span className="font-medium">Address 2</span>
-              <Input name="address_2" value={formData.address_2} onChange={handleChange} placeholder="Address 2" />
-            </div>
-            <div>
-              <span className="font-medium">City</span>
-              <Input name="city" value={formData.city} onChange={handleChange} placeholder="City" />
-            </div>
-            <div>
-              <span className="font-medium">Zip Code</span>
-              <Input name="zip_code" value={formData.zip_code} onChange={handleChange} placeholder="Zip Code" />
-            </div>
-          </Flex>
+          );
+        }}
+      >
+        <div className="py-2">
+          <div className="flex justify-between">
+            <Flex gap={5} vertical={true}>
+              <div className="w-[300px]">
+                <span className="font-medium">Name</span>
+                <Input name="name" value={formData.name} onChange={handleChange} placeholder="Name" />
+              </div>
+              <div>
+                <span className="font-medium">Address</span>
+                <Input name="address" value={formData.address} onChange={handleChange} placeholder="Address" />
+              </div>
+              <div>
+                <span className="font-medium">State</span>
+                <Input name="state" value={formData.state} onChange={handleChange} placeholder="State" />
+              </div>
+              <div>
+                <span className="font-medium">Country</span>
+                <Input name="country" value={formData.country} onChange={handleChange} placeholder="Country" />
+              </div>
+              <div>
+                <span className="font-medium">Phone Number</span>
+                <Input name="phone_number" value={formData.phone_number} onChange={handleChange} placeholder="Phone Number" />
+              </div>
+            </Flex>
+
+            <Flex gap={5} vertical={true}>
+              <div className="w-[300px]">
+                <span className="font-medium">Email</span>
+                <Input name="email" value={formData.email} onChange={handleChange} placeholder="Email" />
+              </div>
+              <div>
+                <span className="font-medium">Address 2</span>
+                <Input name="address_2" value={formData.address_2} onChange={handleChange} placeholder="Address 2" />
+              </div>
+              <div>
+                <span className="font-medium">City</span>
+                <Input name="city" value={formData.city} onChange={handleChange} placeholder="City" />
+              </div>
+              <div>
+                <span className="font-medium">Zip Code</span>
+                <Input name="zip_code" value={formData.zip_code} onChange={handleChange} placeholder="Zip Code" />
+              </div>
+            </Flex>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      <Modal
+        title="Mark Address As Valid"
+        open={isConfirmMarkValidOpen}
+        okText="Confirm"
+        cancelText="Cancel"
+        onOk={markAddressAsValid}
+        onCancel={() => setIsConfirmMarkValidOpen(false)}
+        confirmLoading={isMarkingValid}
+        okButtonProps={{ disabled: isSaving }}
+        cancelButtonProps={{ disabled: isMarkingValid }}
+        width={420}
+      >
+        <div className="text-sm text-[#64748b]">Are you sure you want to mark this order address as valid?</div>
+      </Modal>
+    </>
   );
 };
 
