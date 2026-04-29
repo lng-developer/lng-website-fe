@@ -59,7 +59,7 @@ const LogManager = () => {
   const [loading, setLoading] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState('all');
   const [filters, setFilters] = useState({
-    limit: 500,
+    limit: 50,
     hours: 24,
     logType: '',
     level: '',
@@ -543,6 +543,7 @@ const LogManager = () => {
               onChange={(value) => handleFilterChange('limit', value)}
               style={{ width: '100%' }}
             >
+              <Option value={50}>50 logs</Option>
               <Option value={500}>500 logs</Option>
               <Option value={1000}>1000 logs</Option>
               <Option value={2000}>2000 logs</Option>
