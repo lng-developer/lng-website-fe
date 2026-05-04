@@ -1,7 +1,12 @@
 import instance from '.';
 
+const normalizeOrderParams = (params = {}) => ({
+  ...params,
+  vendor: params?.vendor || undefined,
+});
+
 const getALlOrder = (params) => {
-  return instance.get('/order/fe', { params });
+  return instance.get('/order/fe', { params: normalizeOrderParams(params) });
 };
 
 const updateStatusOrder = (orderId, status) => {
@@ -50,7 +55,7 @@ const resetBaseCost = (payload) => {
 };
 
 const getAllCountStatus = (params) => {
-  return instance.get('/order/statistic', { params });
+  return instance.get('/order/statistic', { params: normalizeOrderParams(params) });
 };
 
 const updateShippingType = (orderId, shipping_type) => {

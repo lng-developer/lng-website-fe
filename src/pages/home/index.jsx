@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Flex, Input, Modal, Pagination, Table, Tooltip, Empty } from 'antd';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
@@ -39,6 +39,7 @@ import ItemShippingType from './table/ItemShippingType';
 import ItemCase from './table/ItemCase';
 import ModalImportOrder from './ModalImportOrder';
 import { getAllTeam } from '../../apis/teams';
+import { getALlVendor } from '../../apis/vendor';
 import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
@@ -49,6 +50,8 @@ const PAGE_SIZE = 10;
 
 const Home = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialVendorId = searchParams.get('vendor') || '';
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatus[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatus);
@@ -78,6 +81,8 @@ const Home = () => {
   const [orderInfo, setOrderInfo] = useState({});
   const [teams, setTeams] = useState([]);
   const [selectTeam, setSelectTeam] = useState('');
+  const [vendors, setVendors] = useState([]);
+  const [selectVendor, setSelectVendor] = useState(initialVendorId);
   const [isImporting, setIsImporting] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
@@ -94,6 +99,7 @@ const Home = () => {
     openCase: false,
     shopName: '',
     teamId: '',
+    vendor: initialVendorId,
   });
 
   const updateLastUpdatedAt = useCallback(() => {
@@ -185,6 +191,9 @@ const Home = () => {
       }
     } catch (error) {
       console.error(error);
+      if (error?.response?.status === 400 && filters.vendor) {
+        return;
+      }
       // toast.error('Error System!');
     }
   }, [filters]);
@@ -205,6 +214,10 @@ const Home = () => {
         }
       } catch (error) {
         console.log(error);
+        if (error?.response?.status === 400 && params?.vendor) {
+          toast.error(error?.response?.data?.message || 'Invalid vendor filter');
+          return;
+        }
         toast.error('Error System!');
       } finally {
         setLoading(false);
@@ -543,6 +556,18 @@ const Home = () => {
     }
   }, []);
 
+  const fetchAllVendors = useCallback(async () => {
+    try {
+      const result = await getALlVendor();
+      if (result.status === 200) {
+        setVendors(Array.isArray(result.data) ? result.data : []);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load vendors');
+    }
+  }, []);
+
   // columns
   const columns = useMemo(
     () => [
@@ -822,6 +847,17 @@ const Home = () => {
     }
   }, []);
 
+  const vendorOptions = useMemo(
+    () => [
+      { label: 'All', value: '' },
+      ...vendors.map((item) => ({
+        label: item?.name || 'Unnamed vendor',
+        value: item?._id,
+      })),
+    ],
+    [vendors]
+  );
+
   useEffect(() => {
     const handleResize = () => {
       const headerHeight = 240;
@@ -840,6 +876,23 @@ const Home = () => {
   useEffect(() => {
     fetchAllTeams();
   }, [fetchAllTeams]);
+
+  useEffect(() => {
+    fetchAllVendors();
+  }, [fetchAllVendors]);
+
+  useEffect(() => {
+    const currentVendor = searchParams.get('vendor') || '';
+    if (currentVendor === filters.vendor) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (filters.vendor) {
+      nextSearchParams.set('vendor', filters.vendor);
+    } else {
+      nextSearchParams.delete('vendor');
+    }
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [filters.vendor, searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchCountStatus();
@@ -1009,6 +1062,16 @@ const Home = () => {
                 onChange={(val) => {
                   setSelectTeam(val);
                   updateFilter({ teamId: val, page: 1 });
+                }}
+              />
+              <SelectSeller
+                title="Vendor"
+                ListData={vendorOptions}
+                value={selectVendor}
+                onChange={(val) => {
+                  const vendorId = val || '';
+                  setSelectVendor(vendorId);
+                  updateFilter({ vendor: vendorId, page: 1 });
                 }}
               />
             </div>
