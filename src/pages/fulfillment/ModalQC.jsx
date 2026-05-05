@@ -162,12 +162,19 @@ export default function QcCanvasModal({
 
   const layersData = useMemo(() => {
     const ff = currentItem?.fulfillment_file;
-    if (!ff) return [];
-    return Object.entries(ff).map(([key, url]) => ({
+    console.log('[QC] currentItem:', currentItem);
+    console.log('[QC] fulfillment_file raw:', ff);
+    if (!ff) {
+      console.warn('[QC] fulfillment_file is empty/undefined → no layers');
+      return [];
+    }
+    const result = Object.entries(ff).map(([key, url]) => ({
       id: key.replace(/_/g, ''),
       label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       url,
     }));
+    console.log('[QC] layersData built:', result);
+    return result;
   }, [currentItem]);
 
   const displayScale = useMemo(
@@ -280,7 +287,12 @@ export default function QcCanvasModal({
 
   useEffect(() => {
     if (!open) return;
-    if (!layersData.length) return setItems([]);
+    if (!layersData.length) {
+      console.warn('[QC] layersData empty → clear items');
+      return setItems([]);
+    }
+
+    console.log('[QC] start loading layers:', layersData.length, 'displayScale:', displayScale);
 
     let cancelled = false;
 
@@ -289,14 +301,21 @@ export default function QcCanvasModal({
         (x, i) =>
           new Promise((resolve) => {
             const it = normalizeLayer(x, i);
-            if (!it.url) return resolve(it);
+            if (!it.url) {
+              console.warn(`[QC] layer ${it.id} has no url → skipped image load`, it);
+              return resolve(it);
+            }
 
             const img = new window.Image();
-            img.crossOrigin = 'anonymous';
             img.onload = () => {
               if (cancelled) return resolve(null);
               const originalWidth = img.width;
               const originalHeight = img.height;
+              console.log(`[QC] layer ${it.id} loaded:`, {
+                url: it.url,
+                originalWidth,
+                originalHeight,
+              });
               resolve({
                 ...it,
                 htmlImg: img,
@@ -308,12 +327,25 @@ export default function QcCanvasModal({
                 height: originalHeight * displayScale,
               });
             };
-            img.onerror = () => resolve(it);
+            img.onerror = (err) => {
+              console.error(`[QC] layer ${it.id} failed to load:`, it.url, err);
+              resolve(it);
+            };
             img.src = it.url;
           })
       )
     ).then((arr) => {
-      if (!cancelled) setItems(arr.filter(Boolean));
+      if (!cancelled) {
+        const finalItems = arr.filter(Boolean);
+        console.log('[QC] items resolved:', finalItems.map((i) => ({
+          id: i.id,
+          hasImg: !!i.htmlImg,
+          width: i.width,
+          height: i.height,
+          url: i.url,
+        })));
+        setItems(finalItems);
+      }
     });
 
     return () => {

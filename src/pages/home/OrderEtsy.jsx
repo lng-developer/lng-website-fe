@@ -552,10 +552,6 @@ const OrderEtsy = () => {
               fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
               orderId={item?.orderId}
               orderItemId={itemSub?.orderItemId}
-              onProductChange={handleProductChange}
-              onSizeChange={handleSizeChange}
-              onColorChange={handleColorChange}
-              onVariantDataChange={handleVariantDataChange}
             />
           ),
           tracking_note: (
@@ -841,7 +837,7 @@ const OrderEtsy = () => {
         setIsModalOpen={setIsShowModal}
         onImportSuccess={() => {
           fetchAllOrder(filters);
-          fetchCountStatus();
+          fetchEtsyStatistic();
         }}
       />
 
