@@ -33,14 +33,12 @@ import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
-import { useAuth } from '../../context/AuthContext';
 import { getAllEtsyOrders, getEtsyStatistic, computeEtsyBaseCost } from '../../apis/etsy';
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 
 const OrderEtsy = () => {
-  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusEtsy[0]);
   const [tabFilter, setTabFilter] = useState(dataFilterStatusEtsy);
@@ -57,7 +55,6 @@ const OrderEtsy = () => {
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
-  const [selectedReplaceItemId, setSelectedReplaceItemId] = useState('');
   const [selectedReplaceItemIds, setSelectedReplaceItemIds] = useState([]);
 
   const [orderInfo, setOrderInfo] = useState({});
@@ -552,10 +549,6 @@ const OrderEtsy = () => {
               fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
               orderId={item?.orderId}
               orderItemId={itemSub?.orderItemId}
-              onProductChange={handleProductChange}
-              onSizeChange={handleSizeChange}
-              onColorChange={handleColorChange}
-              onVariantDataChange={handleVariantDataChange}
             />
           ),
           tracking_note: (
@@ -841,7 +834,7 @@ const OrderEtsy = () => {
         setIsModalOpen={setIsShowModal}
         onImportSuccess={() => {
           fetchAllOrder(filters);
-          fetchCountStatus();
+          fetchEtsyStatistic();
         }}
       />
 
