@@ -161,6 +161,10 @@ export const resetOrdersBulk = (payload) => {
   return instance.put('/scale/orders/reset/bulk', payload);
 };
 
+export const sendFailedOrdersToFulfillment = (payload) => {
+  return instance.post('/fulfillment/qc/send-to-fulfillment', payload);
+};
+
 export {
   getALlOrder,
   updateStatusOrder,

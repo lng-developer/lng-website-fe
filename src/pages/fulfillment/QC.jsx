@@ -11,7 +11,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
 import { BiRefresh } from 'react-icons/bi';
-import { getAllCountStatusQC, getAllQC, getALlShop, retryScaleOrder } from '../../apis/order';
+import { getAllCountStatusQC, getAllQC, getALlShop, retryScaleOrder, sendFailedOrdersToFulfillment } from '../../apis/order';
 import { toast } from 'sonner';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -21,7 +21,7 @@ import { debounce } from 'lodash';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { getAllSellers } from '../../apis/user';
-import { MdOutlineRefresh } from 'react-icons/md';
+import { MdOutlineRefresh, MdOutlineSend } from 'react-icons/md';
 import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -67,6 +67,8 @@ const QC = () => {
   });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [sendingToFulfillment, setSendingToFulfillment] = useState(false);
+  const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
 
   const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
@@ -125,14 +127,14 @@ const QC = () => {
         { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
-        isActiveFilter.title === 'Failed' && {
+        isFailedFilter && {
           title: <span style={{ color: dataColors.title }}>Retry</span>,
           dataIndex: 'action_retry',
           key: 'action_retry',
           align: 'center',
         },
       ].filter(Boolean),
-    [isActiveFilter.title]
+    [isFailedFilter]
   );
 
   const subColumns = useMemo(
@@ -361,6 +363,39 @@ const QC = () => {
     }
   }, [selectedRowKeys, dataSource]);
 
+  const handleSendSelectedToFulfillment = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      toast.error('Please select failed orders to send');
+      return;
+    }
+
+    const selectedOrders = dataSource.filter((order) => selectedRowKeys.includes(order.orderId));
+    if (selectedOrders.length === 0) {
+      toast.error('No matching orders found to send');
+      return;
+    }
+
+    const payload = { orderIds: selectedOrders.map((order) => order.orderId) };
+    setSendingToFulfillment(true);
+
+    try {
+      const response = await sendFailedOrdersToFulfillment(payload);
+      if (response.status >= 200 && response.status < 300) {
+        toast.success(`Sent ${selectedOrders.length} orders to fulfillment`);
+        setSelectedRowKeys([]);
+        fetchAllQC(filters);
+        fetchCountStatus();
+      } else {
+        toast.error(response.data?.message || 'Failed to send orders to fulfillment');
+      }
+    } catch (error) {
+      console.error('Send fulfillment error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to send orders to fulfillment');
+    } finally {
+      setSendingToFulfillment(false);
+    }
+  }, [dataSource, fetchAllQC, fetchCountStatus, filters, selectedRowKeys]);
+
   useEffect(() => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
@@ -475,7 +510,7 @@ const QC = () => {
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
       action_retry:
-        isActiveFilter.title === 'Failed' ? (
+        isFailedFilter ? (
           <Tooltip title="Retry Scale">
             <div
               className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
@@ -561,7 +596,7 @@ const QC = () => {
         ),
       })),
     }));
-  }, [dataSource, handleCopy]);
+  }, [dataSource, handleCopy, handleRetry, isFailedFilter]);
 
   // =============== EFFECTS ===============
   useEffect(() => {
@@ -685,6 +720,21 @@ const QC = () => {
                   Export Excel ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
+
+              {isFailedFilter && (
+                <Tooltip title="Send selected orders to fulfillment">
+                  <Button
+                    type="primary"
+                    danger
+                    icon={<MdOutlineSend />}
+                    onClick={handleSendSelectedToFulfillment}
+                    loading={sendingToFulfillment}
+                    disabled={selectedRowKeys.length === 0 || sendingToFulfillment}
+                  >
+                    Send Fulfillment ({selectedRowKeys.length})
+                  </Button>
+                </Tooltip>
+              )}
             </div>
           </div>
 
