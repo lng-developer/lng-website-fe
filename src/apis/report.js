@@ -36,6 +36,10 @@ const getAds = (params) => {
   return instance.get('/ads', { params });
 };
 
+const getAllAdsEtsy = (start, end, shopId) => {
+  return instance.get('/ads/etsy', { params: { start, end, shopId } });
+};
+
 const exportReportCost = (params) => {
   return instance.get('/report/order_cost/export', { params, responseType: 'blob' });
 };
@@ -49,4 +53,4 @@ const reportForSaler = (from, to) => {
 };
 
 
-export { getAllReport, importReport, importAds, getOrderCostStatistics, getAds, importRefund, exportReportCost, exportAds,reportForSaler };
+export { getAllReport, importReport, importAds, getOrderCostStatistics, getAds, getAllAdsEtsy, importRefund, exportReportCost, exportAds, reportForSaler };

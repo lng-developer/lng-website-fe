@@ -15,6 +15,7 @@ const TITLES = {
   '/report/sale': 'Sale Report',
   '/report/orders-cost': 'Report Orders Cost',
   '/report/ads': 'Amazon Ads Report',
+  '/report/ads-etsy': 'Etsy Ads Report',
   '/design/idea': 'Idea Tasks',
   '/design/psd': 'PSD Tasks',
   '/design/png': 'PNG Tasks',
