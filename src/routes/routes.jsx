@@ -37,6 +37,7 @@ const routes = {
   report_sale_etsy: '/report/sale-etsy',
   report_order_cost_etsy: '/report/order-cost-etsy',
   report_ads: '/report/ads',
+  report_ads_etsy: '/report/ads-etsy',
   extensions: '/extensions',
   extensions_config_auto: '/extensions/config-auto',
   extensions_log_manager: '/extensions/log-manager',

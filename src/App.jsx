@@ -26,6 +26,7 @@ import PSDTasks from './pages/design/PSDTasks';
 import PNGTasks from './pages/design/PNGTasks';
 import IdeaTask from './pages/design/IdeaTask';
 import AdsReport from './pages/report/AdsReport';
+import AdsEtsyReport from './pages/report/AdsEtsyReport';
 import Teams from './pages/cost_center/Teams';
 import ExtensionManager from './pages/extension';
 import ConfigAuto from './pages/extension/ConfigAuto';
@@ -77,6 +78,7 @@ function App() {
           <Route path={routes.report_order_cost_etsy} element={<EtsyOrderCost />} />
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
           <Route path={routes.report_ads} element={<AdsReport />} />
+          <Route path={routes.report_ads_etsy} element={<AdsEtsyReport />} />
 
           <Route path={routes.checkodertracking} element={<CheckOder />} />
           {/* ScalEsty */}
