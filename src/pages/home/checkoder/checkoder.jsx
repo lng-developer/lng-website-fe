@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getAllShop } from '../../../apis/shop';
 import { checkOrdersStatus, createShippingBatchFromOrders } from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
+import ExcelJS from 'exceljs';
 
 const getCarrierInfo = (tracking) => {
     const t = (tracking || '').toUpperCase();
@@ -29,6 +30,8 @@ const CheckOder = () => {
     const [error, setError] = useState(null);
     const [filterTracking, setFilterTracking] = useState('all');
     const [filterAmazon, setFilterAmazon] = useState('all');
+    const [filterAmzDateFrom, setFilterAmzDateFrom] = useState('');
+    const [filterAmzDateTo, setFilterAmzDateTo] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
 
@@ -41,6 +44,7 @@ const CheckOder = () => {
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [submitting, setSubmitting] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
 
     useEffect(() => {
         getShop();
@@ -75,6 +79,8 @@ const CheckOder = () => {
             setError(null);
             setFilterTracking('all');
             setFilterAmazon('all');
+            setFilterAmzDateFrom('');
+            setFilterAmzDateTo('');
             setSearchTerm('');
         }
     };
@@ -115,6 +121,9 @@ const CheckOder = () => {
     };
 
     const filteredOrders = useMemo(() => {
+        const fromTs = filterAmzDateFrom ? new Date(filterAmzDateFrom).setHours(0, 0, 0, 0) : null;
+        const toTs = filterAmzDateTo ? new Date(filterAmzDateTo).setHours(23, 59, 59, 999) : null;
+
         return orders.filter((order) => {
             const matchesTracking =
                 filterTracking === 'all' ||
@@ -124,15 +133,26 @@ const CheckOder = () => {
                 filterAmazon === 'all' ||
                 (filterAmazon === 'yes' ? order.submittedToAmazon : !order.submittedToAmazon);
 
+            let matchesAmzDate = true;
+            if (fromTs !== null || toTs !== null) {
+                if (!order.createAtToAmz) {
+                    matchesAmzDate = false;
+                } else {
+                    const ts = new Date(order.createAtToAmz).getTime();
+                    if (fromTs !== null && ts < fromTs) matchesAmzDate = false;
+                    if (toTs !== null && ts > toTs) matchesAmzDate = false;
+                }
+            }
+
             const matchesSearch =
                 searchTerm === '' ||
                 order.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.shopId?.toLowerCase().includes(searchTerm.toLowerCase());
 
-            return matchesTracking && matchesAmazon && matchesSearch;
+            return matchesTracking && matchesAmazon && matchesAmzDate && matchesSearch;
         });
-    }, [orders, filterTracking, filterAmazon, searchTerm]);
+    }, [orders, filterTracking, filterAmazon, filterAmzDateFrom, filterAmzDateTo, searchTerm]);
 
     const getOrderKey = (order) =>
         `${order.orderId || 'no-order-id'}__${order.shopId || 'no-shop-id'}`;
@@ -235,6 +255,84 @@ const CheckOder = () => {
             alert('Có lỗi khi xuất TXT');
         } finally {
             setExporting(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        if (filteredOrders.length === 0) {
+            alert('Không có dữ liệu để xuất');
+            return;
+        }
+
+        try {
+            setExportingExcel(true);
+
+            const columns = [
+                { header: 'Order ID', key: 'orderId', width: 22 },
+                { header: 'Shop Name', key: 'shopName', width: 18 },
+                { header: 'Shop ID', key: 'shopId', width: 26 },
+                { header: 'Trạng thái', key: 'status', width: 14 },
+                { header: 'Ngày tạo', key: 'createdAt', width: 20 },
+                { header: 'Có tracking', key: 'hasTracking', width: 12 },
+                { header: 'Mã tracking', key: 'tracking', width: 24 },
+                { header: 'Carrier', key: 'carrier', width: 16 },
+                { header: 'Đã submit AMZ', key: 'submittedToAmazon', width: 14 },
+                { header: 'Ngày submit AMZ', key: 'createAtToAmz', width: 20 },
+                { header: 'SL', key: 'itemsCount', width: 6 },
+                { header: 'Fulfillment', key: 'fulfillment', width: 14 },
+                { header: 'Updated At', key: 'updatedAt', width: 20 }
+            ];
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Orders');
+            worksheet.columns = columns;
+
+            filteredOrders.forEach((o) => {
+                worksheet.addRow({
+                    orderId: o.orderId || '',
+                    shopName: o.shopName || '',
+                    shopId: o.shopId || '',
+                    status: o.status || '',
+                    createdAt: o.createdAt ? new Date(o.createdAt).toLocaleString() : '',
+                    hasTracking: o.hasTracking ? 'Có' : 'Không',
+                    tracking: o.tracking || '',
+                    carrier: o.trackingInfo?.carrier || '',
+                    submittedToAmazon: o.submittedToAmazon ? 'Có' : 'Không',
+                    createAtToAmz: o.createAtToAmz ? new Date(o.createAtToAmz).toLocaleString() : '',
+                    itemsCount: o.itemsCount || 0,
+                    fulfillment: o.trackingInfo?.fulfillment || '',
+                    updatedAt: o.trackingInfo?.updated_at
+                        ? new Date(o.trackingInfo.updated_at).toLocaleString()
+                        : ''
+                });
+            });
+
+            const headerRow = worksheet.getRow(1);
+            headerRow.font = { bold: true };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF111827' }
+            };
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const shopName = selectedShop?.name || 'AllShops';
+            const filename = `Orders_${shopName}_${timestamp}.xlsx`;
+            saveAs(blob, filename);
+
+            alert(`Xuất Excel thành công: ${filteredOrders.length} đơn hàng`);
+        } catch (error) {
+            console.error('Export Excel error:', error);
+            alert('Có lỗi khi xuất Excel');
+        } finally {
+            setExportingExcel(false);
         }
     };
 
@@ -573,12 +671,51 @@ const CheckOder = () => {
                             </select>
                         </div>
 
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
+                            <input
+                                type="date"
+                                value={filterAmzDateFrom}
+                                onChange={(e) => setFilterAmzDateFrom(e.target.value)}
+                                disabled={loading}
+                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
+                            />
+                            <span className="text-[10px] text-neutral-400">→</span>
+                            <input
+                                type="date"
+                                value={filterAmzDateTo}
+                                onChange={(e) => setFilterAmzDateTo(e.target.value)}
+                                disabled={loading}
+                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
+                            />
+                            {(filterAmzDateFrom || filterAmzDateTo) && (
+                                <button
+                                    onClick={() => {
+                                        setFilterAmzDateFrom('');
+                                        setFilterAmzDateTo('');
+                                    }}
+                                    className="text-neutral-400 hover:text-neutral-900 text-xs font-bold px-1"
+                                    title="Xoá lọc ngày"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
                         <button
                             onClick={handleExportTxt}
                             disabled={exporting || filteredOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-semibold text-xs hover:bg-neutral-100 hover:border-neutral-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             {exporting ? '...' : `Xuất TXT (${filteredOrders.filter((o) => o.orderId && o.tracking).length})`}
+                        </button>
+
+                        <button
+                            onClick={handleExportExcel}
+                            disabled={exportingExcel || filteredOrders.length === 0 || loading}
+                            className="px-3 py-1.5 rounded-lg border border-green-600 bg-green-600 !text-white font-semibold text-xs hover:bg-green-700 hover:border-green-700 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            {exportingExcel ? '...' : `Xuất Excel (${filteredOrders.length})`}
                         </button>
 
                         <button
@@ -613,13 +750,12 @@ const CheckOder = () => {
                                     </th>
                                     {[
                                         'Order ID',
-                                        'Tên Shop',
-                                        'Shop ID',
                                         'Trạng thái',
                                         'Ngày tạo',
                                         'Tracking',
                                         'Mã tracking',
                                         'AMZ',
+                                        'Ngày submit AMZ',
                                         'SL',
                                         'Fulfillment',
                                         'Updated At'
@@ -668,12 +804,6 @@ const CheckOder = () => {
                                                 <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold whitespace-nowrap">
                                                     {order.orderId || '-'}
                                                 </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 max-w-[180px] truncate">
-                                                    {order.shopName || '-'}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.shopId || '-'}
-                                                </td>
                                                 <td className="px-3 py-2 border-b border-neutral-100">
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200 whitespace-nowrap">
                                                         {order.status || '-'}
@@ -718,6 +848,11 @@ const CheckOder = () => {
                                                         ></span>
                                                         {order.submittedToAmazon ? 'Có' : 'Không'}
                                                     </span>
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.createAtToAmz
+                                                        ? new Date(order.createAtToAmz).toLocaleString()
+                                                        : '-'}
                                                 </td>
                                                 <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold">
                                                     {order.itemsCount || 0}
