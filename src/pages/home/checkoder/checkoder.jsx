@@ -23,6 +23,15 @@ const getCarrierInfo = (tracking) => {
 
 const formatShipDate = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
 
+const generateFakeTracking = () => {
+    const prefix = '9234';
+    let suffix = '';
+    for (let i = 0; i < 18; i++) {
+        suffix += Math.floor(Math.random() * 10);
+    }
+    return prefix + suffix;
+};
+
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
     const [stats, setStats] = useState({});
@@ -45,6 +54,7 @@ const CheckOder = () => {
     const [submitting, setSubmitting] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
+    const [exportingFake, setExportingFake] = useState(false);
 
     useEffect(() => {
         getShop();
@@ -255,6 +265,42 @@ const CheckOder = () => {
             alert('Có lỗi khi xuất TXT');
         } finally {
             setExporting(false);
+        }
+    };
+
+    const handleExportFakeTxt = async () => {
+        if (selectedOrders.length === 0) {
+            alert('Vui lòng tích chọn ít nhất 1 đơn để fake tracking');
+            return;
+        }
+
+        try {
+            setExportingFake(true);
+
+            const shipDate = formatShipDate(new Date());
+            const header = ['order-id', 'ship-date', 'carrier-code', 'tracking-number', 'ship-method'].join('\t');
+
+            const lines = selectedOrders.map((sel) => {
+                const fakeTracking = generateFakeTracking();
+                const { carrierCode, shipMethod } = getCarrierInfo(fakeTracking);
+                return [sel.orderId, shipDate, carrierCode, fakeTracking, shipMethod].join('\t');
+            });
+
+            const content = [header, ...lines].join('\n') + '\n';
+
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const shopName = selectedShop?.name || 'AllShops';
+            const filename = `FakeTracking_${shopName}_${timestamp}.txt`;
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            saveAs(blob, filename);
+
+            alert(`Xuất Fake Tracking thành công: ${selectedOrders.length} đơn hàng`);
+        } catch (error) {
+            console.error('Export Fake TXT error:', error);
+            alert('Có lỗi khi xuất Fake Tracking');
+        } finally {
+            setExportingFake(false);
         }
     };
 
@@ -716,6 +762,15 @@ const CheckOder = () => {
                             className="px-3 py-1.5 rounded-lg border border-green-600 bg-green-600 !text-white font-semibold text-xs hover:bg-green-700 hover:border-green-700 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             {exportingExcel ? '...' : `Xuất Excel (${filteredOrders.length})`}
+                        </button>
+
+                        <button
+                            onClick={handleExportFakeTxt}
+                            disabled={exportingFake || selectedOrders.length === 0 || loading}
+                            className="px-3 py-1.5 rounded-lg border border-amber-500 bg-amber-500 !text-white font-semibold text-xs hover:bg-amber-600 hover:border-amber-600 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Tạo file TXT với tracking giả cho các đơn đã chọn"
+                        >
+                            {exportingFake ? '...' : `Fake Tracking (${selectedOrders.length})`}
                         </button>
 
                         <button
