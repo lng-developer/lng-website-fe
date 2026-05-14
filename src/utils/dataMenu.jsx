@@ -190,11 +190,11 @@ export const detailMenus = {
       label: 'Log Manager',
       icon: <TbReport size={20} />,
     },
-    // {
-    //   key: routes.extensions_confirm_ship,
-    //   label: 'Amz Confirm Ship',
-    //   icon: <RiContractLine size={20} />,
-    // },
+    {
+      key: routes.extensions_confirm_ship,
+      label: 'Amz Confirm Ship',
+      icon: <RiContractLine size={20} />,
+    },
      {
       key: routes.checkodertracking,
       label: 'Check Tracking',
