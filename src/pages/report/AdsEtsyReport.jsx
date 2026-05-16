@@ -5,6 +5,8 @@ import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
 import { getAllAdsEtsy } from '../../apis/adsEtsy';
 import { getAllShop } from '../../apis/shop';
+import { getAllEtsyOrders } from '../../apis/etsy';
+import { getAllSellers } from '../../apis/user';
 
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 const fmtNum = (n) => Number(n || 0).toLocaleString('en-US');
@@ -31,6 +33,8 @@ const AdsEtsyReport = () => {
   const [items, setItems] = useState([]);
   const [shops, setShops] = useState([]);
   const [shopId, setShopId] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [filters, setFilters] = useState({
     from: defaultFrom,
     to: defaultTo,
@@ -69,8 +73,75 @@ const AdsEtsyReport = () => {
     }
   };
 
+  const fetchEtsyOrders = async () => {
+    try {
+      const res = await getAllEtsyOrders({ page: 1, perPage: 100000 });
+      const list = res?.data?.data || res?.data || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error('Error fetching Etsy orders:', error);
+    }
+  };
+
+  const fetchSellers = async () => {
+    try {
+      const res = await getAllSellers();
+      setSellers(Array.isArray(res?.data) ? res.data : []);
+    } catch (error) {
+      console.error('Error fetching sellers:', error);
+    }
+  };
+
+  const sellerByEmployeeId = useMemo(() => {
+    const map = new Map();
+    (sellers || []).forEach((s) => {
+      if (s?.employee_id) map.set(String(s.employee_id), s.full_name || '');
+    });
+    return map;
+  }, [sellers]);
+
+  const resolveSellerNamesFromSkus = (skus) => {
+    const names = new Set();
+    skus.forEach((sku) => {
+      if (!sku) return;
+      const code = String(sku).slice(0, 5);
+      const name = sellerByEmployeeId.get(code);
+      if (name) names.add(name);
+    });
+    return Array.from(names).join(', ');
+  };
+
+  const listingInfoMap = useMemo(() => {
+    const map = new Map();
+    (orders || []).forEach((order) => {
+      const seller = order?.seller?.full_name || order?.seller?.name || order?.seller || null;
+      (order?.items || []).forEach((item) => {
+        const lid = String(item?.listingId || '');
+        if (!lid) return;
+        const entry = map.get(lid) || { skus: new Set(), sellers: new Set() };
+        if (item?.sku) entry.skus.add(item.sku);
+        if (seller) entry.sellers.add(typeof seller === 'string' ? seller : JSON.stringify(seller));
+        map.set(lid, entry);
+      });
+    });
+    return map;
+  }, [orders]);
+
+  const getListingInfo = (listingId) => {
+    const entry = listingInfoMap.get(String(listingId));
+    if (!entry) return { sku: '', seller: '' };
+    const skus = Array.from(entry.skus);
+    const sellerFromSku = resolveSellerNamesFromSkus(skus);
+    return {
+      sku: skus.join(', '),
+      seller: sellerFromSku || Array.from(entry.sellers).join(', '),
+    };
+  };
+
   useEffect(() => {
     fetchShops();
+    fetchEtsyOrders();
+    fetchSellers();
   }, []);
 
   useEffect(() => {
@@ -97,16 +168,19 @@ const AdsEtsyReport = () => {
       const rows = [];
       items.forEach((it) => {
         (it?.rows || []).forEach((r, idx) => {
+          const info = getListingInfo(r.listingId);
           rows.push({
             key: `${it._id}-${r.listingId}-${idx}`,
             shopName: it.shopName,
             ...r,
             title: decodeHtml(r.title),
+            sku: info.sku,
+            seller: info.seller,
           });
         });
       });
       return rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
-    }, [items]);
+    }, [items, listingInfoMap, sellerByEmployeeId]);
 
     const columns = [
       {
@@ -129,6 +203,34 @@ const AdsEtsyReport = () => {
             </div>
           </Tooltip>
         ),
+      },
+      {
+        title: 'SKU',
+        dataIndex: 'sku',
+        key: 'sku',
+        width: 180,
+        render: (v) =>
+          v ? (
+            <Tooltip title={v}>
+              <span className="font-mono text-xs text-black truncate inline-block max-w-[160px] align-middle">{v}</span>
+            </Tooltip>
+          ) : (
+            <span className="text-gray-400">-</span>
+          ),
+      },
+      {
+        title: 'Seller',
+        dataIndex: 'seller',
+        key: 'seller',
+        width: 140,
+        render: (v) =>
+          v ? (
+            <Tooltip title={v}>
+              <span className="text-xs text-gray-800 truncate inline-block max-w-[120px] align-middle">{v}</span>
+            </Tooltip>
+          ) : (
+            <span className="text-gray-400">-</span>
+          ),
       },
       {
         title: 'Date',
@@ -311,7 +413,7 @@ const AdsEtsyReport = () => {
                   showTotal: (total) => `Total ${total} listings`,
                 }}
                 size="middle"
-                scroll={{ x: 1100, y: 'calc(100vh - 430px)' }}
+                scroll={{ x: 1420, y: 'calc(100vh - 430px)' }}
                 sticky
                 className="ads-etsy-table"
               />
