@@ -27,6 +27,65 @@ const toYMD = (value) => {
   return d.toISOString().slice(0, 10);
 };
 
+const pickItemListingId = (item) =>
+  String(
+    item?.listingId ||
+      item?.listing_id ||
+      item?.listingID ||
+      item?.rawListing?.listing_id ||
+      item?.rawListing?.listing?.listing_id ||
+      ''
+  );
+
+const pickItemSku = (item) =>
+  String(
+    item?.sku ||
+      item?.SKU ||
+      item?.productSku ||
+      item?.product_sku ||
+      item?.rawTransaction?.sku ||
+      item?.rawTransaction?.product?.product_identifier ||
+      ''
+  ).trim();
+
+const splitSkuValues = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map((sku) => String(sku || '').trim()).filter(Boolean);
+  return String(value)
+    .split(',')
+    .map((sku) => sku.trim())
+    .filter(Boolean);
+};
+
+const pickOrderItemId = (item) => String(item?.orderItemId || item?.order_item_id || item?._id || '');
+
+const hasBackendSku = (row) => {
+  const sku = String(row?.sku || row?.SKU || row?.productSku || '').trim();
+  const skus = Array.isArray(row?.skus) ? row.skus.filter(Boolean) : row?.skus;
+  return !!sku || (Array.isArray(skus) ? skus.length > 0 : !!skus);
+};
+
+const pickTotalCount = (data) => data?.totalCount || data?.total || data?.count || data?.pagination?.total || undefined;
+
+const explainMissingSku = (row, info, rowSku) => {
+  const adsListingId = String(row?.listingId || '');
+  if (!adsListingId) return 'ads_row_missing_listing_id';
+  if (!info?.hasListingInOrderMap) return 'listing_id_not_found_in_orders';
+  if (!rowSku && !info?.sku) return 'listing_found_but_order_sku_missing';
+  return 'unknown';
+};
+
+const logSkuDebug = (stage, data) => {
+  try {
+    console.log(`[ADS_ETSY_FE][SKU_DEBUG][${stage}]`, data);
+  } catch (error) {
+    console.warn('[ADS_ETSY_FE][SKU_DEBUG][LOG_ERROR]', {
+      stage,
+      message: error?.message || String(error),
+    });
+  }
+};
+
 const AdsEtsyReport = () => {
   const { collapsed } = useOutletContext();
   const [loading, setLoading] = useState(false);
@@ -55,6 +114,50 @@ const AdsEtsyReport = () => {
       const to = toYMD(params?.to);
       const response = await getAllAdsEtsy(from, to, shop);
       const list = response?.data?.items || [];
+
+      const adsAudit = list.flatMap((doc) =>
+        (doc?.rows || []).map((row) => ({
+          docId: doc?._id,
+          day: doc?.day,
+          shopName: doc?.shopName,
+          listingId: String(row?.listingId || ''),
+          title: String(row?.title || '').slice(0, 80),
+          sku: row?.sku,
+          skus: row?.skus,
+          skuSource: row?.skuSource,
+          hasBackendSku: hasBackendSku(row),
+          spend: row?.spend,
+          revenue: row?.revenue,
+          orders: row?.orders,
+          rawKeys: Object.keys(row || {}),
+        }))
+      );
+      const skuSourceCounts = adsAudit.reduce((acc, row) => {
+        const source = row.skuSource || 'missing';
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      }, {});
+
+      logSkuDebug('ADS_API_RESPONSE', {
+        docsCount: list.length,
+        adsRowsCount: adsAudit.length,
+        adsListingIdsCount: new Set(adsAudit.map((x) => x.listingId).filter(Boolean)).size,
+        sample: adsAudit.slice(0, 30),
+      });
+
+      logSkuDebug('ADS_API_RESPONSE_DEEP', {
+        selectedShopId: shop,
+        from,
+        to,
+        docsCount: list.length,
+        rowsCount: adsAudit.length,
+        uniqueAdsListingIds: new Set(adsAudit.map((x) => x.listingId).filter(Boolean)).size,
+        rowsWithSkuFromBackend: adsAudit.filter((x) => x.hasBackendSku).length,
+        rowsMissingSkuFromBackend: adsAudit.filter((x) => !x.hasBackendSku).length,
+        skuSourceCounts,
+        sampleRows: adsAudit.slice(0, 50),
+      });
+
       setItems(list);
     } catch (error) {
       console.error('Error fetching Etsy Ads Report:', error);
@@ -75,9 +178,130 @@ const AdsEtsyReport = () => {
 
   const fetchEtsyOrders = async () => {
     try {
-      const res = await getAllEtsyOrders({ page: 1, perPage: 100000 });
-      const list = res?.data?.data || res?.data || [];
-      setOrders(Array.isArray(list) ? list : []);
+      const perPage = 200;
+      let page = 1;
+      let totalPages = 1;
+      const allOrders = [];
+
+      while (page <= totalPages) {
+        const requestParams = { page, perPage };
+
+        logSkuDebug('ORDERS_API_REQUEST', {
+          page,
+          perPage,
+          shopId,
+          filters: {
+            from: toYMD(filters?.from),
+            to: toYMD(filters?.to),
+          },
+          params: requestParams,
+        });
+
+        const res = await getAllEtsyOrders(requestParams);
+        const list = res?.data?.data || res?.data || [];
+        const safeList = Array.isArray(list) ? list : [];
+        const pageSkuAudit = safeList.flatMap((order) =>
+          (order?.items || []).map((item) => ({
+            orderId: order?.orderId || order?._id || '',
+            orderItemId: pickOrderItemId(item),
+            transactionId: item?.transactionId || item?.transaction_id || '',
+            listingId: pickItemListingId(item),
+            sku: pickItemSku(item),
+            itemName: String(item?.itemName || item?.title || '').slice(0, 80),
+            itemKeys: Object.keys(item || {}),
+          }))
+        );
+
+        logSkuDebug('ORDERS_API_PAGE_RESPONSE', {
+          page,
+          responseDataType: Array.isArray(res?.data) ? 'array' : typeof res?.data,
+          dataKeys: res?.data && typeof res.data === 'object' ? Object.keys(res.data) : [],
+          currentPage: res?.data?.currentPage,
+          totalPages: res?.data?.totalPages,
+          totalCount: pickTotalCount(res?.data),
+          ordersCount: safeList.length,
+          totalItems: pageSkuAudit.length,
+          itemsWithListingId: pageSkuAudit.filter((x) => x.listingId).length,
+          itemsWithSku: pageSkuAudit.filter((x) => x.sku).length,
+          itemsMissingSku: pageSkuAudit.filter((x) => !x.sku).length,
+          itemsMissingListingId: pageSkuAudit.filter((x) => !x.listingId).length,
+          sample: pageSkuAudit.slice(0, 30),
+        });
+
+        if (page === 1) {
+          logSkuDebug('ORDERS_API_RESPONSE', {
+            rawDataType: Array.isArray(res?.data) ? 'array' : typeof res?.data,
+            dataKeys: res?.data && typeof res.data === 'object' ? Object.keys(res.data) : [],
+            currentPage: res?.data?.currentPage,
+            totalPages: res?.data?.totalPages,
+            perPage,
+            ordersCount: safeList.length,
+            totalItems: pageSkuAudit.length,
+            itemsWithSku: pageSkuAudit.filter((x) => x.sku).length,
+            itemsMissingSku: pageSkuAudit.filter((x) => !x.sku).length,
+            sample: pageSkuAudit.slice(0, 30),
+            missingSkuSample: pageSkuAudit.filter((x) => !x.sku).slice(0, 20),
+          });
+        }
+
+        allOrders.push(...safeList);
+        totalPages = Number(res?.data?.totalPages || 1);
+        page += 1;
+      }
+
+      const skuAudit = allOrders.flatMap((order) =>
+        (order?.items || []).map((item) => ({
+          orderId: order?.orderId || order?._id || '',
+          orderItemId: pickOrderItemId(item),
+          transactionId: item?.transactionId || item?.transaction_id || '',
+          listingId: pickItemListingId(item),
+          itemName: String(item?.itemName || item?.title || '').slice(0, 80),
+          sku: pickItemSku(item),
+          hasSku: !!pickItemSku(item),
+        }))
+      );
+      const listingSkuMap = new Map();
+
+      skuAudit.forEach((item) => {
+        if (!item.listingId) return;
+        const entry = listingSkuMap.get(item.listingId) || { skus: new Set(), ordersCount: 0 };
+        entry.ordersCount += 1;
+        if (item.sku) entry.skus.add(item.sku);
+        listingSkuMap.set(item.listingId, entry);
+      });
+
+      logSkuDebug('ORDERS_ALL_PAGES_FETCHED', {
+        totalPages,
+        totalOrders: allOrders.length,
+        totalItems: skuAudit.length,
+        uniqueListingIds: new Set(skuAudit.map((x) => x.listingId).filter(Boolean)).size,
+        itemsWithSku: skuAudit.filter((x) => x.hasSku).length,
+        itemsMissingSku: skuAudit.filter((x) => !x.hasSku).length,
+        sample: skuAudit.slice(0, 30),
+      });
+
+      logSkuDebug('ORDERS_ALL_PAGES_DEEP', {
+        totalPagesFetched: page - 1,
+        totalOrders: allOrders.length,
+        totalItems: skuAudit.length,
+        uniqueOrderListingIds: new Set(skuAudit.map((x) => x.listingId).filter(Boolean)).size,
+        itemsWithSku: skuAudit.filter((x) => x.sku).length,
+        itemsMissingSku: skuAudit.filter((x) => !x.sku).length,
+        itemsWithListingId: skuAudit.filter((x) => x.listingId).length,
+        itemsMissingListingId: skuAudit.filter((x) => !x.listingId).length,
+        topListingIdSkuSample: Array.from(listingSkuMap.entries())
+          .sort((a, b) => b[1].ordersCount - a[1].ordersCount)
+          .slice(0, 50)
+          .map(([listingId, entry]) => ({
+            listingId,
+            skus: Array.from(entry.skus),
+            ordersCount: entry.ordersCount,
+          })),
+        missingSkuSample: skuAudit.filter((x) => !x.sku).slice(0, 50),
+        missingListingIdSample: skuAudit.filter((x) => !x.listingId).slice(0, 50),
+      });
+
+      setOrders(allOrders);
     } catch (error) {
       console.error('Error fetching Etsy orders:', error);
     }
@@ -95,7 +319,7 @@ const AdsEtsyReport = () => {
   const sellerByEmployeeId = useMemo(() => {
     const map = new Map();
     (sellers || []).forEach((s) => {
-      if (s?.employee_id) map.set(String(s.employee_id), s.full_name || '');
+      if (s?.employee_id) map.set(String(s.employee_id).trim().toUpperCase(), s.full_name || '');
     });
     return map;
   }, [sellers]);
@@ -104,7 +328,7 @@ const AdsEtsyReport = () => {
     const names = new Set();
     skus.forEach((sku) => {
       if (!sku) return;
-      const code = String(sku).slice(0, 5);
+      const code = String(sku).trim().slice(0, 5).toUpperCase();
       const name = sellerByEmployeeId.get(code);
       if (name) names.add(name);
     });
@@ -113,28 +337,91 @@ const AdsEtsyReport = () => {
 
   const listingInfoMap = useMemo(() => {
     const map = new Map();
+    let totalItems = 0;
+    let itemsWithListingId = 0;
+    let itemsWithSku = 0;
+    const skipped = [];
+
     (orders || []).forEach((order) => {
       const seller = order?.seller?.full_name || order?.seller?.name || order?.seller || null;
+
       (order?.items || []).forEach((item) => {
-        const lid = String(item?.listingId || '');
-        if (!lid) return;
-        const entry = map.get(lid) || { skus: new Set(), sellers: new Set() };
-        if (item?.sku) entry.skus.add(item.sku);
+        totalItems += 1;
+
+        const lid = pickItemListingId(item);
+        const sku = pickItemSku(item);
+
+        if (lid) itemsWithListingId += 1;
+        if (sku) itemsWithSku += 1;
+
+        if (!lid) {
+          skipped.push({
+            orderId: order?.orderId || order?._id || '',
+            transactionId: item?.transactionId || item?.transaction_id || '',
+            itemName: String(item?.itemName || item?.title || '').slice(0, 80),
+            sku,
+            itemKeys: Object.keys(item || {}),
+          });
+          return;
+        }
+
+        const entry = map.get(lid) || { skus: new Set(), sellers: new Set(), ordersCount: 0 };
+        entry.ordersCount += 1;
+        if (sku) entry.skus.add(sku);
         if (seller) entry.sellers.add(typeof seller === 'string' ? seller : JSON.stringify(seller));
         map.set(lid, entry);
       });
     });
+
+    logSkuDebug('LISTING_INFO_MAP_BUILT', {
+      ordersCount: orders?.length || 0,
+      totalItems,
+      itemsWithListingId,
+      itemsWithSku,
+      mapSize: map.size,
+      skippedNoListingIdCount: skipped.length,
+      skippedNoListingIdSample: skipped.slice(0, 20),
+      mapSample: Array.from(map.entries())
+        .slice(0, 30)
+        .map(([listingId, entry]) => ({
+          listingId,
+          skus: Array.from(entry.skus),
+          sellers: Array.from(entry.sellers),
+          ordersCount: entry.ordersCount,
+        })),
+    });
+
+    logSkuDebug('LISTING_INFO_MAP_DETAIL', {
+      ordersCount: orders?.length || 0,
+      totalItems,
+      mapSize: map.size,
+      listingIdsWithSku: Array.from(map.values()).filter((entry) => entry.skus.size > 0).length,
+      listingIdsWithoutSku: Array.from(map.values()).filter((entry) => entry.skus.size === 0).length,
+      duplicateListingIdsWithMultipleSkus: Array.from(map.values()).filter((entry) => entry.skus.size > 1).length,
+      mapSample: Array.from(map.entries())
+        .slice(0, 50)
+        .map(([listingId, entry]) => ({
+          listingId,
+          skus: Array.from(entry.skus),
+          sellers: Array.from(entry.sellers),
+          ordersCount: entry.ordersCount,
+        })),
+      skippedNoListingIdSample: skipped.slice(0, 50),
+    });
+
     return map;
   }, [orders]);
 
   const getListingInfo = (listingId) => {
     const entry = listingInfoMap.get(String(listingId));
-    if (!entry) return { sku: '', seller: '' };
+    if (!entry) return { sku: '', seller: '', hasListingInOrderMap: false, skus: [] };
     const skus = Array.from(entry.skus);
     const sellerFromSku = resolveSellerNamesFromSkus(skus);
     return {
       sku: skus.join(', '),
       seller: sellerFromSku || Array.from(entry.sellers).join(', '),
+      hasListingInOrderMap: true,
+      skus,
     };
   };
 
@@ -166,19 +453,111 @@ const AdsEtsyReport = () => {
 
     const tableData = useMemo(() => {
       const rows = [];
+      const matchAudit = [];
+      const adsListingIds = new Set();
+
       items.forEach((it) => {
         (it?.rows || []).forEach((r, idx) => {
-          const info = getListingInfo(r.listingId);
+          const adsListingId = String(r.listingId || '');
+          if (adsListingId) adsListingIds.add(adsListingId);
+          const info = getListingInfo(adsListingId);
+          const rowSku = String(r.sku || r.SKU || r.productSku || '').trim();
+          const rowSkus = Array.isArray(r.skus) ? r.skus.filter(Boolean) : r.skus;
+          const rowSeller = String(r.seller || r.sellerName || '').trim();
+          const finalSku = rowSku || info.sku;
+          const sellerFromVisibleSku = resolveSellerNamesFromSkus([
+            ...splitSkuValues(rowSku),
+            ...splitSkuValues(rowSkus),
+            ...splitSkuValues(info.sku),
+          ]);
+          const finalSeller = sellerFromVisibleSku || rowSeller || info.seller;
+          const skuSource = rowSku ? 'ads_row' : info.sku ? 'orders_fallback' : 'missing';
+
+          matchAudit.push({
+            adsListingId,
+            title: String(r.title || '').slice(0, 80),
+            matched: !!finalSku,
+            sku: finalSku,
+            skuSource,
+            seller: finalSeller,
+            spend: r.spend,
+            revenue: r.revenue,
+            orders: r.orders,
+            rowSku,
+            rowSkus,
+            rowSkuSource: r.skuSource,
+            hasListingInOrderMap: info.hasListingInOrderMap,
+            orderMapSkus: info.skus,
+            reason: finalSku ? '' : explainMissingSku(r, info, rowSku),
+          });
+
           rows.push({
             key: `${it._id}-${r.listingId}-${idx}`,
             shopName: it.shopName,
             ...r,
             title: decodeHtml(r.title),
-            sku: info.sku,
-            seller: info.seller,
+            sku: finalSku,
+            seller: finalSeller,
           });
         });
       });
+
+      logSkuDebug('ADS_TO_ORDER_MATCH_AUDIT', {
+        adsRows: matchAudit.length,
+        matchedRows: matchAudit.filter((x) => x.matched).length,
+        missingSkuRows: matchAudit.filter((x) => !x.matched).length,
+        matchedSample: matchAudit.filter((x) => x.matched).slice(0, 20),
+        missingSample: matchAudit.filter((x) => !x.matched).slice(0, 30),
+      });
+
+      logSkuDebug('SKU_SOURCE_AUDIT', {
+        adsRows: matchAudit.length,
+        fromAdsRow: matchAudit.filter((x) => x.skuSource === 'ads_row').length,
+        fromOrdersFallback: matchAudit.filter((x) => x.skuSource === 'orders_fallback').length,
+        missing: matchAudit.filter((x) => x.skuSource === 'missing').length,
+        missingSample: matchAudit.filter((x) => x.skuSource === 'missing').slice(0, 30),
+      });
+
+      logSkuDebug('ADS_TO_ORDER_MATCH_DEEP', {
+        adsRows: matchAudit.length,
+        adsUniqueListingIds: adsListingIds.size,
+        orderMapListingIds: listingInfoMap.size,
+        matchedByAdsRowSku: matchAudit.filter((x) => x.skuSource === 'ads_row').length,
+        matchedByOrdersFallback: matchAudit.filter((x) => x.skuSource === 'orders_fallback').length,
+        matchedListingIdButNoSku: matchAudit.filter((x) => x.reason === 'listing_found_but_order_sku_missing').length,
+        missingListingIdInOrderMap: matchAudit.filter((x) => x.reason === 'listing_id_not_found_in_orders').length,
+        missingAdsListingId: matchAudit.filter((x) => x.reason === 'ads_row_missing_listing_id').length,
+        missingSample: matchAudit
+          .filter((x) => !x.matched)
+          .slice(0, 50)
+          .map((x) => ({
+            adsListingId: x.adsListingId,
+            title: x.title,
+            spend: x.spend,
+            orders: x.orders,
+            rowSku: x.rowSku,
+            rowSkus: x.rowSkus,
+            rowSkuSource: x.rowSkuSource,
+            hasListingInOrderMap: x.hasListingInOrderMap,
+            orderMapSkus: x.orderMapSkus,
+            reason: x.reason,
+          })),
+        matchedSample: matchAudit
+          .filter((x) => x.matched)
+          .slice(0, 30)
+          .map((x) => ({
+            adsListingId: x.adsListingId,
+            title: x.title,
+            sku: x.sku,
+            skuSource: x.skuSource,
+            rowSku: x.rowSku,
+            rowSkus: x.rowSkus,
+            orderMapSkus: x.orderMapSkus,
+            spend: x.spend,
+            orders: x.orders,
+          })),
+      });
+
       return rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
     }, [items, listingInfoMap, sellerByEmployeeId]);
 
