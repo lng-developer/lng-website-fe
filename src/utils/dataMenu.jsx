@@ -190,6 +190,11 @@ export const detailMenus = {
       label: 'Log Manager',
       icon: <TbReport size={20} />,
     },
+    {
+      key: routes.extensions_tracking_etsy,
+      label: 'Tracking Etsy',
+      icon: <FaEtsy size={20} />,
+    },
     // {
     //   key: routes.extensions_confirm_ship,
     //   label: 'Amz Confirm Ship',

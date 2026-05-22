@@ -40,6 +40,7 @@ import ManageStores from './pages/shop/ManageStore';
 import OrderEtsy from './pages/home/OrderEtsy';
 import ScaleEsty from './pages/fulfillment/ScaleEsty';
 import CheckOder from './pages/home/checkoder/checkoder';
+import TrackingEtsy from './pages/extension/TrackingEtsy';
 
 function App() {
   return (
@@ -96,6 +97,7 @@ function App() {
           <Route path={routes.extensions} element={<ExtensionManager />} />
           <Route path={routes.extensions_config_auto} element={<ConfigAuto />} />
           <Route path={routes.extensions_log_manager} element={<LogManager />} />
+          <Route path={routes.extensions_tracking_etsy} element={<TrackingEtsy />} />
           <Route path={routes.extensions_confirm_ship} element={<ConfirmShip />} />
 
           {/* SKU Mapping */}

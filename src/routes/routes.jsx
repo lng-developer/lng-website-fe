@@ -41,6 +41,7 @@ const routes = {
   extensions: '/extensions',
   extensions_config_auto: '/extensions/config-auto',
   extensions_log_manager: '/extensions/log-manager',
+  extensions_tracking_etsy: '/extensions/tracking-etsy',
   sku_mapping: '/sku_mapping',
   management_account: '/account',
   extensions_confirm_ship: '/extensions/confirm-ship',

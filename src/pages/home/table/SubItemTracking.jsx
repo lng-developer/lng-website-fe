@@ -2,11 +2,23 @@ import React, { useMemo } from 'react';
 import { Form, Input, Select, Button, Tooltip } from 'antd';
 import { CopyOutlined, TruckOutlined } from '@ant-design/icons';
 import { trackingOrder } from '../../../apis/order';
+import { updateEtsyItemTracking } from '../../../apis/etsy';
 import { toast } from 'sonner';
 import { TbEdit } from 'react-icons/tb';
 const { TextArea } = Input;
 
-const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filters, fetchCountStatus, orderItemId, status }) => {
+const SubItemTracking = ({
+  orderId = '',
+  tracking_info = {},
+  fetchAllOrder,
+  filters,
+  fetchCountStatus,
+  orderItemId,
+  transactionId,
+  status,
+  isEtsyOrder = false,
+  onTrackingUpdated,
+}) => {
   const [form] = Form.useForm();
 
   const initialValues = {
@@ -33,11 +45,29 @@ const SubItemTracking = ({ orderId = '', tracking_info = {}, fetchAllOrder, filt
 
   const onFinish = async (values) => {
     try {
-      const response = await trackingOrder(orderId, orderItemId, values);
-      if (response.status === 200) toast.success('Update tracking success!');
+      const itemId = transactionId || orderItemId;
+      const response = isEtsyOrder
+        ? await updateEtsyItemTracking(orderId, itemId, {
+            tracking: String(values?.tracking || '').trim(),
+            status: values?.status || 'Shipped',
+          })
+        : await trackingOrder(orderId, orderItemId, values);
+
+      if (response.status === 200) {
+        toast.success('Update tracking success!');
+        onTrackingUpdated?.(response.data);
+      }
     } catch (error) {
       console.log(error);
-      toast.error('Update tracking error!');
+      const statusCode = error?.response?.status;
+      const message = error?.response?.data?.message;
+      if (statusCode === 400 && message) {
+        toast.error(message);
+      } else if (statusCode === 404 && isEtsyOrder) {
+        toast.error(message || 'Khong tim thay Etsy order/item');
+      } else {
+        toast.error(message || 'Update tracking error!');
+      }
     } finally {
       fetchAllOrder?.(filters);
       fetchCountStatus?.();
