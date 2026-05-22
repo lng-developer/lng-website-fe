@@ -315,6 +315,31 @@ const OrderEtsy = () => {
     [fetchAllOrder, fetchEtsyStatistic, filters]
   );
 
+  const handleEtsyTrackingUpdated = useCallback((payload) => {
+    if (!payload?.orderId || !payload?.transactionId) return;
+
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => {
+        if (String(order?.orderId) !== String(payload.orderId)) return order;
+
+        return {
+          ...order,
+          status: payload.orderStatus || order.status,
+          orderStatus: payload.orderStatus || order.orderStatus,
+          items: (order?.items || []).map((orderItem) => {
+            const itemId = orderItem?.transactionId || orderItem?.orderItemId;
+            if (String(itemId) !== String(payload.transactionId)) return orderItem;
+
+            return {
+              ...orderItem,
+              tracking_info: payload.tracking_info || orderItem.tracking_info,
+            };
+          }),
+        };
+      })
+    );
+  }, []);
+
   const handleReplace = useCallback(async () => {
     try {
       if (!selectedReplaceItemIds?.length) {
@@ -555,18 +580,21 @@ const OrderEtsy = () => {
             <SubItemTracking
               tracking_info={itemSub?.tracking_info}
               orderItemId={itemSub?.orderItemId}
+              transactionId={itemSub?.transactionId || itemSub?.orderItemId}
               orderId={item?.orderId}
               status={item?.status}
               fetchAllOrder={fetchAllOrder}
               filters={filters}
               fetchCountStatus={fetchEtsyStatistic}
+              isEtsyOrder={true}
+              onTrackingUpdated={handleEtsyTrackingUpdated}
             />
           ),
         })),
       };
     });
     return results;
-  }, [orders, fetchAllOrder, fetchEtsyStatistic, filters, handleColorStatus, handleRetest, handleCopy]);
+  }, [orders, fetchAllOrder, fetchEtsyStatistic, filters, handleColorStatus, handleRetest, handleCopy, handleEtsyTrackingUpdated]);
 
   const fetchAllTeams = useCallback(async () => {
     try {

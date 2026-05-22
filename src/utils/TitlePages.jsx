@@ -22,6 +22,7 @@ const TITLES = {
   '/design/points': 'Points Dashboard',
   '/extensions': 'Extensions',
   '/extensions/confirm-ship': 'Confirm Shipping',
+  '/extensions/tracking-etsy': 'Tracking Etsy',
   '/account': 'Users Management',
   '/sku_mapping': 'SKU Mapping',
   '/vendor/list-vendor': 'Manage Vendor',
