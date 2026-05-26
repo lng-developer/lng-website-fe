@@ -11,6 +11,8 @@ const TYPE_META = {
     IMPORT_ADS: { label: 'Import Ads', initial: 'AD' }
 };
 
+const SHOP_TYPES = ['Amazon', 'Etsy'];
+
 const Toggle = ({ checked, onChange, disabled }) => (
     <button
         type="button"
@@ -71,6 +73,7 @@ const ConfigAuto = () => {
     const [configs, setConfigs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updating, setUpdating] = useState(null);
+    const [activeShopType, setActiveShopType] = useState('Amazon');
 
     useEffect(() => {
         fetchData();
@@ -88,9 +91,25 @@ const ConfigAuto = () => {
         }
     };
 
-    const groupedByShop = configs.reduce((acc, cfg) => {
+    const shopTypeStats = SHOP_TYPES.reduce((acc, type) => {
+        const typeConfigs = configs.filter((cfg) => cfg.shopType === type);
+        acc[type] = {
+            total: typeConfigs.length,
+            active: typeConfigs.filter((cfg) => cfg.status).length
+        };
+        return acc;
+    }, {});
+
+    const filteredConfigs = configs.filter((cfg) => cfg.shopType === activeShopType);
+
+    const groupedByShop = filteredConfigs.reduce((acc, cfg) => {
         if (!acc[cfg.shopId]) {
-            acc[cfg.shopId] = { shopId: cfg.shopId, shopName: cfg.shopName, items: [] };
+            acc[cfg.shopId] = {
+                shopId: cfg.shopId,
+                shopName: cfg.shopName,
+                shopType: cfg.shopType,
+                items: []
+            };
         }
         acc[cfg.shopId].items.push(cfg);
         return acc;
@@ -129,7 +148,7 @@ const ConfigAuto = () => {
     }, []);
 
     const shops = Object.values(groupedByShop);
-    const totalActive = configs.filter((c) => c.status).length;
+    const totalActive = shopTypeStats[activeShopType]?.active || 0;
 
     return (
         <div className="h-screen flex flex-col bg-neutral-100 overflow-hidden">
@@ -155,6 +174,33 @@ const ConfigAuto = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 p-1 rounded-lg bg-neutral-100 border border-neutral-200">
+                            {SHOP_TYPES.map((type) => {
+                                const isActive = activeShopType === type;
+                                return (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        onClick={() => setActiveShopType(type)}
+                                        className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
+                                            isActive
+                                                ? 'bg-white text-neutral-900 shadow-sm'
+                                                : 'text-neutral-500 hover:text-neutral-900'
+                                        }`}
+                                    >
+                                        {type}
+                                        <span
+                                            className={`ml-1 font-semibold ${
+                                                isActive ? 'text-neutral-500' : 'text-neutral-400'
+                                            }`}
+                                        >
+                                            {shopTypeStats[type]?.total || 0}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-50 border border-neutral-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                             <span className="text-[11px] font-semibold text-neutral-900">
@@ -163,7 +209,7 @@ const ConfigAuto = () => {
                             <span className="text-[11px] text-neutral-500">đang chạy</span>
                             <span className="w-px h-3 bg-neutral-300 mx-1"></span>
                             <span className="text-[11px] font-semibold text-neutral-900">
-                                {configs.length}
+                                {filteredConfigs.length}
                             </span>
                             <span className="text-[11px] text-neutral-500">tổng</span>
                         </div>
