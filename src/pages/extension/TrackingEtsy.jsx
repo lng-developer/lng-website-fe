@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Button, DatePicker, Image, Input, Modal, Pagination, Select, Table, Tag, Tooltip } from 'antd';
+import { Button, DatePicker, Image, Input, Modal, Select, Table, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { FaEtsy } from 'react-icons/fa';
 import { LuRefreshCw, LuUpload } from 'react-icons/lu';
 import { toast } from 'sonner';
-import { getAllEtsyOrders, uploadEtsyTracking, uploadEtsyTrackingBatch } from '../../apis/etsy';
+import { getAllEtsyOrders, updateEtsySubmittedStatus, uploadEtsyTracking, uploadEtsyTrackingBatch } from '../../apis/etsy';
 import { getAllShop } from '../../apis/shop';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 
 const { RangePicker } = DatePicker;
-const PAGE_SIZE = 10;
+const DEFAULT_LIMIT = 100;
+const LIMIT_OPTIONS = [20, 100, 500, 1000];
+const ALL_FILTER = 'all';
 
 const pickOrders = (data) => {
   if (Array.isArray(data)) return data;
@@ -32,8 +34,34 @@ const pickTrackingNumber = (trackingInfo) =>
   trackingInfo?.trackingNumber ||
   trackingInfo?.tracking_number ||
   trackingInfo?.tracking ||
+  trackingInfo?.trackingNo ||
+  trackingInfo?.tracking_no ||
+  trackingInfo?.trackingId ||
+  trackingInfo?.tracking_id ||
+  trackingInfo?.trackingCode ||
+  trackingInfo?.tracking_code ||
+  trackingInfo?.number ||
   trackingInfo?.code ||
   '';
+
+const hasTrackingInfo = (trackingInfo) => {
+  if (!trackingInfo || typeof trackingInfo !== 'object') return false;
+  if (pickTrackingNumber(trackingInfo)) return true;
+
+  return Object.values(trackingInfo).some((value) => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return Boolean(value);
+  });
+};
+
+const orderHasTracking = (order) => {
+  const orderTracking = hasTrackingInfo(order?.tracking_info);
+  const itemTracking = Array.isArray(order?.items) && order.items.some((item) => hasTrackingInfo(item?.tracking_info));
+  return orderTracking || itemTracking;
+};
 
 const formatTracking = (trackingInfo) => {
   if (!trackingInfo || Object.keys(trackingInfo).length === 0) return '-';
@@ -44,6 +72,25 @@ const formatTracking = (trackingInfo) => {
   if (trackingNumber || carrier) return [carrier, trackingNumber].filter(Boolean).join(' - ');
   return JSON.stringify(trackingInfo);
 };
+
+const filterOrders = (orders = [], filters = {}) =>
+  orders.filter((order) => {
+    const submittedMatch =
+      filters.submittedStatus === 'submitted'
+        ? order?.sumbittedoetsy === true
+        : filters.submittedStatus === 'not_submitted'
+          ? order?.sumbittedoetsy !== true
+          : true;
+
+    const trackingMatch =
+      filters.trackingStatus === 'has_tracking'
+        ? orderHasTracking(order)
+        : filters.trackingStatus === 'no_tracking'
+          ? !orderHasTracking(order)
+          : true;
+
+    return submittedMatch && trackingMatch;
+  });
 
 const flattenOrders = (orders = []) =>
   orders.flatMap((order) => {
@@ -56,6 +103,7 @@ const flattenOrders = (orders = []) =>
       shopName: order?.shopName || '-',
       trackingInfo: item?.tracking_info || order?.tracking_info || {},
       trackingNumber: pickTrackingNumber(item?.tracking_info || order?.tracking_info || {}),
+      hasTracking: hasTrackingInfo(item?.tracking_info || order?.tracking_info || {}),
       sumbittedoetsy: order?.sumbittedoetsy === true,
       listingId: item?.listingId || '-',
       baseImageUrl: item?.baseImageUrl || '',
@@ -76,34 +124,30 @@ const TrackingEtsy = () => {
   const [uploadForm, setUploadForm] = useState({ trackingNumber: '' });
   const [filters, setFilters] = useState({
     page: 1,
-    perPage: PAGE_SIZE,
+    perPage: DEFAULT_LIMIT,
     from: defaultFrom,
     to: defaultTo,
     search: '',
     shopName: '',
-    sumbittedoetsy: '',
-    hasTracking: '',
+    submittedStatus: ALL_FILTER,
+    trackingStatus: ALL_FILTER,
   });
 
-  const rows = useMemo(() => {
-    const flattened = flattenOrders(orders);
-    return flattened.filter((row) => {
-      const submittedMatch =
-        filters.sumbittedoetsy === true || filters.sumbittedoetsy === false
-          ? row.sumbittedoetsy === filters.sumbittedoetsy
-          : true;
-      const trackingMatch =
-        filters.hasTracking === true || filters.hasTracking === false ? Boolean(row.trackingNumber) === filters.hasTracking : true;
-
-      return submittedMatch && trackingMatch;
-    });
-  }, [orders, filters.sumbittedoetsy, filters.hasTracking]);
+  const filteredOrders = useMemo(() => filterOrders(orders, filters), [orders, filters.submittedStatus, filters.trackingStatus]);
+  const rows = useMemo(() => flattenOrders(filteredOrders), [filteredOrders]);
   const selectedOrder = selectedRows[0];
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getAllEtsyOrders(filters);
+      const requestParams = {
+        ...filters,
+        sumbittedoetsy:
+          filters.submittedStatus === 'submitted' ? true : filters.submittedStatus === 'not_submitted' ? false : undefined,
+        hasTracking:
+          filters.trackingStatus === 'has_tracking' ? true : filters.trackingStatus === 'no_tracking' ? false : undefined,
+      };
+      const res = await getAllEtsyOrders(requestParams);
       const list = pickOrders(res?.data);
       setOrders(list);
       setTotal(pickTotal(res?.data, list.length));
@@ -133,6 +177,21 @@ const TrackingEtsy = () => {
   useEffect(() => {
     fetchShops();
   }, [fetchShops]);
+
+  const updateFilter = useCallback((changes) => {
+    setSelectedRowKeys([]);
+    setSelectedRows([]);
+    setFilters((prev) => ({
+      ...prev,
+      ...changes,
+      page: Object.prototype.hasOwnProperty.call(changes, 'page') ? changes.page : 1,
+    }));
+  }, []);
+
+  useEffect(() => {
+    setSelectedRowKeys([]);
+    setSelectedRows([]);
+  }, [filters.submittedStatus, filters.trackingStatus, filters.search, filters.shopName, filters.from, filters.to]);
 
   const openUploadModal = () => {
     if (selectedRows.length === 0) {
@@ -194,7 +253,42 @@ const TrackingEtsy = () => {
             });
 
       if (res.status === 200 || res.status === 201) {
+        const submittedTargets = Array.from(
+          new Map(
+            selectedRows.map((row) => [
+              `${row.orderId}-${row.shopId}`,
+              {
+                orderId: row.orderId,
+                shopId: row.shopId,
+                submittedToEtsy: true,
+              },
+            ])
+          ).values()
+        );
+
+        const submittedResults = await Promise.allSettled(submittedTargets.map((payload) => updateEtsySubmittedStatus(payload)));
+        const failedSubmittedUpdates = submittedResults.filter((result) => result.status === 'rejected').length;
+        const successfulSubmittedUpdates = submittedResults
+          .map((result, index) => (result.status === 'fulfilled' ? { payload: submittedTargets[index], data: result.value?.data } : null))
+          .filter(Boolean);
+
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            const updated = successfulSubmittedUpdates.find(
+              ({ payload, data }) =>
+                String(payload.orderId) === String(order?.orderId) &&
+                String(payload.shopId) === String(order?.shopId) &&
+                (data?.ok === true || data?.sumbittedoetsy === true)
+            );
+
+            return updated ? { ...order, sumbittedoetsy: updated.data?.sumbittedoetsy ?? true } : order;
+          })
+        );
+
         toast.success(res?.data?.message || 'Da gui task upload tracking');
+        if (failedSubmittedUpdates > 0) {
+          toast.warning(`${failedSubmittedUpdates} order chua cap nhat duoc Submitted Etsy`);
+        }
         setIsUploadModalOpen(false);
         setSelectedRowKeys([]);
         setSelectedRows([]);
@@ -322,48 +416,56 @@ const TrackingEtsy = () => {
                 value: shop?.shopName || shop?.name,
                 label: shop?.shopName || shop?.name || 'Shop',
               }))}
-              onChange={(value) => setFilters((prev) => ({ ...prev, page: 1, shopName: value || '' }))}
+              onChange={(value) => updateFilter({ shopName: value || '' })}
             />
             <Input.Search
               allowClear
               placeholder="Search order..."
               className="min-w-[170px] flex-1"
-              onSearch={(value) => setFilters((prev) => ({ ...prev, page: 1, search: value.trim() }))}
+              defaultValue={filters.search}
+              onChange={(event) => {
+                if (!event.target.value) updateFilter({ search: '' });
+              }}
+              onSearch={(value) => updateFilter({ search: value.trim() })}
             />
             <RangePicker
               className="min-w-[230px] flex-1"
               value={[dayjs(filters.from), dayjs(filters.to)]}
               format="YYYY-MM-DD"
               onChange={(dates) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  page: 1,
+                updateFilter({
                   from: dates?.[0] ? dates[0].startOf('day').toISOString() : defaultFrom,
                   to: dates?.[1] ? dates[1].endOf('day').toISOString() : defaultTo,
-                }));
+                });
               }}
             />
             <Select
               allowClear
               placeholder="Submitted Etsy"
               className="min-w-[150px] flex-1"
-              value={filters.sumbittedoetsy === '' ? undefined : filters.sumbittedoetsy}
+              value={filters.submittedStatus === ALL_FILTER ? undefined : filters.submittedStatus}
               options={[
-                { value: true, label: 'Submitted' },
-                { value: false, label: 'Not Submitted' },
+                { value: 'submitted', label: 'Submitted' },
+                { value: 'not_submitted', label: 'Not Submitted' },
               ]}
-              onChange={(value) => setFilters((prev) => ({ ...prev, page: 1, sumbittedoetsy: value ?? '' }))}
+              onChange={(value) => updateFilter({ submittedStatus: value || ALL_FILTER })}
             />
             <Select
               allowClear
               placeholder="Tracking Info"
               className="min-w-[150px] flex-1"
-              value={filters.hasTracking === '' ? undefined : filters.hasTracking}
+              value={filters.trackingStatus === ALL_FILTER ? undefined : filters.trackingStatus}
               options={[
-                { value: true, label: 'Has Tracking' },
-                { value: false, label: 'No Tracking' },
+                { value: 'has_tracking', label: 'Has Tracking' },
+                { value: 'no_tracking', label: 'No Tracking' },
               ]}
-              onChange={(value) => setFilters((prev) => ({ ...prev, page: 1, hasTracking: value ?? '' }))}
+              onChange={(value) => updateFilter({ trackingStatus: value || ALL_FILTER })}
+            />
+            <Select
+              className="min-w-[110px] flex-1"
+              value={filters.perPage}
+              options={LIMIT_OPTIONS.map((value) => ({ value, label: `Limit ${value}` }))}
+              onChange={(value) => updateFilter({ perPage: value })}
             />
 
             <Button
@@ -399,15 +501,11 @@ const TrackingEtsy = () => {
             <div className="text-xs text-neutral-500">
               Selected: <span className="font-semibold text-neutral-900">{selectedRows.length}</span>
             </div>
-            <Pagination
-              current={filters.page}
-              pageSize={filters.perPage}
-              total={total}
-              showSizeChanger
-              pageSizeOptions={[10, 20, 50, 100]}
-              showTotal={(value) => `Total ${value} orders`}
-              onChange={(page, pageSize) => setFilters((prev) => ({ ...prev, page, perPage: pageSize }))}
-            />
+            <div className="text-xs text-neutral-500">
+              Loaded: <span className="font-semibold text-neutral-900">{orders.length}</span>
+              <span className="mx-1">/</span>
+              Total: <span className="font-semibold text-neutral-900">{total}</span>
+            </div>
           </div>
         </div>
       </div>
