@@ -14,6 +14,10 @@ const getAllEtsyOrders = (params) => {
       params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
     submittedToEtsy:
       params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
+    hasTracking:
+      params.hasTracking === true || params.hasTracking === false ? params.hasTracking : undefined,
+    trackingInfo:
+      params.hasTracking === true || params.hasTracking === false ? params.hasTracking : undefined,
     // Boolean flags: gửi true nếu = true, bỏ qua (undefined) nếu false
     isNoCostCenter:  params.isNoCostCenter  || undefined,
     invalidAddress:  params.invalidAddress  || undefined,
@@ -53,6 +57,10 @@ const updateEtsyItemTracking = (orderId, transactionId, payload) => {
   return instance.put(`/etsy/${orderId}/items/${transactionId}/tracking`, payload);
 };
 
+const updateEtsySubmittedStatus = (payload) => {
+  return instance.patch('/etsy/sumbittedoetsy', payload);
+};
+
 export {
   getAllEtsyOrders,
   importEtsyOrders,
@@ -61,4 +69,5 @@ export {
   uploadEtsyTracking,
   uploadEtsyTrackingBatch,
   updateEtsyItemTracking,
+  updateEtsySubmittedStatus,
 };
