@@ -123,7 +123,7 @@ const LogManager = () => {
   // API calls
   const fetchShops = useCallback(async () => {
     try {
-      const response = await getALlShop({ merchant: 'amazon' });
+      const response = await getALlShop();
       if (response.status === 200) {
         setShops(response.data || []);
       }
