@@ -20,6 +20,7 @@ import EtsySaleReport from './pages/report/etsy/EtsySaleReport';
 import EtsyOrderCost from './pages/report/etsy/EtsyOrderCost';
 import UnauthorizedPage from './pages/unauthorized';
 import QC from './pages/fulfillment/QC';
+import EtsyQC from './pages/fulfillment/EtsyQC';
 import TitlePages from './utils/TitlePages';
 import Mapping from './pages/cost_center/Mapping';
 import PSDTasks from './pages/design/PSDTasks';
@@ -66,6 +67,7 @@ function App() {
           <Route path={routes.product_cost_center} element={<ProductCostCenter />} />
           <Route path={routes.fulfillmentScale} element={<FulfillmentScale />} />
           <Route path={routes.fulfillmentQc} element={<QC />} />
+          <Route path={routes.fulfillmentQcEtsy} element={<EtsyQC />} />
           <Route path={routes.cost_center_productTypes} element={<CostCenterProductTypes />} />
           <Route path={routes.cost_center_config} element={<CostCenterConfig />} />
           <Route path={routes.cost_center_mapping} element={<Mapping />} />

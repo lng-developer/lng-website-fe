@@ -31,6 +31,8 @@ const normalizeLayer = (x, i) => ({
   originalHeight: null,
 });
 
+const defaultGetItemId = (item) => item?.orderItemId;
+
 /* ===================== EditableImage (pure) ===================== */
 const EditableImage = React.memo(function EditableImage({
   htmlImg,
@@ -143,6 +145,9 @@ export default function QcCanvasModal({
   fetchCountStatus,
   orderInfo = {},
   indexQC = 0,
+  confirmHandler = scaleFulfill,
+  getItemId = defaultGetItemId,
+  platform = 'amazon',
   // NEW: parent sẽ nhận (orderId, orderItemId) và chuyển sang target kế tiếp trong queue Pending
   onNextAfter,
 }) {
@@ -159,6 +164,15 @@ export default function QcCanvasModal({
   const totalItems = orderInfo?.items?.length || 0;
 
   const currentItem = useMemo(() => (totalItems ? orderInfo.items[currentIndex] : undefined), [orderInfo, totalItems, currentIndex]);
+  const currentItemId = useMemo(() => getItemId(currentItem), [currentItem, getItemId]);
+
+  const customItems = useMemo(() => {
+    if (Array.isArray(currentItem?.version3Data)) return currentItem.version3Data;
+    if (currentItem?.variations && typeof currentItem.variations === 'object') {
+      return Object.entries(currentItem.variations).map(([label, value]) => ({ label, value }));
+    }
+    return [];
+  }, [currentItem]);
 
   const layersData = useMemo(() => {
     const ff = currentItem?.fulfillment_file;
@@ -206,22 +220,27 @@ export default function QcCanvasModal({
 
   const goNextTarget = useCallback(() => {
     // Ưu tiên nhảy sang item/order kế tiếp (parent quản lý)
-    if (onNextAfter && orderInfo?.orderId && currentItem?.orderItemId) {
-      onNextAfter(orderInfo.orderId, currentItem.orderItemId);
+    if (onNextAfter && orderInfo?.orderId && currentItemId) {
+      onNextAfter(orderInfo.orderId, currentItemId);
       return;
     }
     // fallback: đóng modal
     onClose?.();
-  }, [onNextAfter, orderInfo?.orderId, currentItem?.orderItemId, onClose]);
+  }, [onNextAfter, orderInfo?.orderId, currentItemId, onClose]);
 
   const handlePass = useCallback(async () => {
     try {
-      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'approve',
-        note: qcNote,
-      });
+      const res = await confirmHandler(
+        orderInfo?.orderId,
+        currentItemId,
+        {
+          decision: 'approve',
+          note: qcNote,
+        },
+        { shopId: orderInfo?.shopId }
+      );
       if (res.status === 200) toast.success(res.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
+      setDecisionByItem((prev) => ({ ...prev, [currentItemId]: 'approved' }));
     } catch (e) {
       console.log(e);
       toast.error('Error');
@@ -230,7 +249,7 @@ export default function QcCanvasModal({
       fetchCountStatus?.();
       goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
+  }, [confirmHandler, orderInfo?.orderId, orderInfo?.shopId, currentItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   const handleReject = useCallback(async () => {
     if (!qcNote) {
@@ -238,12 +257,17 @@ export default function QcCanvasModal({
       return;
     }
     try {
-      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'reject',
-        note: qcNote,
-      });
+      const res = await confirmHandler(
+        orderInfo?.orderId,
+        currentItemId,
+        {
+          decision: 'reject',
+          note: qcNote,
+        },
+        { shopId: orderInfo?.shopId }
+      );
       if (res.status === 200) toast.success(res.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'rejected' }));
+      setDecisionByItem((prev) => ({ ...prev, [currentItemId]: 'rejected' }));
     } catch (e) {
       console.log(e);
       toast.error('Error');
@@ -252,7 +276,7 @@ export default function QcCanvasModal({
       fetchCountStatus?.();
       goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
+  }, [confirmHandler, orderInfo?.orderId, orderInfo?.shopId, currentItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   /* -------- Side effects -------- */
   useEffect(() => {
@@ -272,18 +296,19 @@ export default function QcCanvasModal({
     // reset note khi đổi item
     setQcNote(currentItem?.qc_note || '');
     setErrorNote(false);
-  }, [currentItem?.orderItemId]);
+  }, [currentItemId, currentItem?.qc_note]);
 
   useEffect(() => {
     // map trạng thái server -> decisionByItem (để hiển thị Passed/Rejected)
     const map = {};
     (orderInfo?.items || []).forEach((it) => {
+      const itemId = getItemId(it);
       const st = String(it?.scale_status || '').toLowerCase();
-      if (st === 'ready' || st === 'approved' || st === 'complete') map[it.orderItemId] = 'approved';
-      if (st === 'qc rejected' || st === 'rejected') map[it.orderItemId] = 'rejected';
+      if (st === 'ready' || st === 'approved' || st === 'complete') map[itemId] = 'approved';
+      if (st === 'qc rejected' || st === 'rejected') map[itemId] = 'rejected';
     });
     setDecisionByItem((prev) => ({ ...map, ...prev }));
-  }, [orderInfo]);
+  }, [orderInfo, getItemId]);
 
   useEffect(() => {
     if (!open) return;
@@ -355,7 +380,7 @@ export default function QcCanvasModal({
   }, [open, layersData, displayScale]);
 
   /* -------- UI derived -------- */
-  const decidedStatus = useMemo(() => (currentItem ? decisionByItem[currentItem.orderItemId] : undefined), [decisionByItem, currentItem]);
+  const decidedStatus = useMemo(() => (currentItemId ? decisionByItem[currentItemId] : undefined), [decisionByItem, currentItemId]);
 
   const showActionButtons = useMemo(
     () => String(currentItem?.scale_status).toLowerCase() === 'pending' && !decidedStatus,
@@ -566,17 +591,25 @@ export default function QcCanvasModal({
                     <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
                   </button>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Asin:</span>
-                  <div className="flex gap-1 items-center">
-                    <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
-                    <Tooltip title="Open Link">
-                      <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
-                        <RiLinkM size={18} />
-                      </Link>
-                    </Tooltip>
+                {platform !== 'etsy' && currentItem?.asin && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Asin:</span>
+                    <div className="flex gap-1 items-center">
+                      <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
+                      <Tooltip title="Open Link">
+                        <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
+                          <RiLinkM size={18} />
+                        </Link>
+                      </Tooltip>
+                    </div>
                   </div>
-                </div>
+                )}
+                {platform === 'etsy' && currentItem?.listingId && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Listing ID:</span>
+                    <StatusComponent title={currentItem?.listingId} color={dataColors.pending} />
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Sku:</span>
                   <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
@@ -620,7 +653,7 @@ export default function QcCanvasModal({
                       style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}
                       className="whitespace-nowrap"
                     >
-                      {`${orderInfo?.orderId}-${currentItem?.orderItemId}`}
+                      {`${orderInfo?.orderId}-${currentItemId}`}
                     </span>
                   </div>
                 </div>
@@ -647,7 +680,7 @@ export default function QcCanvasModal({
             }}
           >
             <div className="flex-col justify-between">
-              {currentItem?.version3Data?.map((item, idx) => (
+              {customItems.map((item, idx) => (
                 <div key={idx} className="mb-1 whitespace-normal break-words">
                   <span className="font-medium">{item?.label}:</span>
                   <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>

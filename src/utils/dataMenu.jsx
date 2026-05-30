@@ -62,7 +62,7 @@ export const detailMenus = {
       label: 'Team Tasks',
       icon: <LuNotebook size={20} />,
     },
-   
+
     {
       key: routes.sale_listing,
       label: 'Listings',
@@ -134,14 +134,26 @@ export const detailMenus = {
       label: 'Scale',
       children: [
         {
-          key: routes.fulfillmentScale, label: "AMAZON Scale", icon: <FaAmazon size={20} />
+          key: routes.fulfillmentScale,
+          label: 'AMAZON Scale',
+          icon: <FaAmazon size={20} />,
         },
         {
-          key: routes.scalesty, label: "ESTY Scale ", icon: <FaEtsy size={20} />
-        }
-      ]
+          key: routes.scalesty,
+          label: 'ETSY Scale ',
+          icon: <FaEtsy size={20} />,
+        },
+      ],
     },
-    { key: routes.fulfillmentQc, icon: <TbBlender size={20} />, label: 'QC' },
+    {
+      key: 'qc',
+      icon: <TbBlender size={20} />,
+      label: 'QC',
+      children: [
+        { key: routes.fulfillmentQc, label: 'AMAZON QC', icon: <FaAmazon size={20} /> },
+        { key: routes.fulfillmentQcEtsy, label: 'ETSY QC', icon: <FaEtsy size={20} /> },
+      ],
+    },
     { key: 'working-status', icon: <TbHomeStats size={20} />, label: 'Working Status' },
     {
       key: 'e',
@@ -200,7 +212,7 @@ export const detailMenus = {
     //   label: 'Amz Confirm Ship',
     //   icon: <RiContractLine size={20} />,
     // },
-     {
+    {
       key: routes.checkodertracking,
       label: 'Check Tracking',
       icon: <LuTruck size={20} />,

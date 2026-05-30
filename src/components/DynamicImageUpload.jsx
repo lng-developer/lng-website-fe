@@ -35,6 +35,8 @@ export default function DynamicImageUploadBatch({
   orderItemId,
   fetchAllFulfill,
   filters,
+  uploadHandler = uploadScale,
+  uploadContext,
 }) {
   const [slots, setSlots] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -108,7 +110,7 @@ export default function DynamicImageUploadBatch({
     const meta = itemsReady.map((f) => ({ position: f.position }));
     formData.append('meta', JSON.stringify(meta));
     try {
-      const response = await uploadScale(orderId, orderItemId, formData);
+      const response = await uploadHandler(orderId, orderItemId, formData, uploadContext);
       if (response.status === 200) {
         toast.success('Import success!');
       } else {

@@ -24,6 +24,7 @@ const routes = {
   fulfillmentScale: '/fulfillment/scale',
   fulfillmentWorkingStatus: '/fulfillment/working-status',
   fulfillmentReports: '/fulfillment/reports',
+  fulfillmentQcEtsy: '/fulfillment/qc/etsy',
   designPSD: '/design/psd',
   designPNG: '/design/png',
   designEmbroider: '/design/embroider-list',

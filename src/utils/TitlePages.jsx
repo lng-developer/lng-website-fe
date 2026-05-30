@@ -7,6 +7,7 @@ const TITLES = {
   '/sales/listing': 'Manage Listing',
   '/fulfillment/scale': 'Fulfillment Scale',
   '/fulfillment/qc': 'QC Fulfillment',
+  '/fulfillment/qc/etsy': 'Etsy QC',
   '/reports': 'Reports',
   '/cost-center/config': 'Config Cost Center',
   '/cost-center/product-types': 'Product Type Groups',

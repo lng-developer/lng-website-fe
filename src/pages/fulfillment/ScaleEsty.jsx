@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { dataFilterStatusFulfillment } from '../../utils/dataFilter';
 import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
-import { Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { Flex, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { MdOutlineRefresh } from 'react-icons/md';
@@ -13,7 +13,6 @@ import ItemCustom from './table/ItemCustom';
 import ItemCostCenter from './table/ItemCostCenter';
 import ItemOrderInfo from './table/ItemOrderInfo';
 import TextArea from 'antd/es/input/TextArea';
-import ItemAction from './table/ItemAction';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
@@ -22,72 +21,36 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
+import { getALlShop } from '../../apis/order';
+import {
+  assignEtsyOrderToCs,
+  getAllEtsyScale,
+  getAllEtsyScaleStatistics,
+  unassignEtsyOrderFromCs,
+  uploadEtsyScale,
+} from '../../apis/etsy';
+import { getAllUsers } from '../../apis/user';
+import { useAuth } from '../../context/AuthContext';
 
 const LAST_UPDATED_KEY = 'orders_etsy_scale_last_updated_at';
 const PAGE_SIZE = 10;
 
-// Fake data generator
-const generateFakeData = (count = 20) => {
-  const statuses = ['Pending', 'Processing', 'Completed', 'Cancelled'];
-  const scaleStatuses = ['Not Started', 'In Progress', 'Completed', 'Failed'];
-  const shops = ['EtsyShop1', 'EtsyShop2', 'EtsyShop3', 'EtsyShop4'];
-  const sellers = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Williams'];
-  const groupTypes = ['Standard', 'Express', 'Premium'];
-
-  return Array.from({ length: count }, (_, i) => ({
-    orderId: `ETSY-${1000 + i}`,
-    purchase_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-    groupId: `GRP-${100 + i}`,
-    groupType: groupTypes[Math.floor(Math.random() * groupTypes.length)],
-    shopName: shops[Math.floor(Math.random() * shops.length)],
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    scale_overall_status: scaleStatuses[Math.floor(Math.random() * scaleStatuses.length)],
-    seller: {
-      full_name: sellers[Math.floor(Math.random() * sellers.length)],
-    },
-    scaleBy: sellers[Math.floor(Math.random() * sellers.length)],
-    items: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
-      orderItemId: `ITEM-${i}-${j}`,
-      listing: `Etsy Product ${i}-${j}`,
-      baseImageUrl: 'https://via.placeholder.com/150',
-      asin: `ASIN${1000 + i}${j}`,
-      sku: `SKU-${1000 + i}-${j}`,
-      quantity: Math.floor(Math.random() * 5) + 1,
-      scale_status: scaleStatuses[Math.floor(Math.random() * scaleStatuses.length)],
-      version3Data: [
-        { label: 'Text', value: `Custom text ${i}-${j}` },
-        { label: 'Color', value: ['Red', 'Blue', 'Green'][Math.floor(Math.random() * 3)] },
-        { label: 'Size', value: ['S', 'M', 'L', 'XL'][Math.floor(Math.random() * 4)] },
-      ],
-      customized_url: 'https://via.placeholder.com/200',
-      snapshotImage: Math.random() > 0.5 ? 'https://via.placeholder.com/200' : null,
-      cost_center: {
-        team: `Team ${Math.floor(Math.random() * 5) + 1}`,
-        product_type: ['T-Shirt', 'Mug', 'Poster'][Math.floor(Math.random() * 3)],
-      },
-      qc_note: `QC note for item ${i}-${j}`,
-      fulfillment_file: {
-        front: 'https://via.placeholder.com/300',
-        back: 'https://via.placeholder.com/300',
-      },
-    })),
-  }));
-};
-
 const ScaleEsty = () => {
+  const { user } = useAuth();
   const { collapsed } = useOutletContext();
   const [isActiveFilter, setIsActivefilter] = useState(dataFilterStatusFulfillment[0]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [dataSource, setDataSource] = useState([]);
-  const [allData, setAllData] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [tableHeight, setTableHeight] = useState(0);
   const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
-  const [shops, setShops] = useState(['EtsyShop1', 'EtsyShop2', 'EtsyShop3', 'EtsyShop4']);
+  const [shops, setShops] = useState([]);
+  const [csUsers, setCsUsers] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [assigningOrderId, setAssigningOrderId] = useState('');
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
     return saved ? new Date(saved) : null;
@@ -101,6 +64,7 @@ const ScaleEsty = () => {
     search: '',
     shopName: '',
   });
+  const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader' || user?.role === 'Designer';
 
   const updateLastUpdatedAt = useCallback(() => {
     const now = new Date();
@@ -163,13 +127,20 @@ const ScaleEsty = () => {
       { title: <span style={{ color: dataColors.title }}>Order Status</span>, dataIndex: 'status', key: 'status', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'orderOwner', key: 'orderOwner', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'scaleBy', key: 'scaleBy', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Assign CS</span>,
+        dataIndex: 'assignCS',
+        key: 'assignCS',
+        align: 'center',
+        width: 260,
+      },
+      { title: <span style={{ color: dataColors.title }}>CS Status</span>, dataIndex: 'actions', key: 'actions', align: 'center' },
     ],
     []
   );
 
   const convertToArr = useCallback((object) => {
-    return Object?.entries(typeof object === 'object' ? object : {}).map(([key, url]) => ({
+    return Object.entries(object && typeof object === 'object' ? object : {}).map(([key, url]) => ({
       position: key,
       url,
     }));
@@ -179,75 +150,39 @@ const ScaleEsty = () => {
     async (params) => {
       setLoading(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        let filteredData = [...allData];
-
-        // Filter by scale status
-        if (params.scale_status) {
-          filteredData = filteredData.filter((item) => item.scale_overall_status === params.scale_status);
+        const response = await getAllEtsyScale(params);
+        if (response.status === 200) {
+          setDataSource(response.data?.data || []);
+          setTotalCount(response.data?.totalCount || 0);
+        } else {
+          toast.error(response.data?.message || 'Failed to fetch Etsy scale tasks');
         }
-
-        // Filter by shop
-        if (params.shopName) {
-          filteredData = filteredData.filter((item) => item.shopName === params.shopName);
-        }
-
-        // Filter by search
-        if (params.search) {
-          filteredData = filteredData.filter((item) => item.orderId.toLowerCase().includes(params.search.toLowerCase()));
-        }
-
-        // Filter by date range
-        if (params.from && params.to) {
-          filteredData = filteredData.filter((item) => {
-            const itemDate = new Date(item.purchase_date);
-            return itemDate >= new Date(params.from) && itemDate <= new Date(params.to);
-          });
-        }
-
-        // Pagination
-        const start = (params.page - 1) * params.perPage;
-        const end = start + params.perPage;
-        const paginatedData = filteredData.slice(start, end);
-
-        setDataSource(paginatedData);
-        setTotalCount(filteredData.length);
       } catch (error) {
-        toast.error('Failed to fetch data');
+        toast.error(error?.response?.data?.message || 'Failed to fetch Etsy scale tasks');
       } finally {
         setLoading(false);
         updateLastUpdatedAt();
       }
     },
-    [allData, updateLastUpdatedAt]
+    [updateLastUpdatedAt]
   );
 
   const fetchCountStatus = useCallback(async () => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      const counts = {
-        All: allData.length,
-        'Not Started': allData.filter((item) => item.scale_overall_status === 'Not Started').length,
-        'In Progress': allData.filter((item) => item.scale_overall_status === 'In Progress').length,
-        Completed: allData.filter((item) => item.scale_overall_status === 'Completed').length,
-        Failed: allData.filter((item) => item.scale_overall_status === 'Failed').length,
-      };
-
-      const resultTabFilter = dataFilterStatusFulfillment.map(({ key, title, status }) => ({
-        key,
-        title,
-        status,
-        count: counts[key] ?? 0,
-      }));
-      setTabFilter(resultTabFilter);
+      const response = await getAllEtsyScaleStatistics(filters);
+      if (response.status === 200) {
+        const resultTabFilter = dataFilterStatusFulfillment.map(({ key, title, status }) => ({
+          key,
+          title,
+          status,
+          count: response.data?.overall?.counts?.[key] ?? 0,
+        }));
+        setTabFilter(resultTabFilter);
+      }
     } catch (error) {
       console.log(error);
     }
-  }, [allData]);
+  }, [filters]);
 
   const handleFilterForStatus = useCallback(
     (status) => {
@@ -258,6 +193,80 @@ const ScaleEsty = () => {
       updateFilter({ scale_status: status, page: 1 });
     },
     [updateFilter]
+  );
+
+  const fetchAllShop = useCallback(async () => {
+    try {
+      const result = await getALlShop({ merchant: 'etsy' });
+      if (result.status === 200) {
+        setShops(Array.isArray(result.data) ? result.data : result.data?.data || []);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Failed to load Etsy shops');
+    }
+  }, []);
+
+  const fetchCsUsers = useCallback(async () => {
+    try {
+      const result = await getAllUsers({ all: true, perPage: 1000 });
+      const users = Array.isArray(result.data) ? result.data : result.data?.data || [];
+      const assignableRoles = ['Customer Service', 'Designer', 'Design Leader'];
+      const filteredCsUsers = users.filter((item) => {
+        const roleName = item?.role_name || item?.role_id?.name || item?.role?.name;
+        return assignableRoles.includes(roleName);
+      });
+
+      setCsUsers(filteredCsUsers);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load CS users');
+    }
+  }, []);
+
+  const getAssignErrorMessage = useCallback((error) => {
+    const responseData = error?.response?.data;
+    return responseData?.message || 'Assign CS failed';
+  }, []);
+
+  const handleAssignCs = useCallback(
+    async (order, csUserId) => {
+      if (!canAssignCs) {
+        toast.error('Access denied: insufficient permissions');
+        return;
+      }
+
+      if (!order?.orderId) {
+        toast.error('Order not found');
+        return;
+      }
+
+      const currentCsUserId = order?.cs_assignee?._id || order?.csAssigneeId;
+      if (currentCsUserId === csUserId) {
+        return;
+      }
+
+      setAssigningOrderId(order.orderId);
+      try {
+        const payload = { shopId: order?.shopId };
+        const response = csUserId
+          ? await assignEtsyOrderToCs(order.orderId, { ...payload, csUserId })
+          : await unassignEtsyOrderFromCs(order.orderId, payload);
+
+        if (response.status === 200) {
+          toast.success(response.data?.message || (csUserId ? 'Assigned Etsy order to CS successfully' : 'Unassigned Etsy order from CS successfully'));
+          fetchAllFulfill(filters);
+          fetchCountStatus();
+        } else {
+          toast.error(response.data?.message || 'Assign CS failed');
+        }
+      } catch (error) {
+        toast.error(getAssignErrorMessage(error));
+      } finally {
+        setAssigningOrderId('');
+      }
+    },
+    [canAssignCs, fetchAllFulfill, fetchCountStatus, filters, getAssignErrorMessage]
   );
 
   const debouncedSearch = useMemo(
@@ -317,86 +326,132 @@ const ScaleEsty = () => {
   }, []);
 
   const tableData = useMemo(() => {
-    const results = (dataSource || []).map((item, index) => ({
-      key: item?.orderId,
-      orderId: (
-        <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
-          <StatusComponent title={item?.orderId} color={dataColors.pink} />
-        </button>
-      ),
-      orderDate: (
-        <Flex vertical>
-          <span className="font-medium whitespace-nowrap">{formatDate(item?.purchase_date)}</span>
-          <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
-            (
-            {formatDistanceToNow(item?.purchase_date, { addSuffix: true })
-              .replace(/^about /, '')
-              .replace(/^less than /, '')}
-            )
-          </span>
-        </Flex>
-      ),
-      groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault />,
-      groupType: <StatusComponent title={item?.groupType || 'No data'} color={dataColors.process} />,
-      shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
-      status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-      orderOwner: <StatusComponent title={item?.seller?.full_name || 'No data'} color={dataColors.process} />,
-      scaleBy: <StatusComponent title={item?.scaleBy || 'No data'} color={dataColors.purple} />,
-      scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
-      actions: <ItemAction />,
-      subItems: (item?.items || []).map((itemSub, indexItem) => ({
-        key: `${index}-${indexItem}`,
-        product_info: (
-          <ItemProductInfo
-            listing={itemSub?.listing}
-            imageUrl={itemSub?.baseImageUrl}
-            asin={itemSub?.asin}
-            sku={itemSub?.sku}
-            status={item?.status}
-          />
-        ),
-        customization: <ItemCustom items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
-        task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-        cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
-        cs_note: (
-          <div className="mb-1 w-45">
-            <div className="font-semibold text-gray-800 mb-1">CS note: </div>
-            <TextArea
-              value={itemSub?.qc_note}
-              placeholder="CS note"
-              spellCheck={false}
-              style={{ color: dataColors.cancelled, fontWeight: 500 }}
-            />
-          </div>
-        ),
-        action: (
-          <DynamicImageUpload
-            initialKinds={['front']}
-            serverItems={convertToArr(itemSub?.fulfillment_file)}
-            orderId={item?.orderId}
-            orderItemId={itemSub?.orderItemId}
-            fetchAllFulfill={fetchAllFulfill}
-            filters={filters}
-          />
-        ),
-        order_info: (
-          <ItemOrderInfo
-            orderId={item?.orderId}
-            seller={item?.seller?.full_name}
-            fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
-            quantity={itemSub?.quantity}
-          />
-        ),
-      })),
-    }));
-    return results;
-  }, [dataSource, fetchAllFulfill, filters, convertToArr, handleCopy]);
+    const normalizeCustomItems = (itemSub) => {
+      if (Array.isArray(itemSub?.version3Data)) return itemSub.version3Data;
+      if (itemSub?.variations && typeof itemSub.variations === 'object') {
+        return Object.entries(itemSub.variations).map(([label, value]) => ({ label, value }));
+      }
+      return [];
+    };
 
-  // Initialize fake data
-  useEffect(() => {
-    const fakeData = generateFakeData(50);
-    setAllData(fakeData);
-  }, []);
+    return (dataSource || []).map((item, index) => {
+      const orderDate = item?.purchase_date || item?.saleDate || item?.createdAt;
+      const scaleBy = item?.scaledBy?.full_name || item?.scaleBy?.full_name || item?.scaleBy || 'No data';
+      const sellerName = item?.seller?.full_name || item?.seller?.sellerCode || item?.seller?.email || 'No data';
+      const csStatus = item?.cs_assignee?.full_name || item?.cs_assignment_status || 'Unassigned';
+
+      return {
+        key: item?.orderId,
+        orderId: (
+          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+            <StatusComponent title={item?.orderId} color={dataColors.pink} />
+          </button>
+        ),
+        orderDate: (
+          <Flex vertical>
+            <span className="font-medium whitespace-nowrap">{orderDate ? formatDate(orderDate) : 'No data'}</span>
+            {orderDate && (
+              <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
+                (
+                {formatDistanceToNow(orderDate, { addSuffix: true })
+                  .replace(/^about /, '')
+                  .replace(/^less than /, '')}
+                )
+              </span>
+            )}
+          </Flex>
+        ),
+        groupId: <StatusComponent title={item?.groupId || 'No data'} color={dataColors.default} isDefault />,
+        groupType: <StatusComponent title={item?.groupType || item?.shipping_type || 'No data'} color={dataColors.process} />,
+        shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
+        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+        orderOwner: <StatusComponent title={sellerName} color={dataColors.process} />,
+        scaleBy: <StatusComponent title={scaleBy} color={dataColors.purple} />,
+        scaleStatus: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
+        assignCS: (
+          <Select
+            className="min-w-[220px] text-left"
+            placeholder="Select assignee"
+            value={item?.cs_assignee?._id || item?.csAssigneeId || undefined}
+            onChange={(value) => handleAssignCs(item, value)}
+            options={csUsers.map((userItem) => ({
+              value: userItem?._id,
+              label: `${userItem?.full_name || userItem?.email || 'Unknown'} - ${
+                userItem?.role_name || userItem?.role_id?.name || userItem?.role?.name || 'No role'
+              }`,
+            }))}
+            showSearch
+            allowClear
+            optionFilterProp="label"
+            loading={assigningOrderId === item?.orderId}
+            disabled={!canAssignCs || assigningOrderId === item?.orderId}
+          />
+        ),
+        actions: <StatusComponent title={csStatus} color={item?.cs_assignee?.full_name ? dataColors.process : dataColors.default} isDefault={!item?.cs_assignee?.full_name} />,
+        subItems: (item?.items || []).map((itemSub, indexItem) => {
+          const transactionId = itemSub?.transactionId || itemSub?.orderItemId;
+          const customItems = normalizeCustomItems(itemSub);
+
+          return {
+            key: `${item?.orderId}-${transactionId || indexItem}`,
+            product_info: (
+              <ItemProductInfo
+                listing={itemSub?.listing}
+                imageUrl={itemSub?.baseImageUrl || itemSub?.baseImage?.imageUrl}
+                asin={itemSub?.asin}
+                sku={itemSub?.sku}
+                status={item?.status}
+              />
+            ),
+            customization: <ItemCustom items={customItems} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
+            task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
+            cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
+            cs_note: (
+              <div className="mb-1 w-45">
+                <div className="font-semibold text-gray-800 mb-1">CS note: </div>
+                <TextArea
+                  value={itemSub?.cs_note || ''}
+                  placeholder="CS note"
+                  readOnly
+                  spellCheck={false}
+                  style={{ color: dataColors.cancelled, fontWeight: 500 }}
+                />
+                <div className="font-semibold text-gray-800 mb-1 mt-3">QC note: </div>
+                <TextArea
+                  value={itemSub?.qc_note || ''}
+                  placeholder="QC note"
+                  readOnly
+                  spellCheck={false}
+                  style={{ color: dataColors.cancelled, fontWeight: 500 }}
+                />
+              </div>
+            ),
+            action: (
+              <DynamicImageUpload
+                initialKinds={['front']}
+                serverItems={convertToArr(itemSub?.fulfillment_file)}
+                orderId={item?.orderId}
+                orderItemId={transactionId}
+                fetchAllFulfill={fetchAllFulfill}
+                filters={filters}
+                uploadHandler={uploadEtsyScale}
+                uploadContext={{ shopId: item?.shopId }}
+                hideAddButton={itemSub?.fulfillment_file && Object.keys(itemSub?.fulfillment_file || {}).length > 0}
+              />
+            ),
+            order_info: (
+              <ItemOrderInfo
+                orderId={item?.orderId}
+                seller={sellerName}
+                fulfillName={`${item?.orderId}-${transactionId || indexItem}`}
+                quantity={itemSub?.quantity}
+              />
+            ),
+          };
+        }),
+      };
+    });
+  }, [assigningOrderId, canAssignCs, csUsers, dataSource, fetchAllFulfill, filters, convertToArr, handleAssignCs, handleCopy]);
 
   useEffect(() => {
     // Đồng bộ currentPage với filters.page
@@ -416,11 +471,19 @@ const ScaleEsty = () => {
   }, []);
 
   useEffect(() => {
-    if (allData.length > 0) {
-      fetchAllFulfill(filters);
-      fetchCountStatus();
+    fetchAllShop();
+  }, [fetchAllShop]);
+
+  useEffect(() => {
+    if (canAssignCs) {
+      fetchCsUsers();
     }
-  }, [filters, allData, fetchAllFulfill, fetchCountStatus]);
+  }, [canAssignCs, fetchCsUsers]);
+
+  useEffect(() => {
+    fetchAllFulfill(filters);
+    fetchCountStatus();
+  }, [filters, fetchAllFulfill, fetchCountStatus]);
 
   useEffect(() => {
     if (isShowRowkeys) {
@@ -474,11 +537,11 @@ const ScaleEsty = () => {
             <div className="flex gap-2 items-center ">
               <SelectFilter
                 title="Shop"
-                ListData={shops}
+                ListData={shops.map((item) => item?.name).filter(Boolean)}
                 value={selectShop}
                 onChange={(val) => {
-                  setSelectShop(val);
-                  updateFilter({ shopName: val, page: 1 });
+                  setSelectShop(val || '');
+                  updateFilter({ shopName: val || '', page: 1 });
                 }}
               />
             </div>
