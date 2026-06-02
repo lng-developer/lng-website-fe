@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { cloneElement, memo, useCallback, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
@@ -12,7 +12,12 @@ import { ImSpinner10 } from 'react-icons/im';
 // 👉 Dùng LazyImage dùng chung
 import LazyImage from '../../../components/LazyImage';
 
-const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_status, asin, scale_by }) => {
+const getHighResolutionImageUrl = (src) => {
+  if (typeof src !== 'string') return src;
+  return src.replace(/il_\d+x(?:N|\d+)/, 'il_fullxfull');
+};
+
+const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_status, asin, scale_by, imageSize = 130 }) => {
   const arrFulfill = useMemo(
     () =>
       Object.entries(typeof linkFulfill === 'object' ? linkFulfill : {}).map(([key, url]) => ({
@@ -20,6 +25,26 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
         url,
       })),
     [linkFulfill]
+  );
+
+  const getLargePreview = useCallback(
+    (src) => ({
+      src: getHighResolutionImageUrl(src),
+      mask: 'View large',
+      scaleStep: 0.75,
+      imageRender: (originalNode) =>
+        cloneElement(originalNode, {
+          style: {
+            ...originalNode.props.style,
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '92vw',
+            maxHeight: '85vh',
+            objectFit: 'contain',
+          },
+        }),
+    }),
+    []
   );
 
   const downloadPSD = useCallback(async () => {
@@ -50,11 +75,26 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
     <div>
       <div className={arrFulfill?.length > 0 ? 'inline-grid grid-cols-2 gap-4' : ''}>
         {/* Ảnh listing / base */}
-        <LazyImage src={listing?.product_image || linkImage || NoImage} alt="Product" width={130} height={130} preview={true} />
+        <LazyImage
+          src={listing?.product_image || linkImage || NoImage}
+          alt="Product"
+          width={imageSize}
+          height={imageSize}
+          preview={getLargePreview(listing?.product_image || linkImage || NoImage)}
+        />
 
         {/* Ảnh fulfill */}
         {arrFulfill?.length > 0 &&
-          arrFulfill.map((f, i) => <LazyImage key={i} src={f?.url || NoImage} alt={f?.title} width={130} height={130} preview={true} />)}
+          arrFulfill.map((f, i) => (
+            <LazyImage
+              key={i}
+              src={f?.url || NoImage}
+              alt={f?.title}
+              width={imageSize}
+              height={imageSize}
+              preview={getLargePreview(f?.url || NoImage)}
+            />
+          ))}
       </div>
 
       {/* Info */}
