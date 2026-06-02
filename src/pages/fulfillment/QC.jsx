@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Flex, Input, Pagination, Table, Tooltip, Button } from 'antd';
+import { Alert, Flex, Input, Modal, Pagination, Table, Tooltip, Button } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
@@ -11,7 +11,14 @@ import ButtonFilter from '../../components/ButtonFilter';
 import QcCanvasModal from './ModalQC';
 import { MdOutlineImageSearch } from 'react-icons/md';
 import { BiRefresh } from 'react-icons/bi';
-import { getAllCountStatusQC, getAllQC, getALlShop, retryScaleOrder, sendFailedOrdersToFulfillment } from '../../apis/order';
+import {
+  getAllCountStatusQC,
+  getAllQC,
+  getALlShop,
+  retryScaleOrder,
+  sendFailedOrdersToFulfillment,
+  pushSelectedOrdersToFulfillmentPlatform,
+} from '../../apis/order';
 import { toast } from 'sonner';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -68,7 +75,20 @@ const QC = () => {
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [sendingToFulfillment, setSendingToFulfillment] = useState(false);
+  const [pushingToFulfillmentPlatform, setPushingToFulfillmentPlatform] = useState(false);
+  const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
+  const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
   const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
+
+  const selectedOrdersForFulfillment = useMemo(
+    () => dataSource.filter((order) => selectedRowKeys.includes(order.orderId)),
+    [dataSource, selectedRowKeys]
+  );
+
+  const selectedFulfillmentItemCount = useMemo(
+    () => selectedOrdersForFulfillment.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items.length : 0), 0),
+    [selectedOrdersForFulfillment]
+  );
 
   const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
@@ -369,19 +389,18 @@ const QC = () => {
       return;
     }
 
-    const selectedOrders = dataSource.filter((order) => selectedRowKeys.includes(order.orderId));
-    if (selectedOrders.length === 0) {
+    if (selectedOrdersForFulfillment.length === 0) {
       toast.error('No matching orders found to send');
       return;
     }
 
-    const payload = { orderIds: selectedOrders.map((order) => order.orderId) };
+    const payload = { orderIds: selectedOrdersForFulfillment.map((order) => order.orderId) };
     setSendingToFulfillment(true);
 
     try {
       const response = await sendFailedOrdersToFulfillment(payload);
       if (response.status >= 200 && response.status < 300) {
-        toast.success(`Sent ${selectedOrders.length} orders to fulfillment`);
+        toast.success(`Sent ${selectedOrdersForFulfillment.length} orders to fulfillment`);
         setSelectedRowKeys([]);
         fetchAllQC(filters);
         fetchCountStatus();
@@ -394,7 +413,66 @@ const QC = () => {
     } finally {
       setSendingToFulfillment(false);
     }
-  }, [dataSource, fetchAllQC, fetchCountStatus, filters, selectedRowKeys]);
+  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment, selectedRowKeys.length]);
+
+  const openPushFulfillmentModal = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      toast.error('Please select orders to push');
+      return;
+    }
+
+    if (selectedOrdersForFulfillment.length === 0) {
+      toast.error('No matching orders found to push');
+      return;
+    }
+
+    setFulfillmentPushResult(null);
+    setOpenFulfillmentPushModal(true);
+  }, [selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+
+  const closePushFulfillmentModal = useCallback(() => {
+    setOpenFulfillmentPushModal(false);
+    setFulfillmentPushResult(null);
+  }, []);
+
+  const handlePushSelectedToFulfillmentPlatform = useCallback(async () => {
+    if (selectedOrdersForFulfillment.length === 0) {
+      toast.error('No matching orders found to push');
+      return;
+    }
+
+    setPushingToFulfillmentPlatform(true);
+
+    try {
+      const response = await pushSelectedOrdersToFulfillmentPlatform({
+        orderIds: selectedOrdersForFulfillment.map((order) => order.orderId),
+      });
+      if (response.status >= 200 && response.status < 300) {
+        const fulfillment = response.data?.fulfillment || {};
+        const received = fulfillment.received ?? selectedOrdersForFulfillment.length;
+        const inserted = fulfillment.inserted ?? 0;
+        const updated = fulfillment.updated ?? 0;
+        const skipped = fulfillment.skipped ?? 0;
+        const errorsCount = Array.isArray(fulfillment.errors) ? fulfillment.errors.length : 0;
+
+        setFulfillmentPushResult({
+          received,
+          inserted,
+          updated,
+          skipped,
+          errorsCount,
+        });
+        toast.success(`Pushed ${selectedOrdersForFulfillment.length} orders. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`);
+      } else {
+        toast.error(response.data?.message || 'Failed to push orders to Fulfillment Platform');
+      }
+    } catch (error) {
+      console.error('Push Fulfillment Platform test error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to push orders to Fulfillment Platform');
+    } finally {
+      setPushingToFulfillmentPlatform(false);
+    }
+  }, [selectedOrdersForFulfillment]);
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
@@ -735,6 +813,18 @@ const QC = () => {
                   </Button>
                 </Tooltip>
               )}
+
+              <Tooltip title="Push selected orders directly to Fulfillment Platform v2 for testing">
+                <Button
+                  type="primary"
+                  icon={<MdOutlineSend />}
+                  onClick={openPushFulfillmentModal}
+                  loading={pushingToFulfillmentPlatform}
+                  disabled={selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
+                >
+                  Push Platform Test ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
@@ -788,6 +878,45 @@ const QC = () => {
           />
         </div>
       </div>
+
+      <Modal
+        title="Push orders to Fulfillment Platform"
+        open={openFulfillmentPushModal}
+        onCancel={closePushFulfillmentModal}
+        onOk={handlePushSelectedToFulfillmentPlatform}
+        okText="Push orders"
+        cancelText="Close"
+        confirmLoading={pushingToFulfillmentPlatform}
+        okButtonProps={{
+          disabled: selectedOrdersForFulfillment.length === 0,
+        }}
+        destroyOnHidden
+      >
+        <Flex vertical gap={12}>
+          <Alert
+            type="warning"
+            showIcon
+            message="Portal backend will push these orders to the configured Fulfillment Platform endpoint. This does not update Portal order status or tracking data."
+          />
+
+          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <div className="font-medium text-slate-900">Selected payload</div>
+            <div className="mt-1">Orders: {selectedOrdersForFulfillment.length}</div>
+            <div>Items: {selectedFulfillmentItemCount}</div>
+            {selectedOrdersForFulfillment.length > 0 && (
+              <div className="mt-1 truncate">First order: {selectedOrdersForFulfillment[0]?.orderId}</div>
+            )}
+          </div>
+
+          {fulfillmentPushResult && (
+            <Alert
+              type={fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
+              showIcon
+              message={`Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`}
+            />
+          )}
+        </Flex>
+      </Modal>
 
       <QcCanvasModal
         open={openModalQC}

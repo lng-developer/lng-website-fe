@@ -15,6 +15,11 @@ const { Title } = Typography;
 
 /* ===================== Utilities ===================== */
 const num = (v, d) => (Number.isFinite(+v) ? +v : d);
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const MIN_STAGE_SCALE = 0.25;
+const MAX_STAGE_SCALE = 50;
+const ZOOM_STEP = 1.15;
+const SHIFT_SCROLL_PAN_MULTIPLIER = 0.45;
 
 const normalizeLayer = (x, i) => ({
   id: x.id ?? `layer_${i}`,
@@ -31,6 +36,8 @@ const normalizeLayer = (x, i) => ({
   originalHeight: null,
 });
 
+const defaultGetItemId = (item) => item?.orderItemId;
+
 /* ===================== EditableImage (pure) ===================== */
 const EditableImage = React.memo(function EditableImage({
   htmlImg,
@@ -42,6 +49,7 @@ const EditableImage = React.memo(function EditableImage({
   isSelected,
   visible = true,
   opacity = 1,
+  draggable = true,
   onSelect,
   onChange,
 }) {
@@ -55,12 +63,10 @@ const EditableImage = React.memo(function EditableImage({
     }
   }, [isSelected]);
 
-  if (!htmlImg) return null;
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const handleDragEnd = useCallback((e) => onChange({ x: e.target.x(), y: e.target.y() }), [onChange]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const handleDragMove = useCallback((e) => onChange({ x: e.target.x(), y: e.target.y() }), [onChange]);
+
   const handleTransformEnd = useCallback(() => {
     const node = shapeRef.current;
     if (!node) return;
@@ -85,6 +91,8 @@ const EditableImage = React.memo(function EditableImage({
     });
   }, [onChange, width, height, htmlImg?.width, htmlImg?.height]);
 
+  if (!htmlImg) return null;
+
   return (
     <Group>
       <KonvaImage
@@ -97,10 +105,11 @@ const EditableImage = React.memo(function EditableImage({
         rotation={rotation}
         opacity={opacity}
         visible={visible}
-        draggable
+        draggable={draggable}
         onClick={onSelect}
         onTap={onSelect}
         perfectDrawEnabled={false}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onTransformEnd={handleTransformEnd}
       />
@@ -143,6 +152,9 @@ export default function QcCanvasModal({
   fetchCountStatus,
   orderInfo = {},
   indexQC = 0,
+  confirmHandler = scaleFulfill,
+  getItemId = defaultGetItemId,
+  platform = 'amazon',
   // NEW: parent sẽ nhận (orderId, orderItemId) và chuyển sang target kế tiếp trong queue Pending
   onNextAfter,
 }) {
@@ -154,11 +166,26 @@ export default function QcCanvasModal({
   const [showBack, setShowBack] = useState(false);
   const [activeLayer, setActiveLayer] = useState(null);
   const [decisionByItem, setDecisionByItem] = useState({});
+  const [stageScale, setStageScale] = useState(1);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const stageRef = useRef(null);
+  const panStartRef = useRef(null);
 
   /* -------- Derived values -------- */
   const totalItems = orderInfo?.items?.length || 0;
 
   const currentItem = useMemo(() => (totalItems ? orderInfo.items[currentIndex] : undefined), [orderInfo, totalItems, currentIndex]);
+  const currentItemId = useMemo(() => getItemId(currentItem), [currentItem, getItemId]);
+
+  const customItems = useMemo(() => {
+    if (Array.isArray(currentItem?.version3Data)) return currentItem.version3Data;
+    if (currentItem?.variations && typeof currentItem.variations === 'object') {
+      return Object.entries(currentItem.variations).map(([label, value]) => ({ label, value }));
+    }
+    return [];
+  }, [currentItem]);
 
   const layersData = useMemo(() => {
     const ff = currentItem?.fulfillment_file;
@@ -188,6 +215,8 @@ export default function QcCanvasModal({
     return { wPx: active.originalWidth, hPx: active.originalHeight };
   }, [items, activeLayer]);
 
+  const selectedItem = useMemo(() => (activeLayer ? items.find((x) => x.id === activeLayer) : null), [items, activeLayer]);
+
   /* -------- Handlers -------- */
   const handlePageChange = useCallback((page) => setCurrentIndex(page - 1), []);
 
@@ -198,30 +227,187 @@ export default function QcCanvasModal({
 
   const makeSelectHandler = useCallback((id) => () => selectId(id), [selectId]);
 
+  const clearSelection = useCallback(() => {
+    setItems((arr) => arr.map((it) => ({ ...it, isSelected: false })));
+    setActiveLayer(null);
+  }, []);
+
   const updateItem = useCallback((id, patch) => {
     setItems((arr) => arr.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }, []);
 
   const makeUpdateHandler = useCallback((id) => (patch) => updateItem(id, patch), [updateItem]);
 
+  const resetViewport = useCallback(() => {
+    setStageScale(1);
+    setStagePos({ x: 0, y: 0 });
+  }, []);
+
+  const setZoomFromPoint = useCallback(
+    (nextScale, pointer) => {
+      const clampedScale = clamp(nextScale, MIN_STAGE_SCALE, MAX_STAGE_SCALE);
+      if (!pointer) {
+        setStageScale(clampedScale);
+        return;
+      }
+
+      const mousePointTo = {
+        x: (pointer.x - stagePos.x) / stageScale,
+        y: (pointer.y - stagePos.y) / stageScale,
+      };
+
+      setStageScale(clampedScale);
+      setStagePos({
+        x: pointer.x - mousePointTo.x * clampedScale,
+        y: pointer.y - mousePointTo.y * clampedScale,
+      });
+    },
+    [stagePos.x, stagePos.y, stageScale]
+  );
+
+  const zoomIn = useCallback(() => {
+    setZoomFromPoint(stageScale * ZOOM_STEP, { x: viewportWidth / 2, y: viewportHeight / 2 });
+  }, [setZoomFromPoint, stageScale, viewportHeight, viewportWidth]);
+
+  const zoomOut = useCallback(() => {
+    setZoomFromPoint(stageScale / ZOOM_STEP, { x: viewportWidth / 2, y: viewportHeight / 2 });
+  }, [setZoomFromPoint, stageScale, viewportHeight, viewportWidth]);
+
+  const handleStageWheel = useCallback(
+    (e) => {
+      e.evt.preventDefault();
+      const { ctrlKey, metaKey, shiftKey, deltaX, deltaY } = e.evt;
+
+      if (ctrlKey || metaKey) {
+        const stage = stageRef.current;
+        const pointer = stage?.getPointerPosition();
+        const nextScale = deltaY > 0 ? stageScale / ZOOM_STEP : stageScale * ZOOM_STEP;
+        setZoomFromPoint(nextScale, pointer);
+        return;
+      }
+
+      setStagePos((prev) => ({
+        x: prev.x - (shiftKey ? deltaY * SHIFT_SCROLL_PAN_MULTIPLIER : deltaX),
+        y: shiftKey ? prev.y : prev.y - deltaY,
+      }));
+    },
+    [setZoomFromPoint, stageScale]
+  );
+
+  const handleStageMouseDown = useCallback(
+    (e) => {
+      const stage = stageRef.current;
+      const pointer = stage?.getPointerPosition();
+      const shouldPan = e.evt.button === 1 || (isSpaceDown && e.evt.button === 0);
+
+      if (shouldPan && pointer) {
+        e.evt.preventDefault();
+        setIsPanning(true);
+        panStartRef.current = {
+          pointer,
+          stagePos,
+        };
+        stage.container().style.cursor = 'grabbing';
+        return;
+      }
+
+      if (e.target === stage) {
+        clearSelection();
+      }
+    },
+    [clearSelection, isSpaceDown, stagePos]
+  );
+
+  const handleStageMouseMove = useCallback(() => {
+    if (!isPanning || !panStartRef.current) return;
+    const stage = stageRef.current;
+    const pointer = stage?.getPointerPosition();
+    if (!pointer) return;
+
+    const { pointer: startPointer, stagePos: startStagePos } = panStartRef.current;
+    setStagePos({
+      x: startStagePos.x + pointer.x - startPointer.x,
+      y: startStagePos.y + pointer.y - startPointer.y,
+    });
+  }, [isPanning]);
+
+  const stopPanning = useCallback(() => {
+    if (!isPanning) return;
+    setIsPanning(false);
+    panStartRef.current = null;
+    const stage = stageRef.current;
+    if (stage) {
+      stage.container().style.cursor = isSpaceDown ? 'grab' : 'default';
+    }
+  }, [isPanning, isSpaceDown]);
+
+  const fitSelectedLayer = useCallback(() => {
+    if (!selectedItem?.originalWidth || !selectedItem?.originalHeight) return;
+    const fitScale = Math.min((viewportWidth * 0.9) / selectedItem.originalWidth, (viewportHeight * 0.9) / selectedItem.originalHeight);
+    const width = selectedItem.originalWidth * fitScale;
+    const height = selectedItem.originalHeight * fitScale;
+    updateItem(selectedItem.id, {
+      width,
+      height,
+      x: (viewportWidth - width) / 2,
+      y: (viewportHeight - height) / 2,
+    });
+  }, [selectedItem, updateItem, viewportHeight, viewportWidth]);
+
+  const actualSizeSelectedLayer = useCallback(() => {
+    if (!selectedItem?.originalWidth || !selectedItem?.originalHeight) return;
+    const width = selectedItem.originalWidth * displayScale;
+    const height = selectedItem.originalHeight * displayScale;
+    updateItem(selectedItem.id, {
+      width,
+      height,
+      x: (viewportWidth - width) / 2,
+      y: (viewportHeight - height) / 2,
+    });
+  }, [displayScale, selectedItem, updateItem, viewportHeight, viewportWidth]);
+
+  const centerSelectedLayer = useCallback(() => {
+    if (!selectedItem) return;
+    updateItem(selectedItem.id, {
+      x: (viewportWidth - (selectedItem.width || 0)) / 2,
+      y: (viewportHeight - (selectedItem.height || 0)) / 2,
+    });
+  }, [selectedItem, updateItem, viewportHeight, viewportWidth]);
+
+  const resetSelectedLayer = useCallback(() => {
+    if (!selectedItem) return;
+    updateItem(selectedItem.id, {
+      x: selectedItem.initialX ?? 0,
+      y: selectedItem.initialY ?? 0,
+      width: selectedItem.initialWidth ?? selectedItem.width,
+      height: selectedItem.initialHeight ?? selectedItem.height,
+      rotation: selectedItem.initialRotation ?? 0,
+    });
+  }, [selectedItem, updateItem]);
+
   const goNextTarget = useCallback(() => {
     // Ưu tiên nhảy sang item/order kế tiếp (parent quản lý)
-    if (onNextAfter && orderInfo?.orderId && currentItem?.orderItemId) {
-      onNextAfter(orderInfo.orderId, currentItem.orderItemId);
+    if (onNextAfter && orderInfo?.orderId && currentItemId) {
+      onNextAfter(orderInfo.orderId, currentItemId);
       return;
     }
     // fallback: đóng modal
     onClose?.();
-  }, [onNextAfter, orderInfo?.orderId, currentItem?.orderItemId, onClose]);
+  }, [onNextAfter, orderInfo?.orderId, currentItemId, onClose]);
 
   const handlePass = useCallback(async () => {
     try {
-      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'approve',
-        note: qcNote,
-      });
+      const res = await confirmHandler(
+        orderInfo?.orderId,
+        currentItemId,
+        {
+          decision: 'approve',
+          note: qcNote,
+        },
+        { shopId: orderInfo?.shopId }
+      );
       if (res.status === 200) toast.success(res.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'approved' }));
+      setDecisionByItem((prev) => ({ ...prev, [currentItemId]: 'approved' }));
     } catch (e) {
       console.log(e);
       toast.error('Error');
@@ -230,7 +416,7 @@ export default function QcCanvasModal({
       fetchCountStatus?.();
       goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
+  }, [confirmHandler, orderInfo?.orderId, orderInfo?.shopId, currentItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   const handleReject = useCallback(async () => {
     if (!qcNote) {
@@ -238,12 +424,17 @@ export default function QcCanvasModal({
       return;
     }
     try {
-      const res = await scaleFulfill(orderInfo?.orderId, currentItem?.orderItemId, {
-        decision: 'reject',
-        note: qcNote,
-      });
+      const res = await confirmHandler(
+        orderInfo?.orderId,
+        currentItemId,
+        {
+          decision: 'reject',
+          note: qcNote,
+        },
+        { shopId: orderInfo?.shopId }
+      );
       if (res.status === 200) toast.success(res.data?.message);
-      setDecisionByItem((prev) => ({ ...prev, [currentItem?.orderItemId]: 'rejected' }));
+      setDecisionByItem((prev) => ({ ...prev, [currentItemId]: 'rejected' }));
     } catch (e) {
       console.log(e);
       toast.error('Error');
@@ -252,7 +443,7 @@ export default function QcCanvasModal({
       fetchCountStatus?.();
       goNextTarget();
     }
-  }, [orderInfo?.orderId, currentItem?.orderItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
+  }, [confirmHandler, orderInfo?.orderId, orderInfo?.shopId, currentItemId, qcNote, fetchAllQC, filters, fetchCountStatus, goNextTarget]);
 
   /* -------- Side effects -------- */
   useEffect(() => {
@@ -266,24 +457,59 @@ export default function QcCanvasModal({
     setActiveLayer(null);
     setItems([]);
     setShowBack(false);
-  }, [orderInfo?.orderId]);
+    resetViewport();
+  }, [orderInfo?.orderId, resetViewport]);
 
   useEffect(() => {
     // reset note khi đổi item
     setQcNote(currentItem?.qc_note || '');
     setErrorNote(false);
-  }, [currentItem?.orderItemId]);
+    setActiveLayer(null);
+    resetViewport();
+  }, [currentItemId, currentItem?.qc_note, resetViewport]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const isTextInput = (target) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName);
+
+    const handleKeyDown = (e) => {
+      if (isTextInput(e.target)) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsSpaceDown(true);
+        const stage = stageRef.current;
+        if (stage && !isPanning) stage.container().style.cursor = 'grab';
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        setIsSpaceDown(false);
+        const stage = stageRef.current;
+        if (stage && !isPanning) stage.container().style.cursor = 'default';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isPanning, open]);
 
   useEffect(() => {
     // map trạng thái server -> decisionByItem (để hiển thị Passed/Rejected)
     const map = {};
     (orderInfo?.items || []).forEach((it) => {
+      const itemId = getItemId(it);
       const st = String(it?.scale_status || '').toLowerCase();
-      if (st === 'ready' || st === 'approved' || st === 'complete') map[it.orderItemId] = 'approved';
-      if (st === 'qc rejected' || st === 'rejected') map[it.orderItemId] = 'rejected';
+      if (st === 'ready' || st === 'approved' || st === 'complete') map[itemId] = 'approved';
+      if (st === 'qc rejected' || st === 'rejected') map[itemId] = 'rejected';
     });
     setDecisionByItem((prev) => ({ ...map, ...prev }));
-  }, [orderInfo]);
+  }, [orderInfo, getItemId]);
 
   useEffect(() => {
     if (!open) return;
@@ -312,6 +538,10 @@ export default function QcCanvasModal({
               if (cancelled) return resolve(null);
               const originalWidth = img.width;
               const originalHeight = img.height;
+              const width = originalWidth * displayScale;
+              const height = originalHeight * displayScale;
+              const x = (viewportWidth - width) / 2;
+              const y = (viewportHeight - height) / 2;
               // console.log(`[QC] layer ${it.id} loaded:`, {
               //   url: it.url,
               //   originalWidth,
@@ -322,13 +552,18 @@ export default function QcCanvasModal({
                 htmlImg: img,
                 originalWidth,
                 originalHeight,
-                x: (it.x || 0) * displayScale,
-                y: (it.y || 0) * displayScale,
-                width: originalWidth * displayScale,
-                height: originalHeight * displayScale,
+                x,
+                y,
+                width,
+                height,
+                initialX: x,
+                initialY: y,
+                initialWidth: width,
+                initialHeight: height,
+                initialRotation: it.rotation,
               });
             };
-            img.onerror = (err) => {
+            img.onerror = () => {
               // console.error(`[QC] layer ${it.id} failed to load:`, it.url, err);
               resolve(it);
             };
@@ -352,10 +587,10 @@ export default function QcCanvasModal({
     return () => {
       cancelled = true;
     };
-  }, [open, layersData, displayScale]);
+  }, [open, layersData, displayScale, viewportHeight, viewportWidth]);
 
   /* -------- UI derived -------- */
-  const decidedStatus = useMemo(() => (currentItem ? decisionByItem[currentItem.orderItemId] : undefined), [decisionByItem, currentItem]);
+  const decidedStatus = useMemo(() => (currentItemId ? decisionByItem[currentItemId] : undefined), [decisionByItem, currentItemId]);
 
   const showActionButtons = useMemo(
     () => String(currentItem?.scale_status).toLowerCase() === 'pending' && !decidedStatus,
@@ -442,6 +677,47 @@ export default function QcCanvasModal({
             ) : (
               <span>Size: —</span>
             )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Tooltip title="Zoom out">
+              <Button size="small" onClick={zoomOut}>
+                -
+              </Button>
+            </Tooltip>
+            <Tooltip title="Reset viewport">
+              <Button size="small" onClick={resetViewport}>
+                {Math.round(stageScale * 100)}%
+              </Button>
+            </Tooltip>
+            <Tooltip title="Zoom in">
+              <Button size="small" onClick={zoomIn}>
+                +
+              </Button>
+            </Tooltip>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Tooltip title="Fit selected layer to canvas">
+              <Button size="small" disabled={!selectedItem} onClick={fitSelectedLayer}>
+                Fit
+              </Button>
+            </Tooltip>
+            <Tooltip title="Center selected layer">
+              <Button size="small" disabled={!selectedItem} onClick={centerSelectedLayer}>
+                Center
+              </Button>
+            </Tooltip>
+            <Tooltip title="Reset selected layer">
+              <Button size="small" disabled={!selectedItem} onClick={resetSelectedLayer}>
+                Reset
+              </Button>
+            </Tooltip>
+            <Tooltip title="Preview selected layer at source scale">
+              <Button size="small" disabled={!selectedItem} onClick={actualSizeSelectedLayer}>
+                1:1
+              </Button>
+            </Tooltip>
           </div>
 
           <div className="flex items-center">
@@ -539,14 +815,31 @@ export default function QcCanvasModal({
           className="relative rounded-xl"
           style={{ width: viewportWidth, height: viewportHeight, overflow: 'hidden', background: bgColor }}
         >
-          <Stage width={viewportWidth} height={viewportHeight}>
+          <Stage
+            ref={stageRef}
+            width={viewportWidth}
+            height={viewportHeight}
+            onWheel={handleStageWheel}
+            onMouseDown={handleStageMouseDown}
+            onMouseMove={handleStageMouseMove}
+            onMouseUp={stopPanning}
+            onMouseLeave={stopPanning}
+          >
             <Layer listening={false} imageSmoothingEnabled>
               <Rect x={0} y={0} width={viewportWidth} height={viewportHeight} fill={bgColor} />
             </Layer>
             <Layer imageSmoothingEnabled>
-              {(activeLayer ? items.filter((it) => it.id === activeLayer) : items).map((it) => (
-                <EditableImage key={it.id} {...it} onSelect={makeSelectHandler(it.id)} onChange={makeUpdateHandler(it.id)} />
-              ))}
+              <Group x={stagePos.x} y={stagePos.y} scaleX={stageScale} scaleY={stageScale}>
+                {items.map((it) => (
+                  <EditableImage
+                    key={it.id}
+                    {...it}
+                    draggable={!isSpaceDown && !isPanning}
+                    onSelect={makeSelectHandler(it.id)}
+                    onChange={makeUpdateHandler(it.id)}
+                  />
+                ))}
+              </Group>
             </Layer>
           </Stage>
         </div>
@@ -566,17 +859,25 @@ export default function QcCanvasModal({
                     <StatusComponent title={orderInfo?.orderId} color={dataColors.pink} />
                   </button>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Asin:</span>
-                  <div className="flex gap-1 items-center">
-                    <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
-                    <Tooltip title="Open Link">
-                      <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
-                        <RiLinkM size={18} />
-                      </Link>
-                    </Tooltip>
+                {platform !== 'etsy' && currentItem?.asin && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Asin:</span>
+                    <div className="flex gap-1 items-center">
+                      <StatusComponent title={currentItem?.asin} color={dataColors.pending} />
+                      <Tooltip title="Open Link">
+                        <Link target="_blank" className="!text-black" to={`http://amazon.com/gp/product/${currentItem?.asin}`}>
+                          <RiLinkM size={18} />
+                        </Link>
+                      </Tooltip>
+                    </div>
                   </div>
-                </div>
+                )}
+                {platform === 'etsy' && currentItem?.listingId && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Listing ID:</span>
+                    <StatusComponent title={currentItem?.listingId} color={dataColors.pending} />
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Sku:</span>
                   <StatusComponent title={currentItem?.sku} color={dataColors.asin} />
@@ -620,7 +921,7 @@ export default function QcCanvasModal({
                       style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}
                       className="whitespace-nowrap"
                     >
-                      {`${orderInfo?.orderId}-${currentItem?.orderItemId}`}
+                      {`${orderInfo?.orderId}-${currentItemId}`}
                     </span>
                   </div>
                 </div>
@@ -647,7 +948,7 @@ export default function QcCanvasModal({
             }}
           >
             <div className="flex-col justify-between">
-              {currentItem?.version3Data?.map((item, idx) => (
+              {customItems.map((item, idx) => (
                 <div key={idx} className="mb-1 whitespace-normal break-words">
                   <span className="font-medium">{item?.label}:</span>
                   <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>

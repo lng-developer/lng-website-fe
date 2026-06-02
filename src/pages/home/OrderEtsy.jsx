@@ -33,7 +33,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
-import { getAllEtsyOrders, getEtsyStatistic, computeEtsyBaseCost } from '../../apis/etsy';
+import { getAllEtsyOrders, getEtsyStatistic, computeEtsyBaseCost, manualMappingEtsy } from '../../apis/etsy';
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
@@ -47,6 +47,9 @@ const OrderEtsy = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
   const { collapsed } = useOutletContext();
+  const [mappingData, setMappingData] = useState({});
+  const [appliedOrders, setAppliedOrders] = useState(new Set());
+  const [editingOrders, setEditingOrders] = useState(new Set());
   const [totalCount, setTotalCount] = useState(0);
   const [shippingType, setShippingType] = useState('');
   const [shops, setShops] = useState([]);
@@ -176,6 +179,7 @@ const OrderEtsy = () => {
   const fetchAllOrder = useCallback(
     async (params) => {
       setLoading(true);
+      setAppliedOrders(new Set());
       try {
         const response = await getAllEtsyOrders(params);
 
@@ -250,6 +254,125 @@ const OrderEtsy = () => {
       toast.error('Failed to copy!');
     }
   }, []);
+
+  const getEtsyItemId = useCallback((item) => item?.transactionId || item?.orderItemId, []);
+
+  const handleVariantDataChange = useCallback((orderItemId, variantInfo) => {
+    setMappingData((prev) => ({
+      ...prev,
+      [orderItemId]: variantInfo,
+    }));
+  }, []);
+
+  const handleProductChange = useCallback((orderItemId, product, orderId) => {
+    setEditingOrders((prev) => new Set([...prev, orderId]));
+
+    if (product) {
+      setMappingData((prev) => ({
+        ...prev,
+        [orderItemId]: {
+          ...prev[orderItemId],
+          selectedProduct: product,
+        },
+      }));
+    }
+  }, []);
+
+  const handleSizeChange = useCallback((orderItemId, size) => {
+    setMappingData((prev) => ({
+      ...prev,
+      [orderItemId]: {
+        ...prev[orderItemId],
+        selectedSize: size,
+      },
+    }));
+  }, []);
+
+  const handleColorChange = useCallback((orderItemId, color) => {
+    setMappingData((prev) => ({
+      ...prev,
+      [orderItemId]: {
+        ...prev[orderItemId],
+        selectedColor: color,
+      },
+    }));
+  }, []);
+
+  const handleApplyMappingForOrder = useCallback(
+    async (orderId, orderItems) => {
+      const editedItems = [];
+      const incompleteItems = [];
+
+      for (const item of orderItems) {
+        const itemId = getEtsyItemId(item);
+        const mappingInfo = mappingData[itemId];
+        const originalData = item.cost_center;
+
+        if (mappingInfo) {
+          if (mappingInfo.selectedProduct && mappingInfo.variantData) {
+            editedItems.push(item);
+          } else {
+            incompleteItems.push(item);
+          }
+        } else if (!originalData || !originalData.vendorProductId) {
+          incompleteItems.push(item);
+        }
+      }
+
+      if (incompleteItems.length > 0) {
+        toast.warning(`Please complete mapping for all products. Missing ${incompleteItems.length} item.`);
+        return;
+      }
+
+      if (editedItems.length === 0) {
+        toast.info('No changes to apply.');
+        return;
+      }
+
+      try {
+        const itemsPayload = editedItems.map((item) => {
+          const itemId = getEtsyItemId(item);
+          const mappingInfo = mappingData[itemId];
+          return {
+            transactionId: itemId,
+            vendorCostCenterId: mappingInfo.variantData._id,
+          };
+        });
+
+        const firstItemId = getEtsyItemId(editedItems[0]);
+        const firstItemMapping = mappingData[firstItemId];
+        const payload = {
+          orderId,
+          forcedVendorId: firstItemMapping.selectedProduct.vendorId,
+          items: itemsPayload,
+        };
+
+        await manualMappingEtsy(payload);
+        toast.success(`Manual mapping applied successfully for ${editedItems.length} items`);
+
+        setAppliedOrders((prev) => new Set([...prev, orderId]));
+        setEditingOrders((prev) => {
+          const next = new Set(prev);
+          next.delete(orderId);
+          return next;
+        });
+        setMappingData((prev) => {
+          const next = { ...prev };
+          orderItems.forEach((item) => {
+            delete next[getEtsyItemId(item)];
+          });
+          return next;
+        });
+
+        fetchAllOrder(filters);
+        fetchEtsyStatistic();
+      } catch (error) {
+        console.error('Error applying Etsy manual mapping:', error);
+        toast.error(error?.response?.data?.message || 'Failed to apply manual mapping');
+      }
+    },
+    [fetchAllOrder, fetchEtsyStatistic, filters, getEtsyItemId, mappingData]
+  );
 
   const debouncedSearch = useMemo(
     () =>
@@ -542,7 +665,9 @@ const OrderEtsy = () => {
         store: <StatusComponent title={item?.shopName || 'No Data'} color={dataColors.pending} />,
         handling_time: <span className="font-medium whitespace-nowrap">{item?.remain || 'Unknown'}</span>,
         case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
-        subItems: (item?.items || []).map((itemSub, indexItem) => ({
+        subItems: (item?.items || []).map((itemSub, indexItem) => {
+          const itemId = getEtsyItemId(itemSub);
+          return {
           key: `${index}-${indexItem}`,
           product: (
             <SubItemImage
@@ -571,16 +696,25 @@ const OrderEtsy = () => {
           cost_center: (
             <SubItemCost
               data={itemSub?.cost_center}
-              fulfillName={`${item?.orderId}-${itemSub?.orderItemId}`}
+              fulfillName={`${item?.orderId}-${itemId}`}
               orderId={item?.orderId}
-              orderItemId={itemSub?.orderItemId}
+              orderItemId={itemId}
+              onProductChange={handleProductChange}
+              onSizeChange={handleSizeChange}
+              onColorChange={handleColorChange}
+              onVariantDataChange={handleVariantDataChange}
+              isLastItem={indexItem === (item?.items || []).length - 1}
+              onApplyMapping={handleApplyMappingForOrder}
+              orderItems={item?.items || []}
+              isOrderApplied={appliedOrders.has(item?.orderId)}
+              isOrderEditing={editingOrders.has(item?.orderId)}
             />
           ),
           tracking_note: (
             <SubItemTracking
               tracking_info={itemSub?.tracking_info}
-              orderItemId={itemSub?.orderItemId}
-              transactionId={itemSub?.transactionId || itemSub?.orderItemId}
+              orderItemId={itemId}
+              transactionId={itemId}
               orderId={item?.orderId}
               status={item?.status}
               fetchAllOrder={fetchAllOrder}
@@ -590,11 +724,29 @@ const OrderEtsy = () => {
               onTrackingUpdated={handleEtsyTrackingUpdated}
             />
           ),
-        })),
+          };
+        }),
       };
     });
     return results;
-  }, [orders, fetchAllOrder, fetchEtsyStatistic, filters, handleColorStatus, handleRetest, handleCopy, handleEtsyTrackingUpdated]);
+  }, [
+    orders,
+    fetchAllOrder,
+    fetchEtsyStatistic,
+    filters,
+    handleColorStatus,
+    handleRetest,
+    handleCopy,
+    getEtsyItemId,
+    handleProductChange,
+    handleSizeChange,
+    handleColorChange,
+    handleVariantDataChange,
+    handleApplyMappingForOrder,
+    handleEtsyTrackingUpdated,
+    appliedOrders,
+    editingOrders,
+  ]);
 
   const fetchAllTeams = useCallback(async () => {
     try {
