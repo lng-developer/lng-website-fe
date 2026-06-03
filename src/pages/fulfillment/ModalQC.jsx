@@ -697,7 +697,7 @@ export default function QcCanvasModal({
             </Tooltip>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Tooltip title="Fit selected layer to canvas">
               <Button size="small" disabled={!selectedItem} onClick={fitSelectedLayer}>
                 Fit
@@ -718,7 +718,7 @@ export default function QcCanvasModal({
                 1:1
               </Button>
             </Tooltip>
-          </div>
+          </div> */}
 
           <div className="flex items-center">
             {showBack && (
