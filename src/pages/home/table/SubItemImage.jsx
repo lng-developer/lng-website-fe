@@ -18,11 +18,16 @@ const getHighResolutionImageUrl = (src) => {
 };
 
 const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_status, asin, scale_by, imageSize = 130 }) => {
+  const productImageSrc = useMemo(
+    () => getHighResolutionImageUrl(listing?.product_image || linkImage || NoImage),
+    [linkImage, listing?.product_image]
+  );
+
   const arrFulfill = useMemo(
     () =>
       Object.entries(typeof linkFulfill === 'object' ? linkFulfill : {}).map(([key, url]) => ({
         title: key,
-        url,
+        url: getHighResolutionImageUrl(url),
       })),
     [linkFulfill]
   );
@@ -76,11 +81,11 @@ const SubItemImage = ({ linkImage = '', linkFulfill = {}, listing = {}, scale_st
       <div className={arrFulfill?.length > 0 ? 'inline-grid grid-cols-2 gap-4' : ''}>
         {/* Ảnh listing / base */}
         <LazyImage
-          src={listing?.product_image || linkImage || NoImage}
+          src={productImageSrc}
           alt="Product"
           width={imageSize}
           height={imageSize}
-          preview={getLargePreview(listing?.product_image || linkImage || NoImage)}
+          preview={getLargePreview(productImageSrc)}
         />
 
         {/* Ảnh fulfill */}
