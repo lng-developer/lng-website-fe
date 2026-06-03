@@ -1,4 +1,5 @@
-import { Image, Button, Tooltip } from 'antd';
+import { cloneElement, useCallback, useMemo } from 'react';
+import { Tooltip } from 'antd';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 import NoImage from '../../../assets/NoImage.jpg';
@@ -10,7 +11,37 @@ import { MdOutlineCloudDownload } from 'react-icons/md';
 import { ImSpinner10 } from 'react-icons/im';
 import LazyImage from '../../../components/LazyImage';
 
+const getHighResolutionImageUrl = (src) => {
+  if (typeof src !== 'string') return src;
+  return src.replace(/il_\d+x(?:N|\d+)/, 'il_fullxfull');
+};
+
 const ItemProductInfo = ({ imageUrl, asin, sku, listing }) => {
+  const productImageSrc = useMemo(
+    () => getHighResolutionImageUrl(listing?.product_image || imageUrl || NoImage),
+    [imageUrl, listing?.product_image]
+  );
+
+  const getLargePreview = useCallback(
+    (src) => ({
+      src: getHighResolutionImageUrl(src),
+      mask: 'View large',
+      scaleStep: 0.75,
+      imageRender: (originalNode) =>
+        cloneElement(originalNode, {
+          style: {
+            ...originalNode.props.style,
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '92vw',
+            maxHeight: '85vh',
+            objectFit: 'contain',
+          },
+        }),
+    }),
+    []
+  );
+
   const downloadPSD = async () => {
     if (!(listing?.psd?.status === 'Available')) {
       return;
@@ -47,7 +78,7 @@ const ItemProductInfo = ({ imageUrl, asin, sku, listing }) => {
             boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
           }}
         >
-          <LazyImage width={130} height={130} src={listing?.product_image || imageUrl || NoImage} alt="Product" preview={true} />
+          <LazyImage width={130} height={130} src={productImageSrc} alt="Product" preview={getLargePreview(productImageSrc)} />
         </div>
       </div>
 

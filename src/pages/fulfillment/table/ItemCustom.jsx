@@ -2,7 +2,9 @@ import { Image } from 'antd';
 import { Link } from 'react-router-dom';
 import { FcCancel } from 'react-icons/fc';
 
-const ItemCustom = ({ items = [], customUrl, linkImage }) => {
+const ItemCustom = ({ items = [], customUrl, linkImage, listingId }) => {
+  const listingUrl = listingId ? `https://www.etsy.com/listing/${listingId}` : '';
+
   return (
     <div className="flex-col justify-between">
       {items.map((item, index) => (
@@ -16,6 +18,16 @@ const ItemCustom = ({ items = [], customUrl, linkImage }) => {
         <Link to={customUrl} className="text-[#64748B]">
           Link
         </Link>
+      </div>
+      <div className="flex gap-2 mb-1">
+        <span className="font-medium">Link SP: </span>
+        {listingUrl ? (
+          <a href={listingUrl} target="_blank" rel="noreferrer" className="text-[#64748B]">
+            Link
+          </a>
+        ) : (
+          <span className="text-red-500">x</span>
+        )}
       </div>
       {linkImage && (
         <div className="flex-col gap-2">

@@ -403,7 +403,14 @@ const ScaleEsty = () => {
                 status={item?.status}
               />
             ),
-            customization: <ItemCustom items={customItems} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />,
+            customization: (
+              <ItemCustom
+                items={customItems}
+                customUrl={itemSub?.customized_url}
+                linkImage={itemSub?.snapshotImage}
+                listingId={itemSub?.listingId}
+              />
+            ),
             task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
             cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
             cs_note: (
@@ -454,7 +461,7 @@ const ScaleEsty = () => {
   }, [assigningOrderId, canAssignCs, csUsers, dataSource, fetchAllFulfill, filters, convertToArr, handleAssignCs, handleCopy]);
 
   useEffect(() => {
-    // Đồng bộ currentPage với filters.page
+    // Đồng bộ currentPage với filters.pageáda
     setCurrentPage(filters.page);
   }, [filters.page]);
 
