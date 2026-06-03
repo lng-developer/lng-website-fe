@@ -187,6 +187,8 @@ export default function QcCanvasModal({
     return [];
   }, [currentItem]);
 
+  const csNote = useMemo(() => currentItem?.cs_note ?? '', [currentItem?.cs_note]);
+
   const layersData = useMemo(() => {
     const ff = currentItem?.fulfillment_file;
     // console.log('[QC] currentItem:', currentItem);
@@ -697,7 +699,7 @@ export default function QcCanvasModal({
             </Tooltip>
           </div>
 
-          {/* <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Tooltip title="Fit selected layer to canvas">
               <Button size="small" disabled={!selectedItem} onClick={fitSelectedLayer}>
                 Fit
@@ -718,7 +720,7 @@ export default function QcCanvasModal({
                 1:1
               </Button>
             </Tooltip>
-          </div> */}
+          </div>
 
           <div className="flex items-center">
             {showBack && (
@@ -959,6 +961,18 @@ export default function QcCanvasModal({
 
           <div>
             <Title level={5} style={{ marginTop: 0 }}>
+              CS Note
+            </Title>
+            <Input.TextArea
+              value={csNote}
+              spellCheck={false}
+              readOnly
+              placeholder="No CS note"
+              autoSize={{ minRows: 3, maxRows: 8 }}
+              style={{ color: dataColors.cancelled, fontWeight: 500, marginBottom: 12 }}
+            />
+
+            <Title level={5} style={{ marginTop: 0 }}>
               QC Note
             </Title>
             <Input.TextArea
@@ -970,7 +984,7 @@ export default function QcCanvasModal({
                 setErrorNote(false);
               }}
               placeholder="Enter notes for seller…"
-              autoSize={{ minRows: 5, maxRows: 12 }}
+              autoSize={{ minRows: 3, maxRows: 12 }}
             />
             {errorNote && <div className="text-red-500 font-medium mt-1">Please note!</div>}
           </div>
