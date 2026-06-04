@@ -1,8 +1,36 @@
+import { cloneElement, useCallback, useMemo } from 'react';
 import StatusComponent from '../../components/StatusComponent';
 import LazyImage from '../../components/LazyImage';
 import { dataColors } from '../../utils/dataColors';
 
+const getHighResolutionImageUrl = (src) => {
+  if (typeof src !== 'string') return src;
+  return src.replace(/il_\d+x(?:N|\d+)/, 'il_fullxfull');
+};
+
 const ItemProductInfoEtsyQC = ({ link, sku, listingId, title, quantity }) => {
+  const imageSrc = useMemo(() => getHighResolutionImageUrl(link), [link]);
+
+  const getLargePreview = useCallback(
+    (src) => ({
+      src: getHighResolutionImageUrl(src),
+      mask: 'View large',
+      scaleStep: 0.75,
+      imageRender: (originalNode) =>
+        cloneElement(originalNode, {
+          style: {
+            ...originalNode.props.style,
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '92vw',
+            maxHeight: '85vh',
+            objectFit: 'contain',
+          },
+        }),
+    }),
+    []
+  );
+
   return (
     <div className="flex items-center gap-5">
       <div
@@ -11,7 +39,7 @@ const ItemProductInfoEtsyQC = ({ link, sku, listingId, title, quantity }) => {
           boxShadow: 'rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px',
         }}
       >
-        <LazyImage src={link} width={100} height={100} preview={true} />
+        <LazyImage src={imageSrc} width={100} height={100} preview={getLargePreview(imageSrc)} />
       </div>
       <div className="max-w-[260px]">
         {title && (
