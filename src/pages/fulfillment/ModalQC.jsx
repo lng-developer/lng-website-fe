@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button, Typography, Input, Tooltip, Flex, Pagination } from 'antd';
+import { Modal, Button, Typography, Input, Tooltip, Flex, Pagination, Image } from 'antd';
 import { Stage, Layer, Rect, Image as KonvaImage, Transformer, Group } from 'react-konva';
 import StatusComponent from '../../components/StatusComponent';
 import { dataColors } from '../../utils/dataColors';
@@ -188,6 +188,7 @@ export default function QcCanvasModal({
   }, [currentItem]);
 
   const csNote = useMemo(() => currentItem?.cs_note ?? '', [currentItem?.cs_note]);
+  const customerImage = useMemo(() => currentItem?.snapshotImage ?? '', [currentItem?.snapshotImage]);
 
   const layersData = useMemo(() => {
     const ff = currentItem?.fulfillment_file;
@@ -786,11 +787,43 @@ export default function QcCanvasModal({
         {/* LEFT: thumbnails */}
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 12 }} className="overflow-auto">
           {currentItem?.listing?.product_image && (
-            <img
+            <Image
               src={currentItem?.listing?.product_image}
               style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8, objectFit: 'cover' }}
               alt="mockup"
             />
+          )}
+          {customerImage ? (
+            <div
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                // padding: 8,
+                // background: '#fff',
+              }}
+            >
+              <Image
+                src={customerImage}
+                alt="customer"
+                width="100%"
+                height={150}
+                style={{ objectFit: 'contain', borderRadius: 4, background: '#f8fafc' }}
+              />
+              <div className="flex justify-center" style={{ marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#334155' }}>
+                Customer Image
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                // padding: 8,
+                // background: '#fff',
+              }}
+            >
+              <div className="py-8 flex justify-center font-medium text-gray-400">Customer Image</div>
+            </div>
           )}
           {layersData.map((l) => (
             <div key={l.id}>
@@ -968,7 +1001,7 @@ export default function QcCanvasModal({
               spellCheck={false}
               readOnly
               placeholder="No CS note"
-              autoSize={{ minRows: 3, maxRows: 8 }}
+              autoSize={{ minRows: 2, maxRows: 8 }}
               style={{ color: dataColors.cancelled, fontWeight: 500, marginBottom: 12 }}
             />
 
@@ -984,7 +1017,7 @@ export default function QcCanvasModal({
                 setErrorNote(false);
               }}
               placeholder="Enter notes for seller…"
-              autoSize={{ minRows: 3, maxRows: 12 }}
+              autoSize={{ minRows: 2, maxRows: 12 }}
             />
             {errorNote && <div className="text-red-500 font-medium mt-1">Please note!</div>}
           </div>
