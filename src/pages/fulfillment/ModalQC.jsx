@@ -793,7 +793,7 @@ export default function QcCanvasModal({
               alt="mockup"
             />
           )}
-          {customerImage && (
+          {customerImage ? (
             <div
               style={{
                 border: '1px solid #ddd',
@@ -812,6 +812,17 @@ export default function QcCanvasModal({
               <div className="flex justify-center" style={{ marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#334155' }}>
                 Customer Image
               </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                // padding: 8,
+                // background: '#fff',
+              }}
+            >
+              <div className="py-8 flex justify-center font-medium text-gray-400">Customer Image</div>
             </div>
           )}
           {layersData.map((l) => (
