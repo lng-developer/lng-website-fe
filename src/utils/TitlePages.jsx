@@ -24,6 +24,7 @@ const TITLES = {
   '/extensions': 'Extensions',
   '/extensions/confirm-ship': 'Confirm Shipping',
   '/extensions/tracking-etsy': 'Tracking Etsy',
+  '/extensions/tracking-etsy-detail': 'Tracking Etsy Detail',
   '/account': 'Users Management',
   '/sku_mapping': 'SKU Mapping',
   '/vendor/list-vendor': 'Manage Vendor',

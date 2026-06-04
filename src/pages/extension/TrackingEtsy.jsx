@@ -30,31 +30,27 @@ const formatDateTime = (value) => {
   return date.isValid() ? date.format('YYYY-MM-DD HH:mm') : '-';
 };
 
-const pickTrackingNumber = (trackingInfo) =>
-  trackingInfo?.trackingNumber ||
-  trackingInfo?.tracking_number ||
-  trackingInfo?.tracking ||
-  trackingInfo?.trackingNo ||
-  trackingInfo?.tracking_no ||
-  trackingInfo?.trackingId ||
-  trackingInfo?.tracking_id ||
-  trackingInfo?.trackingCode ||
-  trackingInfo?.tracking_code ||
-  trackingInfo?.number ||
-  trackingInfo?.code ||
-  '';
+const pickTrackingNumber = (trackingInfo) => {
+  const value =
+    trackingInfo?.trackingNumber ||
+    trackingInfo?.tracking_number ||
+    trackingInfo?.tracking ||
+    trackingInfo?.trackingNo ||
+    trackingInfo?.tracking_no ||
+    trackingInfo?.trackingId ||
+    trackingInfo?.tracking_id ||
+    trackingInfo?.trackingCode ||
+    trackingInfo?.tracking_code ||
+    trackingInfo?.number ||
+    trackingInfo?.code ||
+    '';
+
+  return typeof value === 'string' ? value.trim() : value || '';
+};
 
 const hasTrackingInfo = (trackingInfo) => {
   if (!trackingInfo || typeof trackingInfo !== 'object') return false;
-  if (pickTrackingNumber(trackingInfo)) return true;
-
-  return Object.values(trackingInfo).some((value) => {
-    if (value === null || value === undefined) return false;
-    if (typeof value === 'string') return value.trim() !== '';
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object') return Object.keys(value).length > 0;
-    return Boolean(value);
-  });
+  return Boolean(pickTrackingNumber(trackingInfo));
 };
 
 const orderHasTracking = (order) => {
@@ -67,10 +63,7 @@ const formatTracking = (trackingInfo) => {
   if (!trackingInfo || Object.keys(trackingInfo).length === 0) return '-';
 
   const trackingNumber = pickTrackingNumber(trackingInfo);
-  const carrier = trackingInfo.carrier || trackingInfo.carrierName || trackingInfo.shipping_carrier;
-
-  if (trackingNumber || carrier) return [carrier, trackingNumber].filter(Boolean).join(' - ');
-  return JSON.stringify(trackingInfo);
+  return trackingNumber || '-';
 };
 
 const filterOrders = (orders = [], filters = {}) =>
