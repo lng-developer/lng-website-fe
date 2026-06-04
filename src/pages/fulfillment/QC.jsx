@@ -300,17 +300,17 @@ const QC = () => {
 
     try {
       // Filter selected orders from original dataSource
-      const selectedOrders = dataSource.filter(order => selectedRowKeys.includes(order.orderId));
-      
+      const selectedOrders = dataSource.filter((order) => selectedRowKeys.includes(order.orderId));
+
       if (selectedOrders.length === 0) {
         toast.error('No matching orders found for export');
         return;
       }
-      
+
       // Create workbook and worksheet
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('QC Export');
-      
+
       // Define columns
       worksheet.columns = [
         { header: 'Order ID', key: 'orderId', width: 20 },
@@ -322,23 +322,23 @@ const QC = () => {
         { header: 'Address 2 (Shipping)', key: 'address2', width: 30 },
         { header: 'City (Shipping)', key: 'city', width: 20 },
         { header: 'Postcode (Shipping)', key: 'postcode', width: 15 },
-        { header: 'State Name (Shipping)', key: 'state', width: 20 }
+        { header: 'State Name (Shipping)', key: 'state', width: 20 },
       ];
-      
+
       // Add data rows
-      selectedOrders.forEach(order => {
+      selectedOrders.forEach((order) => {
         if (order.items && Array.isArray(order.items)) {
-          order.items.forEach(item => {
+          order.items.forEach((item) => {
             // Get fulfillment file URLs
             const designUrls = [];
             if (item.fulfillment_file && typeof item.fulfillment_file === 'object') {
-              Object.values(item.fulfillment_file).forEach(url => {
+              Object.values(item.fulfillment_file).forEach((url) => {
                 if (url && typeof url === 'string') {
                   designUrls.push(url);
                 }
               });
             }
-            
+
             const rowData = {
               orderId: order.orderId || '',
               mockUp: item.baseImageUrl || '',
@@ -349,34 +349,33 @@ const QC = () => {
               address2: order.customer_infor?.address_2 || '',
               city: order.customer_infor?.city || '',
               postcode: order.customer_infor?.zip_code || '',
-              state: order.customer_infor?.state || ''
+              state: order.customer_infor?.state || '',
             };
-            
+
             worksheet.addRow(rowData);
           });
         }
       });
-      
+
       // Style the header row
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE6F3FF' }
+        fgColor: { argb: 'FFE6F3FF' },
       };
-      
+
       // Generate filename with current date
       const now = new Date();
       const filename = `QC_Export_${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.xlsx`;
-      
+
       // Generate buffer and save file
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, filename);
-      
+
       const totalItems = selectedOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
       toast.success(`Exported ${totalItems} items from ${selectedOrders.length} orders to Excel`);
-      
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export Excel file');
@@ -462,7 +461,9 @@ const QC = () => {
           skipped,
           errorsCount,
         });
-        toast.success(`Pushed ${selectedOrdersForFulfillment.length} orders. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`);
+        toast.success(
+          `Pushed ${selectedOrdersForFulfillment.length} orders. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`
+        );
       } else {
         toast.error(response.data?.message || 'Failed to push orders to Fulfillment Platform');
       }
@@ -587,26 +588,25 @@ const QC = () => {
         </Flex>
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
-      action_retry:
-        isFailedFilter ? (
-          <Tooltip title="Retry Scale">
-            <div
-              className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
-              style={{ borderColor: dataColors.pending }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRetry(item.orderId);
-              }}
-            >
-              <div>
-                <BiRefresh size={16} color={dataColors.pending} />
-              </div>
-              <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-                Retry
-              </span>
+      action_retry: isFailedFilter ? (
+        <Tooltip title="Retry Scale">
+          <div
+            className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
+            style={{ borderColor: dataColors.pending }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRetry(item.orderId);
+            }}
+          >
+            <div>
+              <BiRefresh size={16} color={dataColors.pending} />
             </div>
-          </Tooltip>
-        ) : null,
+            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+              Retry
+            </span>
+          </div>
+        </Tooltip>
+      ) : null,
       shipping_type: <StatusComponent title={item?.shipping_type} color={dataColors.asin} />,
       shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
       qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
@@ -747,7 +747,7 @@ const QC = () => {
         </div>
 
         <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[40%] gap-2">
+          <div className="flex w-[60%] gap-2">
             <Input
               onChange={handleSearch}
               placeholder="Search..."
@@ -784,15 +784,15 @@ const QC = () => {
                   <MdOutlineRefresh size={20} />
                 </button>
               </Tooltip>
-              
+
               <Tooltip title="Export Excel">
                 <Button
                   type="primary"
                   onClick={handleExportExcel}
                   disabled={selectedRowKeys.length === 0}
-                  style={{ 
+                  style={{
                     backgroundColor: selectedRowKeys.length > 0 ? '#52c41a' : undefined,
-                    borderColor: selectedRowKeys.length > 0 ? '#52c41a' : undefined
+                    borderColor: selectedRowKeys.length > 0 ? '#52c41a' : undefined,
                   }}
                 >
                   Export Excel ({selectedRowKeys.length})
@@ -833,7 +833,7 @@ const QC = () => {
               total={totalCount}
               showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
               pageSize={pageSize}
-              pageSizeOptions={PAGE_SIZE_OPTIONS.map(size => size.toString())}
+              pageSizeOptions={PAGE_SIZE_OPTIONS.map((size) => size.toString())}
               showSizeChanger={true}
               current={currentPage}
               onChange={handlePageChange}
