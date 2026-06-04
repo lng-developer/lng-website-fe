@@ -207,6 +207,11 @@ export const detailMenus = {
       label: 'Tracking Etsy',
       icon: <FaEtsy size={20} />,
     },
+    {
+      key: routes.extensions_tracking_etsy_detail,
+      label: 'Message Etsy',
+      icon: <FaEtsy size={20} />,
+    },
     // {
     //   key: routes.extensions_confirm_ship,
     //   label: 'Amz Confirm Ship',
