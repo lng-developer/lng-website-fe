@@ -690,7 +690,12 @@ const OrderEtsy = () => {
             />
           ),
           customer: (
-            <SubItemCustomEtsy items={itemSub?.version3Data} customUrl={itemSub?.customized_url} linkImage={itemSub?.snapshotImage} />
+            <SubItemCustomEtsy
+              items={itemSub?.version3Data}
+              customUrl={itemSub?.customized_url}
+              linkImage={itemSub?.snapshotImage}
+              listingId={itemSub?.listingId}
+            />
           ),
           quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
           cost_center: (
