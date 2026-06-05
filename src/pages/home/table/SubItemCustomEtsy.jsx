@@ -2,7 +2,9 @@ import { Image } from 'antd';
 import { Link } from 'react-router-dom';
 import NoImage from '../../../assets/NoImage.jpg';
 
-const SubItemCustomEtsy = ({ items = [], customUrl, linkImage }) => {
+const SubItemCustomEtsy = ({ items = [], customUrl, linkImage, listingId }) => {
+  const listingUrl = listingId ? `https://www.etsy.com/listing/${listingId}` : '';
+
   // Chuẩn hóa: items có thể là array [{label, value}] hoặc object {key: value}
   const normalizedItems = Array.isArray(items)
     ? items // version3Data: [{label, value}]
@@ -25,6 +27,17 @@ const SubItemCustomEtsy = ({ items = [], customUrl, linkImage }) => {
         <Link to={customUrl} className="text-[#64748B]">
           Link
         </Link>
+      </div>
+
+      <div className="flex gap-2 mb-0.5">
+        <span className="font-medium">Link SP: </span>
+        {listingUrl ? (
+          <a href={listingUrl} target="_blank" rel="noreferrer" className="text-[#64748B]">
+            Link
+          </a>
+        ) : (
+          <span className="text-red-500">x</span>
+        )}
       </div>
 
       {linkImage && (
