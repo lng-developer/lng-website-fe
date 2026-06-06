@@ -695,6 +695,9 @@ const OrderEtsy = () => {
               customUrl={itemSub?.customized_url}
               linkImage={itemSub?.snapshotImage}
               listingId={itemSub?.listingId}
+              customFiles={itemSub?.customFiles || []}
+              orderId={item?.orderId}
+              transactionId={itemId}
             />
           ),
           quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
