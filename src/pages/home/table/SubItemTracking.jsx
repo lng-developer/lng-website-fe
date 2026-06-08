@@ -2,10 +2,12 @@ import React, { useMemo } from 'react';
 import { Form, Input, Select, Button, Tooltip } from 'antd';
 import { CopyOutlined, TruckOutlined } from '@ant-design/icons';
 import { trackingOrder } from '../../../apis/order';
-import { updateEtsyItemTracking } from '../../../apis/etsy';
+import { updateEtsyItemTracking, updateEtsyOrderTracking } from '../../../apis/etsy';
 import { toast } from 'sonner';
 import { TbEdit } from 'react-icons/tb';
 const { TextArea } = Input;
+
+const normalizeValue = (value) => String(value ?? '').trim();
 
 const SubItemTracking = ({
   orderId = '',
@@ -21,17 +23,20 @@ const SubItemTracking = ({
 }) => {
   const [form] = Form.useForm();
 
-  const initialValues = {
-    fulfillment: tracking_info?.fulfillment,
-    tracking: tracking_info?.tracking,
-    status,
-    note: tracking_info?.note,
-  };
+  const initialValues = useMemo(
+    () => ({
+      fulfillment: tracking_info?.fulfillment,
+      tracking: tracking_info?.tracking,
+      status,
+      note: tracking_info?.note,
+    }),
+    [status, tracking_info?.fulfillment, tracking_info?.note, tracking_info?.tracking]
+  );
 
   const allValues = Form.useWatch([], form);
-  const hasErrors = useMemo(() => form.getFieldsError().some(({ errors }) => errors.length), [allValues]);
+  const hasErrors = form.getFieldsError().some(({ errors }) => errors.length);
   const isSame = (a = {}, b = {}) => Object.keys({ ...a, ...b }).every((k) => String(a[k] ?? '') === String(b[k] ?? ''));
-  const isDirty = useMemo(() => !isSame(initialValues, allValues || {}), [allValues]);
+  const isDirty = useMemo(() => !isSame(initialValues, allValues || {}), [allValues, initialValues]);
 
   const copyTracking = async () => {
     const v = form.getFieldValue('tracking') || '';
@@ -46,14 +51,53 @@ const SubItemTracking = ({
   const onFinish = async (values) => {
     try {
       const itemId = transactionId || orderItemId;
-      const response = isEtsyOrder
-        ? await updateEtsyItemTracking(orderId, itemId, {
-            tracking: String(values?.tracking || '').trim(),
-            status: values?.status || 'Shipped',
-          })
-        : await trackingOrder(orderId, orderItemId, values);
+      let response;
 
-      if (response.status === 200) {
+      if (isEtsyOrder) {
+        const nextValues = {
+          fulfillment: normalizeValue(values?.fulfillment),
+          tracking: normalizeValue(values?.tracking),
+          status: values?.status || 'Shipped',
+          note: normalizeValue(values?.note),
+        };
+        const previousValues = {
+          fulfillment: normalizeValue(initialValues.fulfillment),
+          tracking: normalizeValue(initialValues.tracking),
+          status: initialValues.status || 'Shipped',
+          note: normalizeValue(initialValues.note),
+        };
+        const noteChanged = nextValues.note !== previousValues.note;
+        const trackingFieldsChanged =
+          nextValues.fulfillment !== previousValues.fulfillment ||
+          nextValues.tracking !== previousValues.tracking ||
+          nextValues.status !== previousValues.status;
+
+        if (noteChanged && !trackingFieldsChanged) {
+          response = await updateEtsyOrderTracking(orderId, {
+            transactionId: itemId,
+            note: nextValues.note,
+          });
+        } else {
+          response = await updateEtsyItemTracking(orderId, itemId, nextValues);
+        }
+
+        response = {
+          ...response,
+          data: {
+            ...response.data,
+            orderId: response.data?.orderId || orderId,
+            transactionId: response.data?.transactionId || itemId,
+            tracking_info: response.data?.tracking_info || {
+              ...tracking_info,
+              ...nextValues,
+            },
+          },
+        };
+      } else {
+        response = await trackingOrder(orderId, orderItemId, values);
+      }
+
+      if (response.status >= 200 && response.status < 300) {
         toast.success('Update tracking success!');
         onTrackingUpdated?.(response.data);
       }
