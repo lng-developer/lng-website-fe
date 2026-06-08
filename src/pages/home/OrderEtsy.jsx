@@ -421,7 +421,7 @@ const OrderEtsy = () => {
     async (id) => {
       try {
         const toastId = toast.loading('Computing base cost...');
-        const response = await computeEtsyBaseCost({ orderId: id });
+        const response = await computeEtsyBaseCost({ orderId: id,forceAddressValidation: true });
         if (response.status === 200) {
           toast.success('Compute base cost success!', { id: toastId });
         } else {
