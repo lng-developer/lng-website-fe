@@ -455,7 +455,11 @@ const OrderEtsy = () => {
 
             return {
               ...orderItem,
-              tracking_info: payload.tracking_info || orderItem.tracking_info,
+              tracking_info: {
+                ...(orderItem.tracking_info || {}),
+                ...(payload.tracking_info || payload.applied || {}),
+                ...(Object.prototype.hasOwnProperty.call(payload, 'note') ? { note: payload.note } : {}),
+              },
             };
           }),
         };

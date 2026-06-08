@@ -11,10 +11,8 @@ const getAllEtsyOrders = (params = {}) => {
     teamId: params.teamId || undefined,
     shippingType: params.shippingType || undefined,
     status: params.status || undefined,
-    sumbittedoetsy:
-      params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
-    submittedToEtsy:
-      params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
+    sumbittedoetsy: params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
+    submittedToEtsy: params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,
     hasTracking: params.hasTracking === true || params.hasTracking === false ? params.hasTracking : undefined,
     trackingInfo: params.hasTracking === true || params.hasTracking === false ? params.hasTracking : undefined,
     isNoCostCenter: params.isNoCostCenter || undefined,
@@ -57,6 +55,10 @@ const uploadEtsyTrackingBatch = (body) => {
 
 const updateEtsyItemTracking = (orderId, transactionId, payload) => {
   return instance.put(`/etsy/${orderId}/items/${transactionId}/tracking`, payload);
+};
+
+const updateEtsyOrderTracking = (orderId, payload) => {
+  return instance.put(`/etsy/${encodeURIComponent(orderId)}/tracking`, payload);
 };
 
 const updateEtsySubmittedStatus = (payload) => {
@@ -123,6 +125,7 @@ export {
   uploadEtsyTracking,
   uploadEtsyTrackingBatch,
   updateEtsyItemTracking,
+  updateEtsyOrderTracking,
   updateEtsySubmittedStatus,
   getAllEtsyScale,
   getAllEtsyScaleStatistics,
