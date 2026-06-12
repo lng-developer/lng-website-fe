@@ -47,6 +47,11 @@ const getEtsyCustomItems = (item) => {
   return [];
 };
 
+const getFullSizeEtsyImageUrl = (src) => {
+  if (typeof src !== 'string') return src;
+  return src.replace(/il_\d+x(?:N|\d+)/, 'il_fullxfull');
+};
+
 const normalizeText = (value) =>
   String(value || '')
     .normalize('NFD')
@@ -332,9 +337,10 @@ const EtsyQC = () => {
       selectedOrders.forEach((order) => {
         (order.items || []).forEach((item) => {
           const designValues = getDesignExportValues(item.fulfillment_file);
+          const mockUpUrl = item.baseImageUrl || item.baseImage?.imageUrl || '';
           worksheet.addRow({
             orderId: order.orderId || '',
-            mockUp: item.baseImageUrl || item.baseImage?.imageUrl || '',
+            mockUp: getFullSizeEtsyImageUrl(mockUpUrl),
             designFront: designValues.designFront || '',
             designSleeve: [designValues.designLeft, designValues.designRight].filter(Boolean).join('\n'),
             productType: getWorkshopProductType(item),
