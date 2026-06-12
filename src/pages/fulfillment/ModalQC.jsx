@@ -187,7 +187,7 @@ export default function QcCanvasModal({
     return [];
   }, [currentItem]);
 
-  const csNote = useMemo(() => currentItem?.cs_note ?? '', [currentItem?.cs_note]);
+  const csNote = useMemo(() => currentItem?.tracking_info.note ?? '', [currentItem?.cs_note]);
   const customerImage = useMemo(() => currentItem?.snapshotImage ?? '', [currentItem?.snapshotImage]);
 
   const layersData = useMemo(() => {
