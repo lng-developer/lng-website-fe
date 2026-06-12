@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Flex, Input, Pagination, Table, Tooltip } from 'antd';
+import { Alert, Button, Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { debounce } from 'lodash';
 import ExcelJS from 'exceljs';
@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { FcApproval } from 'react-icons/fc';
 import { IoArrowUndo } from 'react-icons/io5';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { MdOutlineImageSearch, MdOutlineRefresh } from 'react-icons/md';
+import { MdOutlineImageSearch, MdOutlineRefresh, MdOutlineSend } from 'react-icons/md';
 import ButtonFilter from '../../components/ButtonFilter';
 import DateRangePicker from '../../components/DateRangePicker';
 import SelectFilter from '../../components/SelectFilter';
@@ -19,10 +19,11 @@ import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import { getALlShop } from '../../apis/order';
 import { getAllSellers } from '../../apis/user';
-import { confirmEtsyScaleForItem, getAllEtsyQC, getAllEtsyQCStatistics } from '../../apis/etsy';
+import { confirmEtsyScaleForItem, getAllEtsyQC, getAllEtsyQCStatistics, pushSelectedEtsyOrdersToFulfillmentPlatform } from '../../apis/etsy';
 import QcCanvasModal from './ModalQC';
 import ItemProductInfoEtsyQC from './ItemProductInfoEtsyQC';
 import { toast } from 'sonner';
+import { getCustomizationExportValue, getDesignExportValues } from './exportHelpers';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -44,6 +45,43 @@ const getEtsyCustomItems = (item) => {
     return Object.entries(item.variations).map(([label, value]) => ({ label, value }));
   }
   return [];
+};
+
+const normalizeText = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const findCustomizationValue = (item, keywords = []) => {
+  const normalizedKeywords = keywords.map(normalizeText);
+  return (
+    getEtsyCustomItems(item).find((customItem) => {
+      const label = normalizeText(customItem?.label);
+      return normalizedKeywords.some((keyword) => label.includes(keyword));
+    })?.value || ''
+  );
+};
+
+const getWorkshopProductType = (item) => {
+  const costCenter = item?.cost_center || {};
+  const displayName = costCenter?.productType || costCenter?.product_type || costCenter?.vendorProductDisplayName || '';
+  return String(displayName).replace(/^\s*.*?\s*[-–—]\s+/, '').trim();
+};
+
+const getWorkshopSize = (item) => item?.cost_center?.sizeValue || findCustomizationValue(item, ['size', 'kich co', 'kích cỡ']);
+
+const getWorkshopColor = (item) => item?.cost_center?.colorValue || findCustomizationValue(item, ['color', 'colour', 'mau', 'màu']);
+
+const getWorkshopEmbroideryPosition = (item, designValues) => {
+  const explicitPosition = findCustomizationValue(item, ['vi tri theu', 'vị trí thêu', 'embroidery position', 'position']);
+  if (explicitPosition) return explicitPosition;
+
+  const positions = [];
+  if (designValues.designFront) positions.push('Front');
+  if (designValues.designLeft || designValues.designRight) positions.push('Sleeve');
+  return positions.join(', ');
 };
 
 const renderDate = (dateValue) => {
@@ -85,6 +123,9 @@ const EtsyQC = () => {
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [pushingToFulfillmentPlatform, setPushingToFulfillmentPlatform] = useState(false);
+  const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
+  const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: DEFAULT_PAGE_SIZE,
@@ -95,6 +136,17 @@ const EtsyQC = () => {
     sellerId: '',
     shopName: '',
   });
+  const isPushableFilter = isActiveFilter?.status === 'Ready' || isActiveFilter?.status === 'Failed';
+
+  const selectedOrdersForFulfillment = useMemo(
+    () => dataSource.filter((order) => selectedRowKeys.includes(order.orderId)),
+    [dataSource, selectedRowKeys]
+  );
+
+  const selectedFulfillmentItemCount = useMemo(
+    () => selectedOrdersForFulfillment.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items.length : 0), 0),
+    [selectedOrdersForFulfillment]
+  );
 
   const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
@@ -263,34 +315,34 @@ const EtsyQC = () => {
       }
 
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Etsy QC Export');
+      const worksheet = workbook.addWorksheet('Etsy Workshop Export');
       worksheet.columns = [
         { header: 'Order ID', key: 'orderId', width: 20 },
-        { header: 'Mock Up', key: 'mockUp', width: 50 },
-        { header: 'Design', key: 'design', width: 50 },
-        { header: 'Quantity', key: 'quantity', width: 10 },
-        { header: 'Full Name (Shipping)', key: 'fullName', width: 25 },
-        { header: 'Address 1 (Shipping)', key: 'address1', width: 30 },
-        { header: 'Address 2 (Shipping)', key: 'address2', width: 30 },
-        { header: 'City (Shipping)', key: 'city', width: 20 },
-        { header: 'Postcode (Shipping)', key: 'postcode', width: 15 },
-        { header: 'State Name (Shipping)', key: 'state', width: 20 },
+        { header: 'Link ảnh Mockup', key: 'mockUp', width: 55 },
+        { header: 'Design front', key: 'designFront', width: 55 },
+        { header: 'Design Sleeve', key: 'designSleeve', width: 55 },
+        { header: 'Loại áo', key: 'productType', width: 32 },
+        { header: 'Size', key: 'size', width: 14 },
+        { header: 'Màu áo', key: 'color', width: 18 },
+        { header: 'Vị trí thêu', key: 'embroideryPosition', width: 22 },
+        { header: 'Số lượng', key: 'quantity', width: 12 },
+        { header: 'Customization', key: 'customization', width: 60 },
       ];
 
       selectedOrders.forEach((order) => {
         (order.items || []).forEach((item) => {
-          const designUrls = Object.values(item.fulfillment_file || {}).filter(Boolean);
+          const designValues = getDesignExportValues(item.fulfillment_file);
           worksheet.addRow({
             orderId: order.orderId || '',
             mockUp: item.baseImageUrl || item.baseImage?.imageUrl || '',
-            design: designUrls.join(', '),
+            designFront: designValues.designFront || '',
+            designSleeve: [designValues.designLeft, designValues.designRight].filter(Boolean).join('\n'),
+            productType: getWorkshopProductType(item),
+            size: getWorkshopSize(item),
+            color: getWorkshopColor(item),
+            embroideryPosition: getWorkshopEmbroideryPosition(item, designValues),
             quantity: item.quantity || 0,
-            fullName: order.customer_infor?.name || order.shipping?.name || '',
-            address1: order.customer_infor?.address || order.shipping?.address1 || '',
-            address2: order.customer_infor?.address_2 || order.shipping?.address2 || '',
-            city: order.customer_infor?.city || order.shipping?.city || '',
-            postcode: order.customer_infor?.zip_code || order.shipping?.zipcode || '',
-            state: order.customer_infor?.state || order.shipping?.state || '',
+            customization: getCustomizationExportValue(item),
           });
         });
       });
@@ -301,18 +353,91 @@ const EtsyQC = () => {
         pattern: 'solid',
         fgColor: { argb: 'FFE6F3FF' },
       };
+      ['mockUp', 'designFront', 'designSleeve', 'productType', 'embroideryPosition', 'customization'].forEach((key) => {
+        worksheet.getColumn(key).alignment = { wrapText: true, vertical: 'top' };
+      });
 
       const now = new Date();
-      const filename = `Etsy_QC_Export_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.xlsx`;
+      const filename = `Etsy_Workshop_Export_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, filename);
-      toast.success(`Exported ${selectedOrders.length} orders to Excel`);
+      toast.success(`Exported ${selectedOrders.length} Etsy orders for workshop`);
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export Excel file');
     }
   }, [selectedRowKeys, dataSource]);
+
+  const openPushFulfillmentModal = useCallback(() => {
+    if (!isPushableFilter) {
+      toast.error('Please switch to Ready filter before pushing Etsy orders to Fulfillment Platform v2');
+      return;
+    }
+
+    if (selectedRowKeys.length === 0) {
+      toast.error('Please select Etsy orders to push');
+      return;
+    }
+
+    if (selectedOrdersForFulfillment.length === 0) {
+      toast.error('No matching Etsy orders found to push');
+      return;
+    }
+
+    setFulfillmentPushResult(null);
+    setOpenFulfillmentPushModal(true);
+  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+
+  const closePushFulfillmentModal = useCallback(() => {
+    setOpenFulfillmentPushModal(false);
+    setFulfillmentPushResult(null);
+  }, []);
+
+  const handlePushSelectedToFulfillmentPlatform = useCallback(async () => {
+    if (selectedOrdersForFulfillment.length === 0) {
+      toast.error('No matching Etsy orders found to push');
+      return;
+    }
+
+    setPushingToFulfillmentPlatform(true);
+
+    try {
+      const response = await pushSelectedEtsyOrdersToFulfillmentPlatform({
+        orderIds: selectedOrdersForFulfillment.map((order) => order.orderId),
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        const fulfillment = response.data?.fulfillment || {};
+        const received = fulfillment.received ?? selectedOrdersForFulfillment.length;
+        const inserted = fulfillment.inserted ?? 0;
+        const updated = fulfillment.updated ?? 0;
+        const skipped = fulfillment.skipped ?? 0;
+        const errorsCount = Array.isArray(fulfillment.errors) ? fulfillment.errors.length : 0;
+
+        setFulfillmentPushResult({
+          received,
+          inserted,
+          updated,
+          skipped,
+          errorsCount,
+        });
+        toast.success(
+          `Pushed ${selectedOrdersForFulfillment.length} Etsy orders to FFv2. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`
+        );
+        setSelectedRowKeys([]);
+        fetchAllQC(filters);
+        fetchCountStatus();
+      } else {
+        toast.error(response.data?.message || 'Failed to push Etsy orders to Fulfillment Platform');
+      }
+    } catch (error) {
+      console.error('Push Etsy Fulfillment Platform test error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to push Etsy orders to Fulfillment Platform');
+    } finally {
+      setPushingToFulfillmentPlatform(false);
+    }
+  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
 
   useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
 
@@ -361,7 +486,7 @@ const EtsyQC = () => {
   );
 
   const tableData = useMemo(() => {
-    return (dataSource || []).map((item, index) => ({
+    return (dataSource || []).map((item) => ({
       key: item?.orderId,
       orderId: (
         <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
@@ -569,6 +694,17 @@ const EtsyQC = () => {
                   Export Excel ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
+              <Tooltip title={isPushableFilter ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Ready filter to push Etsy orders to Fulfillment Platform v2'}>
+                <Button
+                  type="primary"
+                  icon={<MdOutlineSend />}
+                  onClick={openPushFulfillmentModal}
+                  loading={pushingToFulfillmentPlatform}
+                  disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
+                >
+                  Push Platform Test ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
@@ -622,6 +758,46 @@ const EtsyQC = () => {
           />
         </div>
       </div>
+
+      <Modal
+        title="Push Etsy orders to Fulfillment Platform v2"
+        open={openFulfillmentPushModal}
+        onCancel={closePushFulfillmentModal}
+        onOk={handlePushSelectedToFulfillmentPlatform}
+        okText="Push orders"
+        cancelText="Close"
+        confirmLoading={pushingToFulfillmentPlatform}
+        okButtonProps={{
+          disabled: selectedOrdersForFulfillment.length === 0,
+        }}
+        destroyOnHidden
+      >
+        <Flex vertical gap={12}>
+          <Alert
+            type="warning"
+            showIcon
+            message="Portal backend will push these Etsy orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
+          />
+
+          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <div className="font-medium text-slate-900">Selected payload</div>
+            <div className="mt-1">Source channel: ETSY</div>
+            <div>Orders: {selectedOrdersForFulfillment.length}</div>
+            <div>Items: {selectedFulfillmentItemCount}</div>
+            {selectedOrdersForFulfillment.length > 0 && (
+              <div className="mt-1 truncate">First order: {selectedOrdersForFulfillment[0]?.orderId}</div>
+            )}
+          </div>
+
+          {fulfillmentPushResult && (
+            <Alert
+              type={fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
+              showIcon
+              message={`Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`}
+            />
+          )}
+        </Flex>
+      </Modal>
 
       <QcCanvasModal
         open={openModalQC}

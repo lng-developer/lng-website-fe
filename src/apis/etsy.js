@@ -81,6 +81,10 @@ const getAllEtsyQCStatistics = (params) => {
   return instance.get('/etsy/qc/statistics', { params });
 };
 
+const pushSelectedEtsyOrdersToFulfillmentPlatform = (payload) => {
+  return instance.post('/etsy/qc/push-platform-orders', payload);
+};
+
 const uploadEtsyScale = (orderId, transactionId, payload, options = {}) => {
   return instance.post(`/etsy/${orderId}/items/${transactionId}/fulfillment-file`, payload, {
     params: {
@@ -131,6 +135,7 @@ export {
   getAllEtsyScaleStatistics,
   getAllEtsyQC,
   getAllEtsyQCStatistics,
+  pushSelectedEtsyOrdersToFulfillmentPlatform,
   uploadEtsyScale,
   confirmEtsyScaleForItem,
   assignEtsyOrderToCs,
