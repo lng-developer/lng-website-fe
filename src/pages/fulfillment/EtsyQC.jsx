@@ -23,7 +23,7 @@ import { confirmEtsyScaleForItem, getAllEtsyQC, getAllEtsyQCStatistics, pushSele
 import QcCanvasModal from './ModalQC';
 import ItemProductInfoEtsyQC from './ItemProductInfoEtsyQC';
 import { toast } from 'sonner';
-import { DESIGN_EXPORT_FIELDS, getCustomizationExportValue, getDesignExportValues } from './exportHelpers';
+import { getCustomizationExportValue, getDesignExportValues } from './exportHelpers';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -45,6 +45,43 @@ const getEtsyCustomItems = (item) => {
     return Object.entries(item.variations).map(([label, value]) => ({ label, value }));
   }
   return [];
+};
+
+const normalizeText = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const findCustomizationValue = (item, keywords = []) => {
+  const normalizedKeywords = keywords.map(normalizeText);
+  return (
+    getEtsyCustomItems(item).find((customItem) => {
+      const label = normalizeText(customItem?.label);
+      return normalizedKeywords.some((keyword) => label.includes(keyword));
+    })?.value || ''
+  );
+};
+
+const getWorkshopProductType = (item) => {
+  const costCenter = item?.cost_center || {};
+  const displayName = costCenter?.productType || costCenter?.product_type || costCenter?.vendorProductDisplayName || '';
+  return String(displayName).replace(/^\s*.*?\s*[-–—]\s+/, '').trim();
+};
+
+const getWorkshopSize = (item) => item?.cost_center?.sizeValue || findCustomizationValue(item, ['size', 'kich co', 'kích cỡ']);
+
+const getWorkshopColor = (item) => item?.cost_center?.colorValue || findCustomizationValue(item, ['color', 'colour', 'mau', 'màu']);
+
+const getWorkshopEmbroideryPosition = (item, designValues) => {
+  const explicitPosition = findCustomizationValue(item, ['vi tri theu', 'vị trí thêu', 'embroidery position', 'position']);
+  if (explicitPosition) return explicitPosition;
+
+  const positions = [];
+  if (designValues.designFront) positions.push('Front');
+  if (designValues.designLeft || designValues.designRight) positions.push('Sleeve');
+  return positions.join(', ');
 };
 
 const renderDate = (dateValue) => {
@@ -278,34 +315,33 @@ const EtsyQC = () => {
       }
 
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Etsy QC Export');
+      const worksheet = workbook.addWorksheet('Etsy Workshop Export');
       worksheet.columns = [
         { header: 'Order ID', key: 'orderId', width: 20 },
-        { header: 'Mock Up', key: 'mockUp', width: 50 },
-        ...DESIGN_EXPORT_FIELDS.map((field) => ({ header: field.header, key: field.key, width: 50 })),
-        { header: 'Quantity', key: 'quantity', width: 10 },
-        { header: 'Full Name (Shipping)', key: 'fullName', width: 25 },
-        { header: 'Address 1 (Shipping)', key: 'address1', width: 30 },
-        { header: 'Address 2 (Shipping)', key: 'address2', width: 30 },
-        { header: 'City (Shipping)', key: 'city', width: 20 },
-        { header: 'Postcode (Shipping)', key: 'postcode', width: 15 },
-        { header: 'State Name (Shipping)', key: 'state', width: 20 },
+        { header: 'Link ảnh Mockup', key: 'mockUp', width: 55 },
+        { header: 'Design front', key: 'designFront', width: 55 },
+        { header: 'Design Sleeve', key: 'designSleeve', width: 55 },
+        { header: 'Loại áo', key: 'productType', width: 32 },
+        { header: 'Size', key: 'size', width: 14 },
+        { header: 'Màu áo', key: 'color', width: 18 },
+        { header: 'Vị trí thêu', key: 'embroideryPosition', width: 22 },
+        { header: 'Số lượng', key: 'quantity', width: 12 },
         { header: 'Customization', key: 'customization', width: 60 },
       ];
 
       selectedOrders.forEach((order) => {
         (order.items || []).forEach((item) => {
+          const designValues = getDesignExportValues(item.fulfillment_file);
           worksheet.addRow({
             orderId: order.orderId || '',
             mockUp: item.baseImageUrl || item.baseImage?.imageUrl || '',
-            ...getDesignExportValues(item.fulfillment_file),
+            designFront: designValues.designFront || '',
+            designSleeve: [designValues.designLeft, designValues.designRight].filter(Boolean).join('\n'),
+            productType: getWorkshopProductType(item),
+            size: getWorkshopSize(item),
+            color: getWorkshopColor(item),
+            embroideryPosition: getWorkshopEmbroideryPosition(item, designValues),
             quantity: item.quantity || 0,
-            fullName: order.customer_infor?.name || order.shipping?.name || '',
-            address1: order.customer_infor?.address || order.shipping?.address1 || '',
-            address2: order.customer_infor?.address_2 || order.shipping?.address2 || '',
-            city: order.customer_infor?.city || order.shipping?.city || '',
-            postcode: order.customer_infor?.zip_code || order.shipping?.zipcode || '',
-            state: order.customer_infor?.state || order.shipping?.state || '',
             customization: getCustomizationExportValue(item),
           });
         });
@@ -317,14 +353,16 @@ const EtsyQC = () => {
         pattern: 'solid',
         fgColor: { argb: 'FFE6F3FF' },
       };
-      worksheet.getColumn('customization').alignment = { wrapText: true, vertical: 'top' };
+      ['mockUp', 'designFront', 'designSleeve', 'productType', 'embroideryPosition', 'customization'].forEach((key) => {
+        worksheet.getColumn(key).alignment = { wrapText: true, vertical: 'top' };
+      });
 
       const now = new Date();
-      const filename = `Etsy_QC_Export_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.xlsx`;
+      const filename = `Etsy_Workshop_Export_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, filename);
-      toast.success(`Exported ${selectedOrders.length} orders to Excel`);
+      toast.success(`Exported ${selectedOrders.length} Etsy orders for workshop`);
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export Excel file');
