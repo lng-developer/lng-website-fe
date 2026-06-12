@@ -32,6 +32,7 @@ import { MdOutlineRefresh, MdOutlineSend } from 'react-icons/md';
 import SelectSeller from '../../components/SelectSeller';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { DESIGN_EXPORT_FIELDS, getCustomizationExportValue, getDesignExportValues } from './exportHelpers';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -315,7 +316,7 @@ const QC = () => {
       worksheet.columns = [
         { header: 'Order ID', key: 'orderId', width: 20 },
         { header: 'Mock Up', key: 'mockUp', width: 50 },
-        { header: 'Design', key: 'design', width: 50 },
+        ...DESIGN_EXPORT_FIELDS.map((field) => ({ header: field.header, key: field.key, width: 50 })),
         { header: 'Quantity', key: 'quantity', width: 10 },
         { header: 'Full Name (Shipping)', key: 'fullName', width: 25 },
         { header: 'Address 1 (Shipping)', key: 'address1', width: 30 },
@@ -323,26 +324,17 @@ const QC = () => {
         { header: 'City (Shipping)', key: 'city', width: 20 },
         { header: 'Postcode (Shipping)', key: 'postcode', width: 15 },
         { header: 'State Name (Shipping)', key: 'state', width: 20 },
+        { header: 'Customization', key: 'customization', width: 60 },
       ];
 
       // Add data rows
       selectedOrders.forEach((order) => {
         if (order.items && Array.isArray(order.items)) {
           order.items.forEach((item) => {
-            // Get fulfillment file URLs
-            const designUrls = [];
-            if (item.fulfillment_file && typeof item.fulfillment_file === 'object') {
-              Object.values(item.fulfillment_file).forEach((url) => {
-                if (url && typeof url === 'string') {
-                  designUrls.push(url);
-                }
-              });
-            }
-
             const rowData = {
               orderId: order.orderId || '',
               mockUp: item.baseImageUrl || '',
-              design: designUrls.join(', '),
+              ...getDesignExportValues(item.fulfillment_file),
               quantity: item.quantity || 0,
               fullName: order.customer_infor?.name || '',
               address1: order.customer_infor?.address || '',
@@ -350,6 +342,7 @@ const QC = () => {
               city: order.customer_infor?.city || '',
               postcode: order.customer_infor?.zip_code || '',
               state: order.customer_infor?.state || '',
+              customization: getCustomizationExportValue(item),
             };
 
             worksheet.addRow(rowData);
@@ -364,6 +357,7 @@ const QC = () => {
         pattern: 'solid',
         fgColor: { argb: 'FFE6F3FF' },
       };
+      worksheet.getColumn('customization').alignment = { wrapText: true, vertical: 'top' };
 
       // Generate filename with current date
       const now = new Date();
@@ -415,6 +409,11 @@ const QC = () => {
   }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment, selectedRowKeys.length]);
 
   const openPushFulfillmentModal = useCallback(() => {
+    if (!isFailedFilter) {
+      toast.error('Please switch to Failed filter before pushing orders to Fulfillment Platform v2');
+      return;
+    }
+
     if (selectedRowKeys.length === 0) {
       toast.error('Please select orders to push');
       return;
@@ -427,7 +426,7 @@ const QC = () => {
 
     setFulfillmentPushResult(null);
     setOpenFulfillmentPushModal(true);
-  }, [selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+  }, [isFailedFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
 
   const closePushFulfillmentModal = useCallback(() => {
     setOpenFulfillmentPushModal(false);
@@ -462,8 +461,11 @@ const QC = () => {
           errorsCount,
         });
         toast.success(
-          `Pushed ${selectedOrdersForFulfillment.length} orders. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`
+          `Pushed ${selectedOrdersForFulfillment.length} orders to FFv2. Inserted: ${inserted}, skipped: ${skipped}, errors: ${errorsCount}`
         );
+        setSelectedRowKeys([]);
+        fetchAllQC(filters);
+        fetchCountStatus();
       } else {
         toast.error(response.data?.message || 'Failed to push orders to Fulfillment Platform');
       }
@@ -473,7 +475,7 @@ const QC = () => {
     } finally {
       setPushingToFulfillmentPlatform(false);
     }
-  }, [selectedOrdersForFulfillment]);
+  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
@@ -814,13 +816,13 @@ const QC = () => {
                 </Tooltip>
               )}
 
-              <Tooltip title="Push selected orders directly to Fulfillment Platform v2 for testing">
+              <Tooltip title={isFailedFilter ? 'Push selected failed orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Failed filter to push orders to Fulfillment Platform v2'}>
                 <Button
                   type="primary"
                   icon={<MdOutlineSend />}
                   onClick={openPushFulfillmentModal}
                   loading={pushingToFulfillmentPlatform}
-                  disabled={selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
+                  disabled={!isFailedFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
                   Push Platform Test ({selectedRowKeys.length})
                 </Button>
@@ -880,7 +882,7 @@ const QC = () => {
       </div>
 
       <Modal
-        title="Push orders to Fulfillment Platform"
+        title="Push failed orders to Fulfillment Platform v2"
         open={openFulfillmentPushModal}
         onCancel={closePushFulfillmentModal}
         onOk={handlePushSelectedToFulfillmentPlatform}
@@ -896,12 +898,13 @@ const QC = () => {
           <Alert
             type="warning"
             showIcon
-            message="Portal backend will push these orders to the configured Fulfillment Platform endpoint. This does not update Portal order status or tracking data."
+            message="Portal backend will push these failed orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
           />
 
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
             <div className="font-medium text-slate-900">Selected payload</div>
-            <div className="mt-1">Orders: {selectedOrdersForFulfillment.length}</div>
+            <div className="mt-1">Source channel: AMAZON</div>
+            <div>Orders: {selectedOrdersForFulfillment.length}</div>
             <div>Items: {selectedFulfillmentItemCount}</div>
             {selectedOrdersForFulfillment.length > 0 && (
               <div className="mt-1 truncate">First order: {selectedOrdersForFulfillment[0]?.orderId}</div>
