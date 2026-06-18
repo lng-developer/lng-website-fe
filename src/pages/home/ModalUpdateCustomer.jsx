@@ -13,6 +13,7 @@ const ModalUpdateCustomer = ({
   fetchCountStatus,
   filters,
   showMarkValidButton = false,
+  updateCustomerInfoRequest = updateCustomerInfor,
 }) => {
   const [formData, setFormData] = useState({
     name: customerInfor?.name,
@@ -58,7 +59,7 @@ const ModalUpdateCustomer = ({
   const handleOk = async () => {
     try {
       setIsSaving(true);
-      const response = await updateCustomerInfor(orderId, formData);
+      const response = await updateCustomerInfoRequest(orderId, formData);
       if (response.status === 200) {
         toast.success(response.data?.message);
         fetchAllOrder(filters);

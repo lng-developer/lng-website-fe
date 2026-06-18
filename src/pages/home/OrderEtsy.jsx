@@ -40,6 +40,7 @@ import {
   manualMappingEtsy,
   removeEtsyCase,
   resetEtsyScaleOrdersBulk,
+  updateEtsyCustomerAddress,
   updateEtsyOpenCase,
   updateEtsyOrderItemQuantity,
 } from '../../apis/etsy';
@@ -633,6 +634,7 @@ const OrderEtsy = () => {
             fetchAllOrder={fetchAllOrder}
             filters={filters}
             address_validation={item?.address_validation}
+            updateCustomerInfoRequest={updateEtsyCustomerAddress}
           />
         ),
         status: (

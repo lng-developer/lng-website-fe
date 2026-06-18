@@ -73,6 +73,19 @@ const updateEtsyOrderItemQuantity = (orderId, transactionId, payload) => {
   return instance.patch(`/etsy/${orderId}/items/${transactionId}/quantity`, payload);
 };
 
+const updateEtsyCustomerAddress = (orderId, customerInfor = {}) => {
+  return instance.patch(`/etsy/${encodeURIComponent(orderId)}/address`, {
+    shipping: {
+      address1: customerInfor?.address,
+      address2: customerInfor?.address_2,
+      city: customerInfor?.city,
+      state: customerInfor?.state,
+      zipcode: customerInfor?.zip_code,
+      country: customerInfor?.country,
+    },
+  });
+};
+
 const updateEtsySubmittedStatus = (payload) => {
   return instance.patch('/etsy/sumbittedoetsy', payload);
 };
@@ -149,6 +162,7 @@ export {
   updateEtsyItemTracking,
   updateEtsyOrderTracking,
   updateEtsyOrderItemQuantity,
+  updateEtsyCustomerAddress,
   updateEtsySubmittedStatus,
   getAllEtsyScale,
   getAllEtsyScaleStatistics,

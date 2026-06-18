@@ -8,7 +8,16 @@ import { IoWarningOutline } from 'react-icons/io5';
 import { FcApproval } from 'react-icons/fc';
 import { toast } from 'sonner';
 
-const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, fetchCountStatus, filters, address_validation, showMarkValidButton = false }) => {
+const ItemCustomer = ({
+  customerInfor,
+  orderId,
+  fetchAllOrder,
+  fetchCountStatus,
+  filters,
+  address_validation,
+  showMarkValidButton = false,
+  updateCustomerInfoRequest,
+}) => {
   const [isShowModalUpdate, setIsShowModalUpdate] = useState(false);
 
   const handleCopy = async (textToCopy) => {
@@ -243,6 +252,7 @@ const ItemCustomer = ({ customerInfor, orderId, fetchAllOrder, fetchCountStatus,
         fetchCountStatus={fetchCountStatus}
         filters={filters}
         showMarkValidButton={showMarkValidButton && !address_validation}
+        updateCustomerInfoRequest={updateCustomerInfoRequest}
       />
     </>
   );
