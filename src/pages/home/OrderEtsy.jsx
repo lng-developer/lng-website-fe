@@ -33,7 +33,14 @@ import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
-import { getAllEtsyOrders, getEtsyStatistic, computeEtsyBaseCost, manualMappingEtsy } from '../../apis/etsy';
+import {
+  getAllEtsyOrders,
+  getEtsyStatistic,
+  computeEtsyBaseCost,
+  manualMappingEtsy,
+  resetEtsyScaleOrdersBulk,
+  updateEtsyOrderItemQuantity,
+} from '../../apis/etsy';
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
@@ -59,6 +66,8 @@ const OrderEtsy = () => {
   const [tableHeight, setTableHeight] = useState(0);
   const [isShowModalReplace, setIsShowModalReplace] = useState(false);
   const [selectedReplaceItemIds, setSelectedReplaceItemIds] = useState([]);
+  const [isShowModalResetOrder, setIsShowModalResetOrder] = useState(false);
+  const [selectedResetOrderId, setSelectedResetOrderId] = useState('');
 
   const [orderInfo, setOrderInfo] = useState({});
   const [teams, setTeams] = useState([]);
@@ -421,7 +430,7 @@ const OrderEtsy = () => {
     async (id) => {
       try {
         const toastId = toast.loading('Computing base cost...');
-        const response = await computeEtsyBaseCost({ orderId: id,forceAddressValidation: true });
+        const response = await computeEtsyBaseCost({ orderId: id, forceAddressValidation: true });
         if (response.status === 200) {
           toast.success('Compute base cost success!', { id: toastId });
         } else {
@@ -490,6 +499,38 @@ const OrderEtsy = () => {
       setIsShowModalReplace(false);
     }
   }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchEtsyStatistic, filters]);
+
+  const handleResetOrder = useCallback(async () => {
+    if (!selectedResetOrderId) {
+      toast.error('Please select an order to reset');
+      return;
+    }
+
+    try {
+      const response = await resetEtsyScaleOrdersBulk({
+        orderIds: [selectedResetOrderId],
+        note: 'redo',
+      });
+      if (response.status === 200) {
+        toast.success('Reset order success!');
+        setIsShowModalResetOrder(false);
+        setSelectedResetOrderId('');
+      } else {
+        toast.error(response.data?.message || 'Reset order error!');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'Reset order error!');
+    } finally {
+      fetchAllOrder(filters);
+      fetchEtsyStatistic();
+    }
+  }, [fetchAllOrder, fetchEtsyStatistic, filters, selectedResetOrderId]);
+
+  const handleQuantityUpdated = useCallback(() => {
+    fetchAllOrder(filters);
+    fetchEtsyStatistic();
+  }, [fetchAllOrder, fetchEtsyStatistic, filters]);
 
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
@@ -608,8 +649,8 @@ const OrderEtsy = () => {
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
               {item?.createdAt
                 ? `(${formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })
-                    .replace(/^about /, '')
-                    .replace(/^less than /, '')})`
+                  .replace(/^about /, '')
+                  .replace(/^less than /, '')})`
                 : ''}
             </span>
           </Flex>
@@ -620,8 +661,8 @@ const OrderEtsy = () => {
             <span className="whitespace-nowrap" style={{ color: dataColors.title }}>
               {item?.purchase_date
                 ? `(${formatDistanceToNow(new Date(item.purchase_date), { addSuffix: true })
-                    .replace(/^about /, '')
-                    .replace(/^less than /, '')})`
+                  .replace(/^about /, '')
+                  .replace(/^less than /, '')})`
                 : ''}
             </span>
           </Flex>
@@ -635,17 +676,34 @@ const OrderEtsy = () => {
           />
         ),
         config_cost_center: (
-          <div
-            className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
-            style={{ borderColor: dataColors.pending }}
-            onClick={() => handleRetest(item?.orderId)}
-          >
-            <div>
-              <BiRefresh size={16} color={dataColors.pending} />
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+              style={{ borderColor: dataColors.pending }}
+              onClick={() => handleRetest(item?.orderId)}
+            >
+              <div>
+                <BiRefresh size={16} color={dataColors.pending} />
+              </div>
+              <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+                Re-Test
+              </span>
             </div>
-            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-              Re-Test
-            </span>
+            <div
+              className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"
+              style={{ borderColor: dataColors.pending }}
+              onClick={() => {
+                setSelectedResetOrderId(item?.orderId || '');
+                setIsShowModalResetOrder(true);
+              }}
+            >
+              <div>
+                <BiRefresh size={16} color={dataColors.pending} />
+              </div>
+              <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+                Reset Order
+              </span>
+            </div>
           </div>
         ),
         base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
@@ -672,70 +730,79 @@ const OrderEtsy = () => {
         subItems: (item?.items || []).map((itemSub, indexItem) => {
           const itemId = getEtsyItemId(itemSub);
           return {
-          key: `${index}-${indexItem}`,
-          product: (
-            <SubItemImage
-              linkImage={itemSub?.baseImageUrl}
-              linkFulfill={itemSub?.fulfillment_file}
-              seller={item?.seller}
-              listing={itemSub?.listingId}
-              scale_status={itemSub?.scale_status}
-              asin={itemSub?.asin}
-              scale_by={item?.scaledBy}
-            />
-          ),
-          sku: (
-            <SubItemSku
-              sku={itemSub?.sku}
-              mapped_sku={itemSub?.mapped_sku}
-              asin={itemSub?.asin}
-              sellerName={item?.seller?.full_name || '—'}
-              listing={itemSub?.listingId}
-            />
-          ),
-          customer: (
-            <SubItemCustomEtsy
-              items={itemSub?.version3Data}
-              customUrl={itemSub?.customized_url}
-              linkImage={itemSub?.snapshotImage}
-              listingId={itemSub?.listingId}
-              customFiles={itemSub?.customFiles || []}
-              orderId={item?.orderId}
-              transactionId={itemId}
-            />
-          ),
-          quantity: <SubItemQuantity quantity={itemSub?.quantity} />,
-          cost_center: (
-            <SubItemCost
-              data={itemSub?.cost_center}
-              fulfillName={`${item?.orderId}-${itemId}`}
-              orderId={item?.orderId}
-              orderItemId={itemId}
-              onProductChange={handleProductChange}
-              onSizeChange={handleSizeChange}
-              onColorChange={handleColorChange}
-              onVariantDataChange={handleVariantDataChange}
-              isLastItem={indexItem === (item?.items || []).length - 1}
-              onApplyMapping={handleApplyMappingForOrder}
-              orderItems={item?.items || []}
-              isOrderApplied={appliedOrders.has(item?.orderId)}
-              isOrderEditing={editingOrders.has(item?.orderId)}
-            />
-          ),
-          tracking_note: (
-            <SubItemTracking
-              tracking_info={itemSub?.tracking_info}
-              orderItemId={itemId}
-              transactionId={itemId}
-              orderId={item?.orderId}
-              status={item?.status}
-              fetchAllOrder={fetchAllOrder}
-              filters={filters}
-              fetchCountStatus={fetchEtsyStatistic}
-              isEtsyOrder={true}
-              onTrackingUpdated={handleEtsyTrackingUpdated}
-            />
-          ),
+            key: `${index}-${indexItem}`,
+            product: (
+              <SubItemImage
+                linkImage={itemSub?.baseImageUrl}
+                linkFulfill={itemSub?.fulfillment_file}
+                seller={item?.seller}
+                listing={itemSub?.listingId}
+                scale_status={itemSub?.scale_status}
+                asin={itemSub?.asin}
+                scale_by={item?.scaledBy}
+              />
+            ),
+            sku: (
+              <SubItemSku
+                sku={itemSub?.sku}
+                mapped_sku={itemSub?.mapped_sku}
+                asin={itemSub?.asin}
+                sellerName={item?.seller?.full_name || '—'}
+                listing={itemSub?.listingId}
+              />
+            ),
+            customer: (
+              <SubItemCustomEtsy
+                items={itemSub?.version3Data}
+                customUrl={itemSub?.customized_url}
+                linkImage={itemSub?.snapshotImage}
+                listingId={itemSub?.listingId}
+                customFiles={itemSub?.customFiles || []}
+                orderId={item?.orderId}
+                transactionId={itemId}
+              />
+            ),
+            quantity: (
+              <SubItemQuantity
+                quantity={itemSub?.quantity}
+                orderId={item?.orderId}
+                orderItemId={itemId}
+                editable={true}
+                updateQuantity={updateEtsyOrderItemQuantity}
+                onUpdated={handleQuantityUpdated}
+              />
+            ),
+            cost_center: (
+              <SubItemCost
+                data={itemSub?.cost_center}
+                fulfillName={`${item?.orderId}-${itemId}`}
+                orderId={item?.orderId}
+                orderItemId={itemId}
+                onProductChange={handleProductChange}
+                onSizeChange={handleSizeChange}
+                onColorChange={handleColorChange}
+                onVariantDataChange={handleVariantDataChange}
+                isLastItem={indexItem === (item?.items || []).length - 1}
+                onApplyMapping={handleApplyMappingForOrder}
+                orderItems={item?.items || []}
+                isOrderApplied={appliedOrders.has(item?.orderId)}
+                isOrderEditing={editingOrders.has(item?.orderId)}
+              />
+            ),
+            tracking_note: (
+              <SubItemTracking
+                tracking_info={itemSub?.tracking_info}
+                orderItemId={itemId}
+                transactionId={itemId}
+                orderId={item?.orderId}
+                status={item?.status}
+                fetchAllOrder={fetchAllOrder}
+                filters={filters}
+                fetchCountStatus={fetchEtsyStatistic}
+                isEtsyOrder={true}
+                onTrackingUpdated={handleEtsyTrackingUpdated}
+              />
+            ),
           };
         }),
       };
@@ -756,6 +823,7 @@ const OrderEtsy = () => {
     handleVariantDataChange,
     handleApplyMappingForOrder,
     handleEtsyTrackingUpdated,
+    handleQuantityUpdated,
     appliedOrders,
     editingOrders,
   ]);
@@ -1073,6 +1141,37 @@ const OrderEtsy = () => {
           />
 
           <div className="text-xs text-[#94a3b8]">This action cannot be undone.</div>
+        </Flex>
+      </Modal>
+
+      <Modal
+        title="Reset Order Confirmation"
+        width={480}
+        style={{ top: '30%' }}
+        okText="Confirm Reset"
+        cancelText="Cancel"
+        closable={{ 'aria-label': 'Custom Close Button' }}
+        open={isShowModalResetOrder}
+        onOk={handleResetOrder}
+        onCancel={() => {
+          setIsShowModalResetOrder(false);
+          setSelectedResetOrderId('');
+        }}
+        okButtonProps={{ danger: true }}
+      >
+        <Flex vertical gap={16}>
+          <div className="text-sm text-[#64748b]">
+            Are you sure you want to reset this order? This action will reset the order status and cannot be undone.
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div className="text-sm">
+              <span className="text-[#64748b]">Order ID: </span>
+              <span className="font-medium text-black">{selectedResetOrderId || '---'}</span>
+            </div>
+          </div>
+
+          <div className="text-xs text-red-500 font-medium">This action cannot be undone.</div>
         </Flex>
       </Modal>
     </div>

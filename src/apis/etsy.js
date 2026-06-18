@@ -61,6 +61,10 @@ const updateEtsyOrderTracking = (orderId, payload) => {
   return instance.put(`/etsy/${encodeURIComponent(orderId)}/tracking`, payload);
 };
 
+const updateEtsyOrderItemQuantity = (orderId, transactionId, payload) => {
+  return instance.patch(`/etsy/${orderId}/items/${transactionId}/quantity`, payload);
+};
+
 const updateEtsySubmittedStatus = (payload) => {
   return instance.patch('/etsy/sumbittedoetsy', payload);
 };
@@ -71,6 +75,10 @@ const getAllEtsyScale = (params) => {
 
 const getAllEtsyScaleStatistics = (params) => {
   return instance.get('/etsy/scale/statistics', { params });
+};
+
+const resetEtsyScaleOrdersBulk = (payload) => {
+  return instance.put('/etsy/scale/orders/reset/bulk', payload);
 };
 
 const getAllEtsyQC = (params) => {
@@ -130,9 +138,11 @@ export {
   uploadEtsyTrackingBatch,
   updateEtsyItemTracking,
   updateEtsyOrderTracking,
+  updateEtsyOrderItemQuantity,
   updateEtsySubmittedStatus,
   getAllEtsyScale,
   getAllEtsyScaleStatistics,
+  resetEtsyScaleOrdersBulk,
   getAllEtsyQC,
   getAllEtsyQCStatistics,
   pushSelectedEtsyOrdersToFulfillmentPlatform,
