@@ -5,7 +5,7 @@ import { Checkbox, Flex, Modal, Select, Tooltip } from 'antd';
 import { dataColors } from '../../../utils/dataColors';
 import { toast } from 'sonner';
 
-const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [], openCaseHandler = updateOpenCase }) => {
+const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [], openCaseHandler = updateOpenCase, removeCaseHandler = removeCase }) => {
   const [isShowModal, setIsShowModal] = useState(false);
   const [selectCase, setSelectCase] = useState('');
   const [cases, setCases] = useState([]);
@@ -50,7 +50,7 @@ const ItemCase = ({ orderId, fetchAllOrder, filters, caseList = [], openCaseHand
 
   const handleUpdateCase = async () => {
     try {
-      const response = await removeCase({
+      const response = await removeCaseHandler({
         orderId,
         caseIds: selectedCases,
       });

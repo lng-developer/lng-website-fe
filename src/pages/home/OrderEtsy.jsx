@@ -38,6 +38,7 @@ import {
   getEtsyStatistic,
   computeEtsyBaseCost,
   manualMappingEtsy,
+  removeEtsyCase,
   resetEtsyScaleOrdersBulk,
   updateEtsyOpenCase,
   updateEtsyOrderItemQuantity,
@@ -734,6 +735,7 @@ const OrderEtsy = () => {
             filters={filters}
             caseList={item?.case}
             openCaseHandler={updateEtsyOpenCase}
+            removeCaseHandler={removeEtsyCase}
           />
         ),
         subItems: (item?.items || []).map((itemSub, indexItem) => {
