@@ -17,9 +17,7 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { dataFilterStatusEtsy } from '../../utils/dataFilter';
-import SubItemImage from './table/SubItemImage';
 import SubItemSku from './table/SubItemSku';
-import SubItemCustomEtsy from './table/SubItemCustomEtsy';
 import SubItemQuantity from './table/SubItemQuantity';
 import SubItemCost from './table/SubItemCost';
 import SubItemTracking from './table/SubItemTracking';
@@ -28,6 +26,8 @@ import ItemBaseCost from './table/ItemBaseCost';
 import ItemShippingType from './table/ItemShippingType';
 import ItemCase from './table/ItemCase';
 import ModalImportEtsy from './ModalImportEtsy';
+import OrderEtsySubItemImageOptimized from '../order-etsy/components/optimized-images/OrderEtsySubItemImageOptimized';
+import OrderEtsySubItemCustomOptimized from '../order-etsy/components/optimized-images/OrderEtsySubItemCustomOptimized';
 import { getAllTeam } from '../../apis/teams';
 import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
@@ -743,7 +743,7 @@ const OrderEtsy = () => {
           return {
             key: `${index}-${indexItem}`,
             product: (
-              <SubItemImage
+              <OrderEtsySubItemImageOptimized
                 linkImage={itemSub?.baseImageUrl}
                 linkFulfill={itemSub?.fulfillment_file}
                 seller={item?.seller}
@@ -763,7 +763,7 @@ const OrderEtsy = () => {
               />
             ),
             customer: (
-              <SubItemCustomEtsy
+              <OrderEtsySubItemCustomOptimized
                 items={itemSub?.version3Data}
                 customUrl={itemSub?.customized_url}
                 linkImage={itemSub?.snapshotImage}
