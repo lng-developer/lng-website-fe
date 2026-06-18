@@ -38,7 +38,9 @@ import {
   getEtsyStatistic,
   computeEtsyBaseCost,
   manualMappingEtsy,
+  removeEtsyCase,
   resetEtsyScaleOrdersBulk,
+  updateEtsyOpenCase,
   updateEtsyOrderItemQuantity,
 } from '../../apis/etsy';
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
@@ -726,7 +728,16 @@ const OrderEtsy = () => {
         ),
         store: <StatusComponent title={item?.shopName || 'No Data'} color={dataColors.pending} />,
         handling_time: <span className="font-medium whitespace-nowrap">{item?.remain || 'Unknown'}</span>,
-        case: <ItemCase orderId={item?.orderId} fetchAllOrder={fetchAllOrder} filters={filters} caseList={item?.case} />,
+        case: (
+          <ItemCase
+            orderId={item?.orderId}
+            fetchAllOrder={fetchAllOrder}
+            filters={filters}
+            caseList={item?.case}
+            openCaseHandler={updateEtsyOpenCase}
+            removeCaseHandler={removeEtsyCase}
+          />
+        ),
         subItems: (item?.items || []).map((itemSub, indexItem) => {
           const itemId = getEtsyItemId(itemSub);
           return {

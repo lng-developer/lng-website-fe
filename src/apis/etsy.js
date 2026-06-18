@@ -45,6 +45,14 @@ const manualMappingEtsy = (payload) => {
   return instance.put('/etsy/manual-mapping', payload);
 };
 
+const updateEtsyOpenCase = (payload) => {
+  return instance.put('/etsy/open-case', payload);
+};
+
+const removeEtsyCase = (payload) => {
+  return instance.put('/etsy/remove-case', payload);
+};
+
 const uploadEtsyTracking = (body) => {
   return instance.post('/ext/etsy/upload-tracking', body);
 };
@@ -134,6 +142,8 @@ export {
   getEtsyStatistic,
   computeEtsyBaseCost,
   manualMappingEtsy,
+  updateEtsyOpenCase,
+  removeEtsyCase,
   uploadEtsyTracking,
   uploadEtsyTrackingBatch,
   updateEtsyItemTracking,
