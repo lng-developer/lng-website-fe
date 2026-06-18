@@ -3,7 +3,7 @@ import { InputNumber } from 'antd';
 import { toast } from 'sonner';
 import { updateOrderItemQuantity } from '../../../apis/order';
 
-const SubItemQuantity = ({ quantity = null, orderId = '', orderItemId = '', editable = false, onUpdated }) => {
+const SubItemQuantity = ({ quantity = null, orderId = '', orderItemId = '', editable = false, onUpdated, updateQuantity = updateOrderItemQuantity }) => {
   const normalizedQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
   const [fulfillQty, setFulfillQty] = useState(normalizedQuantity);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -30,7 +30,7 @@ const SubItemQuantity = ({ quantity = null, orderId = '', orderItemId = '', edit
 
     setIsUpdating(true);
     try {
-      const response = await updateOrderItemQuantity(orderId, orderItemId, { quantity: nextQuantity });
+      const response = await updateQuantity(orderId, orderItemId, { quantity: nextQuantity });
 
       if (response.status === 200) {
         toast.success(`Updated fulfill qty for ${orderItemId}`);
@@ -45,7 +45,7 @@ const SubItemQuantity = ({ quantity = null, orderId = '', orderItemId = '', edit
     } finally {
       setIsUpdating(false);
     }
-  }, [editable, fulfillQty, isUpdating, normalizedQuantity, onUpdated, orderId, orderItemId]);
+  }, [editable, fulfillQty, isUpdating, normalizedQuantity, onUpdated, orderId, orderItemId, updateQuantity]);
 
   return (
     <div>
