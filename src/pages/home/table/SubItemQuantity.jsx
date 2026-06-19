@@ -60,7 +60,7 @@ const SubItemQuantity = ({ quantity = null, orderId = '', orderItemId = '', edit
         <div>
           <span className="font-medium">Fulfill Qty</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-start gap-2">
           <InputNumber
             width={10}
             min={1}
