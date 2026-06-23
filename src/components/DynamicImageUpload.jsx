@@ -28,6 +28,7 @@ const TITLE_BY_TYPE = {
 export default function DynamicImageUploadBatch({
   serverItems = [], // NEW: [{id, kind, url, title?}]
   maxSlots = 5,
+  serverPreviewMode = 'image',
   initialKinds = [], // ví dụ: ['front']
   disabled = false,
   hideAddButton = false, // NEW: ẩn nút Add khi đã có ảnh
@@ -42,6 +43,7 @@ export default function DynamicImageUploadBatch({
   const [addOpen, setAddOpen] = useState(false);
   const [kind, setKind] = useState();
   const [spinning, setSpinning] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
 
   // --- HYDRATE từ API + initialKinds
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function DynamicImageUploadBatch({
       title: TITLE_BY_TYPE[it.position] || it.title || it.position,
       file: null,
       preview: it.url || '', // hiển thị ngay
+      isServer: true,
     }));
 
     // 2) thêm initialKinds nếu chưa có
@@ -72,6 +75,7 @@ export default function DynamicImageUploadBatch({
   const usedKinds = new Set(slots.map((s) => s.kind));
   const selectableKinds = IMAGE_TYPES.filter((t) => !usedKinds.has(t.value));
   const canAdd = slots.length < maxSlots && selectableKinds.length > 0;
+  const shouldUseServerPreviewButton = serverPreviewMode === 'button';
 
   const addSlot = () => {
     setKind(undefined);
@@ -176,7 +180,18 @@ export default function DynamicImageUploadBatch({
             >
               {slot.preview ? (
                 <div className="rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                  <LazyImage width={slots.length > 1 ? 126 : 176} height={100} src={slot.preview} preview={true} />
+                  {shouldUseServerPreviewButton && slot.isServer && !slot.file ? (
+                    <div
+                      className="flex items-center justify-center rounded-md border border-dashed border-[#CBD5E1] bg-[#F8FAFC]"
+                      style={{ width: slots.length > 1 ? 126 : 176, height: 100 }}
+                    >
+                      <Button size="small" onClick={() => setPreviewImageUrl(slot.preview)}>
+                        View
+                      </Button>
+                    </div>
+                  ) : (
+                    <LazyImage width={slots.length > 1 ? 126 : 176} height={100} src={slot.preview} preview={true} />
+                  )}
                 </div>
               ) : (
                 <div
@@ -199,6 +214,10 @@ export default function DynamicImageUploadBatch({
       </div>
 
       {spinning && <Spin fullscreen tip="Uploading photos..." />}
+
+      <Modal open={!!previewImageUrl} title="Preview image" footer={null} onCancel={() => setPreviewImageUrl('')} width={900}>
+        {previewImageUrl && <Image src={previewImageUrl} alt="Uploaded fulfillment" style={{ width: '100%' }} preview={false} />}
+      </Modal>
 
       {/* Modal chọn loại ảnh khi Add */}
       <Modal
