@@ -437,6 +437,7 @@ const ScaleEsty = () => {
               <DynamicImageUpload
                 initialKinds={['front']}
                 serverItems={convertToArr(itemSub?.fulfillment_file)}
+                serverPreviewMode="button"
                 orderId={item?.orderId}
                 orderItemId={transactionId}
                 fetchAllFulfill={fetchAllFulfill}
