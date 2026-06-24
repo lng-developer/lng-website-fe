@@ -816,7 +816,13 @@ const QC = () => {
                 </Tooltip>
               )}
 
-              <Tooltip title={isFailedFilter ? 'Push selected failed orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Failed filter to push orders to Fulfillment Platform v2'}>
+              <Tooltip
+                title={
+                  isFailedFilter
+                    ? 'Push selected failed orders to Fulfillment Platform v2 and update Portal status'
+                    : 'Switch to Failed filter to push orders to Fulfillment Platform v2'
+                }
+              >
                 <Button
                   type="primary"
                   icon={<MdOutlineSend />}
@@ -824,7 +830,7 @@ const QC = () => {
                   loading={pushingToFulfillmentPlatform}
                   disabled={!isFailedFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
-                  Push Platform Test ({selectedRowKeys.length})
+                  Push Fulfillment LNG ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
             </div>

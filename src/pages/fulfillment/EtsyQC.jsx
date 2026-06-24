@@ -98,7 +98,12 @@ const findCustomizationValue = (item, keywords = []) => {
 const getWorkshopProductType = (item) => {
   const costCenter = item?.cost_center || {};
   const displayName = costCenter?.productType || costCenter?.product_type || costCenter?.vendorProductDisplayName || '';
-  return String(displayName).replace(/^\s*.*?\s*[-–—]\s+/, '').trim();
+  return String(displayName)
+    .replace(/^\s*.*?\s*[-–—]\s+/, '')
+    .trim();
+  return String(displayName)
+    .replace(/^\s*.*?\s*[-–—]\s+/, '')
+    .trim();
 };
 
 const getWorkshopSize = (item) => item?.cost_center?.sizeValue || findCustomizationValue(item, ['size', 'kich co', 'kích cỡ']);
@@ -239,11 +244,44 @@ const EtsyQC = () => {
   const columns = useMemo(
     () => [
       { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'orderId', key: 'orderId', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Status QC</span>, dataIndex: 'scale_overall_status', key: 'scale_overall_status', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Status QC</span>,
+        dataIndex: 'scale_overall_status',
+        key: 'scale_overall_status',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Status QC</span>,
+        dataIndex: 'scale_overall_status',
+        key: 'scale_overall_status',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'createdAt', key: 'createdAt', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Order Date</span>, dataIndex: 'purchase_date', key: 'purchase_date', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Order Date</span>,
+        dataIndex: 'purchase_date',
+        key: 'purchase_date',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Order Date</span>,
+        dataIndex: 'purchase_date',
+        key: 'purchase_date',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Shipping Type</span>, dataIndex: 'shipping_type', key: 'shipping_type', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
+        dataIndex: 'shipping_type',
+        key: 'shipping_type',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
+        dataIndex: 'shipping_type',
+        key: 'shipping_type',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
@@ -253,12 +291,67 @@ const EtsyQC = () => {
 
   const subColumns = useMemo(
     () => [
-      { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info', align: 'left' },
-      { title: <span style={{ color: dataColors.title }}>Scale Status</span>, dataIndex: 'scale_status', key: 'scale_status', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Product Info</span>,
+        dataIndex: 'product_info',
+        key: 'product_info',
+        align: 'left',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+        dataIndex: 'scale_status',
+        key: 'scale_status',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Product Info</span>,
+        dataIndex: 'product_info',
+        key: 'product_info',
+        align: 'left',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Scale Status</span>,
+        dataIndex: 'scale_status',
+        key: 'scale_status',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'seller', key: 'seller', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Fulfill Name</span>, dataIndex: 'fulfill_name', key: 'fulfill_name', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization', align: 'left' },
-      { title: <span style={{ color: dataColors.title }}>Vendor Product</span>, dataIndex: 'cost_center', key: 'cost_center', align: 'center' },
+      {
+        title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
+        dataIndex: 'fulfill_name',
+        key: 'fulfill_name',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Customization</span>,
+        dataIndex: 'customization',
+        key: 'customization',
+        align: 'left',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Vendor Product</span>,
+        dataIndex: 'cost_center',
+        key: 'cost_center',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
+        dataIndex: 'fulfill_name',
+        key: 'fulfill_name',
+        align: 'center',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Customization</span>,
+        dataIndex: 'customization',
+        key: 'customization',
+        align: 'left',
+      },
+      {
+        title: <span style={{ color: dataColors.title }}>Vendor Product</span>,
+        dataIndex: 'cost_center',
+        key: 'cost_center',
+        align: 'center',
+      },
       { title: <span style={{ color: dataColors.title }}>Action</span>, dataIndex: 'action', key: 'action', align: 'center' },
     ],
     []
@@ -342,10 +435,7 @@ const EtsyQC = () => {
 
   const fetchAdvancedFilterData = useCallback(async () => {
     try {
-      const [usersRes, vendorsRes] = await Promise.all([
-        getAllUsers({ all: true, perPage: 1000 }),
-        getALlVendor(),
-      ]);
+      const [usersRes, vendorsRes] = await Promise.all([getAllUsers({ all: true, perPage: 1000 }), getALlVendor()]);
 
       if (usersRes.status === 200) {
         const userList = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.data || [];
@@ -540,11 +630,7 @@ const EtsyQC = () => {
       const key = `${order.orderId}:retry`;
       setActionLoadingKey(key);
       try {
-        const response = await retrySendEtsyFulfillment(
-          order.orderId,
-          { provider },
-          { shopId: order.shopId, provider }
-        );
+        const response = await retrySendEtsyFulfillment(order.orderId, { provider }, { shopId: order.shopId, provider });
         toast.success(response.data?.message || 'Retry send completed');
         fetchAllQC(filters);
         fetchCountStatus();
@@ -646,141 +732,148 @@ const EtsyQC = () => {
       const reopenable = canReopenEtsyQc(item);
 
       return {
-      key: item?.orderId,
-      orderId: (
-        <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
-          <StatusComponent title={item?.orderId} color={dataColors.default} isDefault />
-        </button>
-      ),
-      status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
-      scale_overall_status: <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />,
-      createdAt: renderDate(item?.createdAt),
-      purchase_date: renderDate(item?.purchase_date || item?.saleDate || item?.createdAt),
-      scale_by: <StatusComponent title={item?.scaledBy?.full_name || item?.scaleBy?.full_name || item?.scaleBy || 'No data'} color={dataColors.process} />,
-      shipping_type: <StatusComponent title={item?.shipping_type || 'No data'} color={dataColors.asin} />,
-      shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
-      qc_by: <StatusComponent title={item?.cs_assignee?.full_name || item?.qcBy?.full_name || 'No data'} color={dataColors.purple} />,
-      subItems: (item?.items || []).map((itemSub, indexItem) => {
-        const itemId = getEtsyItemId(itemSub);
-        const customItems = getEtsyCustomItems(itemSub);
-        return {
-          key: `${item?.orderId}-${itemId || indexItem}`,
-          product_info: (
-            <ItemProductInfoEtsyQC
-              link={itemSub?.baseImageUrl || itemSub?.baseImage?.imageUrl}
-              title={itemSub?.title || itemSub?.itemName}
-              listingId={itemSub?.listingId}
-              sku={itemSub?.sku}
-              quantity={itemSub?.quantity}
-            />
-          ),
-          scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
-          seller: <StatusComponent title={item?.seller?.full_name || item?.seller?.sellerCode || 'No data'} color={dataColors.process} />,
-          fulfill_name: (
-            <div
-              style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
-              className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
-            >
-              <span>{`${item?.orderId}-${itemId}`}</span>
-            </div>
-          ),
-          customization: (
-            <div className="text-left">
-              {customItems.map((customItem, idx) => (
-                <div key={idx} className="mb-1 max-w-[260px] whitespace-normal break-words">
-                  <span className="font-medium">{customItem?.label}:</span>
-                  <span className="text-[#64748B] ml-2">{customItem?.value || <span className="text-red-500">x</span>}</span>
-                </div>
-              ))}
-            </div>
-          ),
-          cost_center: (
-            <div
-              style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
-              className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
-            >
-              <span>{itemSub?.cost_center?.vendorProductDisplayName || 'No data'}</span>
-            </div>
-          ),
-          action: (
-            <>
-              {item?.scale_overall_status === 'Failed' ? (
-                <Flex vertical gap={6} align="center">
-                  <Tooltip
-                    title={
-                      failureInfo?.error
-                        ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
-                        : 'Backend has not returned the failed vendor response for this order.'
-                    }
-                  >
-                    <div className="max-w-[210px] text-xs text-left text-[#cd1323] leading-5">
-                      <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
-                      <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
-                    </div>
-                  </Tooltip>
-                  <Flex gap={6} wrap="wrap" justify="center">
-                    <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
-                      <span>
-                        <Button
-                          size="small"
-                          type="primary"
-                          icon={<MdOutlineSend />}
-                          disabled={!retryable}
-                          loading={actionLoadingKey === `${item.orderId}:retry`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleRetrySend(item, failureInfo);
-                          }}
-                        >
-                          Retry
-                        </Button>
-                      </span>
+        key: item?.orderId,
+        orderId: (
+          <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
+            <StatusComponent title={item?.orderId} color={dataColors.default} isDefault />
+          </button>
+        ),
+        status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
+        scale_overall_status: (
+          <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
+        ),
+        createdAt: renderDate(item?.createdAt),
+        purchase_date: renderDate(item?.purchase_date || item?.saleDate || item?.createdAt),
+        scale_by: (
+          <StatusComponent
+            title={item?.scaledBy?.full_name || item?.scaleBy?.full_name || item?.scaleBy || 'No data'}
+            color={dataColors.process}
+          />
+        ),
+        shipping_type: <StatusComponent title={item?.shipping_type || 'No data'} color={dataColors.asin} />,
+        shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
+        qc_by: <StatusComponent title={item?.cs_assignee?.full_name || item?.qcBy?.full_name || 'No data'} color={dataColors.purple} />,
+        subItems: (item?.items || []).map((itemSub, indexItem) => {
+          const itemId = getEtsyItemId(itemSub);
+          const customItems = getEtsyCustomItems(itemSub);
+          return {
+            key: `${item?.orderId}-${itemId || indexItem}`,
+            product_info: (
+              <ItemProductInfoEtsyQC
+                link={itemSub?.baseImageUrl || itemSub?.baseImage?.imageUrl}
+                title={itemSub?.title || itemSub?.itemName}
+                listingId={itemSub?.listingId}
+                sku={itemSub?.sku}
+                quantity={itemSub?.quantity}
+              />
+            ),
+            scale_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
+            seller: <StatusComponent title={item?.seller?.full_name || item?.seller?.sellerCode || 'No data'} color={dataColors.process} />,
+            fulfill_name: (
+              <div
+                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
+                className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
+              >
+                <span>{`${item?.orderId}-${itemId}`}</span>
+              </div>
+            ),
+            customization: (
+              <div className="text-left">
+                {customItems.map((customItem, idx) => (
+                  <div key={idx} className="mb-1 max-w-[260px] whitespace-normal break-words">
+                    <span className="font-medium">{customItem?.label}:</span>
+                    <span className="text-[#64748B] ml-2">{customItem?.value || <span className="text-red-500">x</span>}</span>
+                  </div>
+                ))}
+              </div>
+            ),
+            cost_center: (
+              <div
+                style={{ borderColor: dataColors.default, backgroundColor: `${dataColors.default}10` }}
+                className="inline-flex items-center rounded-full border-1 px-2.5 py-0.5 text-xs transition-colors font-medium text-foreground"
+              >
+                <span>{itemSub?.cost_center?.vendorProductDisplayName || 'No data'}</span>
+              </div>
+            ),
+            action: (
+              <>
+                {item?.scale_overall_status === 'Failed' ? (
+                  <Flex vertical gap={6} align="center">
+                    <Tooltip
+                      title={
+                        failureInfo?.error
+                          ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
+                          : 'Backend has not returned the failed vendor response for this order.'
+                      }
+                    >
+                      <div className="max-w-[210px] text-xs text-left text-[#cd1323] leading-5">
+                        <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
+                        <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
+                      </div>
                     </Tooltip>
-                    <Tooltip title={reopenDisabledReason || 'Move back to Pending QC and keep scale files.'}>
-                      <span>
-                        <Button
-                          size="small"
-                          icon={<MdOutlineImageSearch />}
-                          disabled={!reopenable}
-                          loading={actionLoadingKey === `${item.orderId}:reopen`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleReopenQc(item, failureInfo);
-                          }}
-                        >
-                          Re-QC
-                        </Button>
-                      </span>
-                    </Tooltip>
+                    <Flex gap={6} wrap="wrap" justify="center">
+                      <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
+                        <span>
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<MdOutlineSend />}
+                            disabled={!retryable}
+                            loading={actionLoadingKey === `${item.orderId}:retry`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleRetrySend(item, failureInfo);
+                            }}
+                          >
+                            Retry
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={reopenDisabledReason || 'Move back to Pending QC and keep scale files.'}>
+                        <span>
+                          <Button
+                            size="small"
+                            icon={<MdOutlineImageSearch />}
+                            disabled={!reopenable}
+                            loading={actionLoadingKey === `${item.orderId}:reopen`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleReopenQc(item, failureInfo);
+                            }}
+                          >
+                            Re-QC
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    </Flex>
                   </Flex>
-                </Flex>
-              ) : itemSub?.scale_status === 'Pending' ? (
-                <Tooltip title="QC">
-                  <button
-                    className="cursor-pointer border rounded"
-                    style={{ padding: 6, borderColor: dataColors.default }}
-                    onClick={() => {
-                      setDataView(item);
-                      setIndexQC(indexItem);
-                      setOpenModalQC(true);
-                    }}
-                  >
-                    <MdOutlineImageSearch size={20} />
-                  </button>
-                </Tooltip>
-              ) : itemSub?.scale_status === 'Complete' ? (
-                <div className="flex justify-center items-center">
-                  <FcApproval size={25} />
-                </div>
-              ) : (
-                <div className="flex justify-center items-center">
-                  <IoArrowUndo size={25} color={dataColors.cancelled} />
-                </div>
-              )}
-            </>
-          ),
-        };
-      }),
+                ) : itemSub?.scale_status === 'Pending' ? (
+                  <Tooltip title="QC">
+                    <button
+                      className="cursor-pointer border rounded"
+                      style={{ padding: 6, borderColor: dataColors.default }}
+                      onClick={() => {
+                        setDataView(item);
+                        setIndexQC(indexItem);
+                        setOpenModalQC(true);
+                      }}
+                    >
+                      <MdOutlineImageSearch size={20} />
+                    </button>
+                  </Tooltip>
+                ) : itemSub?.scale_status === 'Complete' ? (
+                  <div className="flex justify-center items-center">
+                    <FcApproval size={25} />
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center">
+                    <IoArrowUndo size={25} color={dataColors.cancelled} />
+                  </div>
+                )}
+              </>
+            ),
+          };
+        }),
       };
     });
   }, [actionLoadingKey, dataSource, handleCopy, handleReopenQc, handleRetrySend]);
@@ -908,7 +1001,13 @@ const EtsyQC = () => {
                   Export Excel ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
-              <Tooltip title={isPushableFilter ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Ready or Failed filter to push Etsy orders to Fulfillment Platform v2'}>
+              <Tooltip
+                title={
+                  isPushableFilter
+                    ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status'
+                    : 'Switch to Ready or Failed filter to push Etsy orders to Fulfillment Platform v2'
+                }
+              >
                 <Button
                   type="primary"
                   icon={<MdOutlineSend />}
@@ -916,7 +1015,7 @@ const EtsyQC = () => {
                   loading={pushingToFulfillmentPlatform}
                   disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
-                  Push Platform Test ({selectedRowKeys.length})
+                  Push Fulfillment LNG ({selectedRowKeys.length}) Push Fulfillment LNG ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
             </div>
