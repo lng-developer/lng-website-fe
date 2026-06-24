@@ -1015,7 +1015,7 @@ const EtsyQC = () => {
                   loading={pushingToFulfillmentPlatform}
                   disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
-                  Push Fulfillment LNG ({selectedRowKeys.length}) Push Fulfillment LNG ({selectedRowKeys.length})
+                  Push Fulfillment LNG ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
             </div>
