@@ -18,20 +18,46 @@ import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import { getALlShop } from '../../apis/order';
-import { getAllSellers } from '../../apis/user';
-import { confirmEtsyScaleForItem, getAllEtsyQC, getAllEtsyQCStatistics, pushSelectedEtsyOrdersToFulfillmentPlatform } from '../../apis/etsy';
+import { getAllSellers, getAllUsers } from '../../apis/user';
+import { getALlVendor } from '../../apis/vendor';
+import {
+  confirmEtsyScaleForItem,
+  getAllEtsyQC,
+  getAllEtsyQCStatistics,
+  pushSelectedEtsyOrdersToFulfillmentPlatform,
+  reopenEtsyQc,
+  retrySendEtsyFulfillment,
+} from '../../apis/etsy';
 import QcCanvasModal from './ModalQC';
 import ItemProductInfoEtsyQC from './ItemProductInfoEtsyQC';
 import { toast } from 'sonner';
 import { getCustomizationExportValue, getDesignExportValues } from './exportHelpers';
+import {
+  canReopenEtsyQc,
+  canRetryEtsySend,
+  getEtsyFailureInfo,
+  getReopenEtsyQcDisabledReason,
+  getRetryEtsySendDisabledReason,
+} from './etsyQcActions';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
+
+const ETSY_ORDER_STATUS_OPTIONS = ['New', 'Shipped', 'Fulfilled', 'Cancelled', 'Canceled'].map((status) => ({
+  label: status,
+  value: status,
+}));
+
+const HAS_SCALE_FILE_OPTIONS = [
+  { label: 'Has scale file', value: 'true' },
+  { label: 'Missing scale file', value: 'false' },
+];
 
 const etsyQcFilterTabs = [
   { key: 'All', title: 'All', status: 'All' },
   { key: 'Pending', title: 'Pending', status: 'Pending' },
   { key: 'Ready', title: 'Ready', status: 'Ready' },
+  { key: 'Failed', title: 'Failed', status: 'Failed' },
   { key: 'Sent', title: 'Completed', status: 'Sent' },
   { key: 'QC Rejected', title: 'QC Rejected', status: 'QC Rejected' },
   { key: 'Address Invalid', title: 'Address Invalid', status: 'Address Invalid' },
@@ -124,6 +150,8 @@ const EtsyQC = () => {
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [tableHeight, setTableHeight] = useState(0);
   const [sellers, setSellers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [selectSeller, setSelectSeller] = useState();
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
@@ -131,6 +159,7 @@ const EtsyQC = () => {
   const [pushingToFulfillmentPlatform, setPushingToFulfillmentPlatform] = useState(false);
   const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
   const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
+  const [actionLoadingKey, setActionLoadingKey] = useState('');
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: DEFAULT_PAGE_SIZE,
@@ -140,6 +169,12 @@ const EtsyQC = () => {
     search: '',
     sellerId: '',
     shopName: '',
+    vendor: '',
+    failureReason: '',
+    orderStatus: '',
+    scaleBy: '',
+    qcBy: '',
+    hasScaleFile: '',
   });
   const isPushableFilter = isActiveFilter?.status === 'Ready' || isActiveFilter?.status === 'Failed';
 
@@ -151,6 +186,25 @@ const EtsyQC = () => {
   const selectedFulfillmentItemCount = useMemo(
     () => selectedOrdersForFulfillment.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items.length : 0), 0),
     [selectedOrdersForFulfillment]
+  );
+
+  const userOptions = useMemo(
+    () =>
+      users.map((item) => ({
+        label: item?.full_name || item?.email || item?.username || item?._id,
+        value: item?._id,
+      })),
+    [users]
+  );
+
+  const vendorOptions = useMemo(
+    () =>
+      vendors
+        .flatMap((item) => [item?.name, item?.fulfillment_type])
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index)
+        .map((value) => ({ label: value, value })),
+    [vendors]
   );
 
   const updateFilter = useCallback((newValues) => {
@@ -243,7 +297,11 @@ const EtsyQC = () => {
 
   const fetchCountStatus = useCallback(async () => {
     try {
-      const response = await getAllEtsyQCStatistics(filters);
+      const statisticsFilters = { ...filters };
+      delete statisticsFilters.scale_status;
+      delete statisticsFilters.page;
+      delete statisticsFilters.perPage;
+      const response = await getAllEtsyQCStatistics(statisticsFilters);
       if (response.status === 200) {
         setTabFilter(
           etsyQcFilterTabs.map(({ key, title, status }) => ({
@@ -282,6 +340,27 @@ const EtsyQC = () => {
     }
   }, []);
 
+  const fetchAdvancedFilterData = useCallback(async () => {
+    try {
+      const [usersRes, vendorsRes] = await Promise.all([
+        getAllUsers({ all: true, perPage: 1000 }),
+        getALlVendor(),
+      ]);
+
+      if (usersRes.status === 200) {
+        const userList = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.data || [];
+        setUsers(userList);
+      }
+
+      if (vendorsRes.status === 200) {
+        const vendorList = Array.isArray(vendorsRes.data) ? vendorsRes.data : vendorsRes.data?.data || [];
+        setVendors(vendorList);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to fetch advanced filters');
+    }
+  }, []);
+
   const fetchAllShop = useCallback(async () => {
     try {
       const result = await getALlShop({ merchant: 'etsy' });
@@ -295,6 +374,11 @@ const EtsyQC = () => {
 
   const debouncedSearch = useMemo(() => debounce((keyword) => updateFilter({ search: keyword || '', page: 1 }), 300), [updateFilter]);
   const handleSearch = useCallback((e) => debouncedSearch(e.target.value), [debouncedSearch]);
+  const debouncedFailureReason = useMemo(
+    () => debounce((keyword) => updateFilter({ failureReason: keyword || '', page: 1 }), 300),
+    [updateFilter]
+  );
+  const handleFailureReasonSearch = useCallback((e) => debouncedFailureReason(e.target.value), [debouncedFailureReason]);
 
   const handleCopy = useCallback(async (textToCopy) => {
     try {
@@ -377,7 +461,7 @@ const EtsyQC = () => {
 
   const openPushFulfillmentModal = useCallback(() => {
     if (!isPushableFilter) {
-      toast.error('Please switch to Ready filter before pushing Etsy orders to Fulfillment Platform v2');
+      toast.error('Please switch to Ready or Failed filter before pushing Etsy orders to Fulfillment Platform v2');
       return;
     }
 
@@ -445,7 +529,69 @@ const EtsyQC = () => {
     }
   }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
 
-  useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
+  const handleRetrySend = useCallback(
+    async (order, failureInfo) => {
+      const provider = failureInfo?.provider;
+      if (!provider) {
+        toast.error('Cannot retry: missing vendor provider from failure response.');
+        return;
+      }
+
+      const key = `${order.orderId}:retry`;
+      setActionLoadingKey(key);
+      try {
+        const response = await retrySendEtsyFulfillment(
+          order.orderId,
+          { provider },
+          { shopId: order.shopId, provider }
+        );
+        toast.success(response.data?.message || 'Retry send completed');
+        fetchAllQC(filters);
+        fetchCountStatus();
+      } catch (error) {
+        const status = error?.response?.status;
+        const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Retry send failed';
+        toast.error(status ? `Retry failed (${status}): ${message}` : message);
+      } finally {
+        setActionLoadingKey('');
+      }
+    },
+    [fetchAllQC, fetchCountStatus, filters]
+  );
+
+  const handleReopenQc = useCallback(
+    async (order, failureInfo) => {
+      const key = `${order.orderId}:reopen`;
+      setActionLoadingKey(key);
+      try {
+        const response = await reopenEtsyQc(
+          order.orderId,
+          {
+            reason: failureInfo?.error || 'Reopen QC from failed vendor send',
+          },
+          { shopId: order.shopId }
+        );
+        toast.success(response.data?.message || 'Order reopened for QC');
+        fetchAllQC(filters);
+        fetchCountStatus();
+      } catch (error) {
+        const status = error?.response?.status;
+        const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Reopen QC failed';
+        toast.error(status ? `Re-QC failed (${status}): ${message}` : message);
+      } finally {
+        setActionLoadingKey('');
+      }
+    },
+    [fetchAllQC, fetchCountStatus, filters]
+  );
+
+  useEffect(
+    () => () => {
+      debouncedSearch.cancel();
+      debouncedFailureReason.cancel();
+    },
+    [debouncedFailureReason, debouncedSearch]
+  );
 
   const qcQueue = useMemo(() => {
     const queue = [];
@@ -492,7 +638,14 @@ const EtsyQC = () => {
   );
 
   const tableData = useMemo(() => {
-    return (dataSource || []).map((item) => ({
+    return (dataSource || []).map((item) => {
+      const failureInfo = getEtsyFailureInfo(item);
+      const retryDisabledReason = getRetryEtsySendDisabledReason(item);
+      const reopenDisabledReason = getReopenEtsyQcDisabledReason(item);
+      const retryable = canRetryEtsySend(item);
+      const reopenable = canReopenEtsyQc(item);
+
+      return {
       key: item?.orderId,
       orderId: (
         <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
@@ -551,7 +704,57 @@ const EtsyQC = () => {
           ),
           action: (
             <>
-              {itemSub?.scale_status === 'Pending' ? (
+              {item?.scale_overall_status === 'Failed' ? (
+                <Flex vertical gap={6} align="center">
+                  <Tooltip
+                    title={
+                      failureInfo?.error
+                        ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
+                        : 'Backend has not returned the failed vendor response for this order.'
+                    }
+                  >
+                    <div className="max-w-[210px] text-xs text-left text-[#cd1323] leading-5">
+                      <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
+                      <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
+                    </div>
+                  </Tooltip>
+                  <Flex gap={6} wrap="wrap" justify="center">
+                    <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
+                      <span>
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<MdOutlineSend />}
+                          disabled={!retryable}
+                          loading={actionLoadingKey === `${item.orderId}:retry`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleRetrySend(item, failureInfo);
+                          }}
+                        >
+                          Retry
+                        </Button>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={reopenDisabledReason || 'Move back to Pending QC and keep scale files.'}>
+                      <span>
+                        <Button
+                          size="small"
+                          icon={<MdOutlineImageSearch />}
+                          disabled={!reopenable}
+                          loading={actionLoadingKey === `${item.orderId}:reopen`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleReopenQc(item, failureInfo);
+                          }}
+                        >
+                          Re-QC
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  </Flex>
+                </Flex>
+              ) : itemSub?.scale_status === 'Pending' ? (
                 <Tooltip title="QC">
                   <button
                     className="cursor-pointer border rounded"
@@ -578,8 +781,9 @@ const EtsyQC = () => {
           ),
         };
       }),
-    }));
-  }, [dataSource, handleCopy]);
+      };
+    });
+  }, [actionLoadingKey, dataSource, handleCopy, handleReopenQc, handleRetrySend]);
 
   useEffect(() => {
     setCurrentPage(filters.page);
@@ -597,13 +801,17 @@ const EtsyQC = () => {
   }, [fetchAllSellersMemo]);
 
   useEffect(() => {
+    fetchAdvancedFilterData();
+  }, [fetchAdvancedFilterData]);
+
+  useEffect(() => {
     fetchAllQC(filters);
     fetchCountStatus();
   }, [filters, fetchAllQC, fetchCountStatus]);
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240;
+      const headerHeight = 300;
       const marginBottom = 20;
       setTableHeight(window.innerHeight - headerHeight - marginBottom);
     };
@@ -700,7 +908,7 @@ const EtsyQC = () => {
                   Export Excel ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
-              <Tooltip title={isPushableFilter ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Ready filter to push Etsy orders to Fulfillment Platform v2'}>
+              <Tooltip title={isPushableFilter ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status' : 'Switch to Ready or Failed filter to push Etsy orders to Fulfillment Platform v2'}>
                 <Button
                   type="primary"
                   icon={<MdOutlineSend />}
@@ -726,6 +934,46 @@ const EtsyQC = () => {
               onShowSizeChange={handlePageChange}
             />
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <SelectSeller
+            title="Vendor"
+            ListData={vendorOptions}
+            value={filters.vendor || undefined}
+            onChange={(value) => updateFilter({ vendor: value || '', page: 1 })}
+          />
+          <Input
+            allowClear
+            placeholder="Failure reason"
+            onChange={handleFailureReasonSearch}
+            className="h-10 rounded-md border-dashed"
+            style={{ width: 220 }}
+          />
+          <SelectSeller
+            title="Order Status"
+            ListData={ETSY_ORDER_STATUS_OPTIONS}
+            value={filters.orderStatus || undefined}
+            onChange={(value) => updateFilter({ orderStatus: value || '', page: 1 })}
+          />
+          <SelectSeller
+            title="Scale By"
+            ListData={userOptions}
+            value={filters.scaleBy || undefined}
+            onChange={(value) => updateFilter({ scaleBy: value || '', page: 1 })}
+          />
+          <SelectSeller
+            title="QC By / CS"
+            ListData={userOptions}
+            value={filters.qcBy || undefined}
+            onChange={(value) => updateFilter({ qcBy: value || '', page: 1 })}
+          />
+          <SelectSeller
+            title="Scale File"
+            ListData={HAS_SCALE_FILE_OPTIONS}
+            value={filters.hasScaleFile || undefined}
+            onChange={(value) => updateFilter({ hasScaleFile: value || '', page: 1 })}
+          />
         </div>
 
         <div className="mt-4">

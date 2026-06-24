@@ -1,7 +1,6 @@
 import axios from 'axios';
 const instance = axios.create({
-  baseURL: 'https://api.lngmerch.co/api',
-  // baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.lngmerch.co/api',
   headers: {
     'Content-Type': 'application/json',
   },

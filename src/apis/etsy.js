@@ -133,6 +133,23 @@ const confirmEtsyScaleForItem = (orderId, transactionId, payload, options = {}) 
   });
 };
 
+const retrySendEtsyFulfillment = (orderId, payload = {}, options = {}) => {
+  return instance.post(`/etsy/${encodeURIComponent(orderId)}/scale/send`, payload, {
+    params: {
+      shopId: options?.shopId || undefined,
+      provider: options?.provider || payload?.provider || undefined,
+    },
+  });
+};
+
+const reopenEtsyQc = (orderId, payload = {}, options = {}) => {
+  return instance.patch(`/etsy/${encodeURIComponent(orderId)}/scale/reopen-qc`, payload, {
+    params: {
+      shopId: options?.shopId || undefined,
+    },
+  });
+};
+
 const assignEtsyOrderToCs = (orderId, payload) => {
   return instance.put(`/etsy/${encodeURIComponent(orderId)}/assign-cs`, payload);
 };
@@ -172,6 +189,8 @@ export {
   pushSelectedEtsyOrdersToFulfillmentPlatform,
   uploadEtsyScale,
   confirmEtsyScaleForItem,
+  retrySendEtsyFulfillment,
+  reopenEtsyQc,
   assignEtsyOrderToCs,
   unassignEtsyOrderFromCs,
   updateEtsyCSNote,
