@@ -6,12 +6,13 @@ import { CloseOutlined } from '@ant-design/icons';
 const SelectProductType = ({ ListData = [], value, onChange, title }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectLabel, setSelectLabel] = useState('');
 
   const filteredVendors = useMemo(() => {
     if (!search.trim()) return ListData;
     return ListData.filter((v) => v?.label?.toLowerCase().includes(search.toLowerCase()));
   }, [ListData, search]);
+
+  const selectLabel = useMemo(() => ListData.find((item) => item?.value === value)?.label || '', [ListData, value]);
 
   const handleSelect = (val) => {
     onChange?.(val);
@@ -42,7 +43,6 @@ const SelectProductType = ({ ListData = [], value, onChange, title }) => {
               value={data?.value}
               style={{ paddingLeft: 10, paddingTop: 5, paddingBottom: 5, marginRight: 0 }}
               className="hover:bg-[#f1f5f9] rounded-lg"
-              onClick={() => setSelectLabel(data?.label)}
             >
               {data?.label}
             </Radio>

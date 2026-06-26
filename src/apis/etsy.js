@@ -9,6 +9,7 @@ const getAllEtsyOrders = (params = {}) => {
     search: params.search || undefined,
     shopName: params.shopName || undefined,
     teamId: params.teamId || undefined,
+    vendorId: params.vendorId || undefined,
     shippingType: params.shippingType || undefined,
     status: params.status || undefined,
     sumbittedoetsy: params.sumbittedoetsy === true || params.sumbittedoetsy === false ? params.sumbittedoetsy : undefined,

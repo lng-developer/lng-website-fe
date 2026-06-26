@@ -321,10 +321,12 @@ const dataFilterStatusEtsy = [
   { key: 'all',            title: 'All',             status: 'All'          },
   { key: 'new',            title: 'New Order',       status: 'New'          },
   { key: 'noCostCenter',   title: 'No Cost Center',  status: 'NoCostCenter' },
+  { key: 'noPsd',          title: 'No PSD',          status: 'noPsd'        },
   { key: 'fulfilled',      title: 'Fulfilled',       status: 'Fulfilled'    },
   { key: 'shipped',        title: 'Shipped',         status: 'Shipped'      },
   { key: 'cancelled',      title: 'Cancelled',       status: 'Cancelled'    },
   { key: 'refund',         title: 'Refund',          status: 'Refund'       },
+  { key: 'openCase',       title: 'Open Case',       status: 'openCase'     },
   { key: 'invalidAddress', title: 'Address Invalid', status: 'invalidAddress'},
 ];
 

@@ -5,6 +5,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Flex, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
+import SelectSeller from '../../components/SelectSeller';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { MdOutlineRefresh } from 'react-icons/md';
 import StatusComponent from '../../components/StatusComponent';
@@ -22,10 +23,14 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
-import { getAllUsers } from '../../apis/user';
+import { getAllSellers, getAllUsers } from '../../apis/user';
 import { useAuth } from '../../context/AuthContext';
 const LAST_UPDATED_KEY = 'orders_fulfill_last_updated_at';
 const PAGE_SIZE = 10;
+const CS_ASSIGNMENT_STATUS_OPTIONS = [
+  { label: 'Assigned', value: 'Assigned' },
+  { label: 'Unassigned', value: 'Unassigned' },
+];
 const fulfillmentFilterTabs = [
   dataFilterStatusFulfillment[0],
   {
@@ -50,7 +55,9 @@ const FulfillmentScale = () => {
   const [tabFilter, setTabFilter] = useState(fulfillmentFilterTabs);
   const [shops, setShops] = useState([]);
   const [csUsers, setCsUsers] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [selectSeller, setSelectSeller] = useState();
   const [assigningOrderId, setAssigningOrderId] = useState('');
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
@@ -60,11 +67,14 @@ const FulfillmentScale = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     scale_status: '',
-    unassigned: false,
+    cs_unassigned: false,
     from: defaultFrom,
     to: defaultTo,
     search: '',
     shopName: '',
+    sellerId: '',
+    cs_assignee_id: '',
+    cs_assignment_status: '',
   });
   const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader' || user?.role === 'Design';
 
@@ -244,16 +254,16 @@ const FulfillmentScale = () => {
   const handleFilterForStatus = useCallback(
     (status) => {
       if (status === 'All') {
-        updateFilter({ scale_status: '', unassigned: false, page: 1 });
+        updateFilter({ scale_status: '', cs_unassigned: false, cs_assignment_status: '', page: 1 });
         return;
       }
 
       if (status === 'CSUnassigned') {
-        updateFilter({ scale_status: '', unassigned: true, page: 1 });
+        updateFilter({ scale_status: '', cs_unassigned: true, cs_assignment_status: 'Unassigned', cs_assignee_id: '', page: 1 });
         return;
       }
 
-      updateFilter({ scale_status: status, unassigned: false, page: 1 });
+      updateFilter({ scale_status: status, cs_unassigned: false, page: 1 });
     },
     [updateFilter]
   );
@@ -283,6 +293,23 @@ const FulfillmentScale = () => {
     } catch (error) {
       console.error(error);
       toast.error('Failed to load CS users');
+    }
+  }, []);
+
+  const fetchAllSellersMemo = useCallback(async () => {
+    try {
+      const res = await getAllSellers();
+      if (res.status === 200) {
+        setSellers(
+          (res.data || []).map((item) => ({
+            label: item?.full_name,
+            value: item?._id,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load sellers');
     }
   }, []);
 
@@ -472,10 +499,12 @@ const FulfillmentScale = () => {
   }, [fetchAllShop]);
 
   useEffect(() => {
-    if (canAssignCs) {
-      fetchCsUsers();
-    }
-  }, [canAssignCs, fetchCsUsers]);
+    fetchCsUsers();
+  }, [fetchCsUsers]);
+
+  useEffect(() => {
+    fetchAllSellersMemo();
+  }, [fetchAllSellersMemo]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -537,24 +566,52 @@ const FulfillmentScale = () => {
           ))}
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[40%] gap-2">
+        <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+            <div className="w-[270px] flex-none">
             <Input
               onChange={handleSearch}
-              placeholder="Search..."
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+              placeholder="Search text..."
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full"
             />
-            <div className="flex gap-2 items-center ">
-              <SelectFilter
-                title="Shop"
-                ListData={shops.map((item) => item.name)}
-                value={selectShop}
-                onChange={(val) => {
-                  setSelectShop(val);
-                  updateFilter({ shopName: val, page: 1 });
-                }}
-              />
             </div>
+            <SelectFilter
+              title="Shop"
+              ListData={shops.map((item) => item.name).filter(Boolean)}
+              value={selectShop}
+              onChange={(val) => {
+                setSelectShop(val || '');
+                updateFilter({ shopName: val || '', page: 1 });
+              }}
+            />
+            <SelectSeller
+              title="Seller"
+              ListData={sellers}
+              value={selectSeller}
+              onChange={(val) => {
+                setSelectSeller(val || undefined);
+                updateFilter({ sellerId: val || '', page: 1 });
+              }}
+            />
+            <SelectSeller
+              title="CS By"
+              ListData={csUsers}
+              value={filters.cs_assignee_id || undefined}
+              onChange={(val) => updateFilter({ cs_assignee_id: val || '', cs_unassigned: false, page: 1 })}
+            />
+            <SelectSeller
+              title="CS Status"
+              ListData={CS_ASSIGNMENT_STATUS_OPTIONS}
+              value={filters.cs_assignment_status || undefined}
+              onChange={(val) =>
+                updateFilter({
+                  cs_assignment_status: val || '',
+                  cs_unassigned: val === 'Unassigned',
+                  cs_assignee_id: val === 'Unassigned' ? '' : filters.cs_assignee_id,
+                  page: 1,
+                })
+              }
+            />
             <Tooltip title="Refresh">
               <button
                 className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
@@ -568,7 +625,7 @@ const FulfillmentScale = () => {
               </button>
             </Tooltip>
           </div>
-          <div>
+          <div className="flex-none">
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}

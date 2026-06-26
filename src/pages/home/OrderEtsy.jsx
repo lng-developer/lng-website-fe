@@ -12,6 +12,7 @@ import { TbHistory, TbReplace } from 'react-icons/tb';
 import { BiRefresh } from 'react-icons/bi';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
+import SelectProductType from '../../components/SelectProductType';
 import StatusComponent from '../../components/StatusComponent';
 import DateRangePicker from '../../components/DateRangePicker';
 import { dataColors } from '../../utils/dataColors';
@@ -45,6 +46,7 @@ import {
   updateEtsyOrderItemQuantity,
 } from '../../apis/etsy';
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
+import { getALlVendor } from '../../apis/vendor';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 const NO_COST_STATUS_OPTIONS = dataFilterStatusEtsy
@@ -66,7 +68,9 @@ const OrderEtsy = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [shippingType, setShippingType] = useState('');
   const [shops, setShops] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [selectVendor, setSelectVendor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isShowRowkeys, setIsShowRowKeys] = useState(true);
   const [tableHeight, setTableHeight] = useState(0);
@@ -96,6 +100,7 @@ const OrderEtsy = () => {
     noPsd: false,
     shopName: '',
     teamId: '',
+    vendorId: '',
     shippingType: '',
   });
 
@@ -416,18 +421,19 @@ const OrderEtsy = () => {
   const handleFilterForStatus = useCallback(
     (status) => {
       setCurrentPage(1);
+      setSelectVendor(null);
       if (status === 'All')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
       if (status === 'NoCostCenter')
-        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
       if (status === 'invalidAddress')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, vendorId: '', page: 1 });
       if (status === 'openCase')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true, noPsd: false, vendorId: '', page: 1 });
       if (status === 'noPsd')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, vendorId: '', page: 1 });
       // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
-      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
     },
     [updateFilter]
   );
@@ -551,6 +557,22 @@ const OrderEtsy = () => {
       const result = await getALlShop({ merchant: 'etsy' });
       if (result.status === 200) {
         setShops(result.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  const fetchAllVendor = useCallback(async () => {
+    try {
+      const response = await getALlVendor();
+      if (response.status === 200) {
+        setVendors(
+          (response.data || []).map((item) => ({
+            value: item?._id,
+            label: item?.name,
+          }))
+        );
       }
     } catch (error) {
       console.error(error);
@@ -878,6 +900,10 @@ const OrderEtsy = () => {
   }, [fetchAllShop]);
 
   useEffect(() => {
+    fetchAllVendor();
+  }, [fetchAllVendor]);
+
+  useEffect(() => {
     fetchAllTeams();
   }, [fetchAllTeams]);
 
@@ -1059,6 +1085,15 @@ const OrderEtsy = () => {
                 onChange={(val) => {
                   setSelectTeam(val);
                   updateFilter({ teamId: val, page: 1 });
+                }}
+              />
+              <SelectProductType
+                title="Vendor"
+                ListData={vendors}
+                value={selectVendor}
+                onChange={(val) => {
+                  setSelectVendor(val);
+                  updateFilter({ vendorId: val || '', page: 1 });
                 }}
               />
             </div>

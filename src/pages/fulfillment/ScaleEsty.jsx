@@ -5,6 +5,7 @@ import ButtonFilter from '../../components/ButtonFilter';
 import { dataColors } from '../../utils/dataColors';
 import { Flex, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import SelectFilter from '../../components/SelectFilter';
+import SelectSeller from '../../components/SelectSeller';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { MdOutlineRefresh } from 'react-icons/md';
 import StatusComponent from '../../components/StatusComponent';
@@ -30,10 +31,19 @@ import {
   uploadEtsyScale,
 } from '../../apis/etsy';
 import { getAllUsers } from '../../apis/user';
+import { getALlVendor } from '../../apis/vendor';
 import { useAuth } from '../../context/AuthContext';
 
 const LAST_UPDATED_KEY = 'orders_etsy_scale_last_updated_at';
 const PAGE_SIZE = 10;
+const ETSY_ORDER_STATUS_OPTIONS = ['New', 'Shipped', 'Fulfilled', 'Cancelled', 'Canceled'].map((status) => ({
+  label: status,
+  value: status,
+}));
+const HAS_SCALE_FILE_OPTIONS = [
+  { label: 'Has scale file', value: 'true' },
+  { label: 'Missing scale file', value: 'false' },
+];
 
 const ScaleEsty = () => {
   const { user } = useAuth();
@@ -49,6 +59,7 @@ const ScaleEsty = () => {
   const [tabFilter, setTabFilter] = useState(dataFilterStatusFulfillment);
   const [shops, setShops] = useState([]);
   const [csUsers, setCsUsers] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [selectShop, setSelectShop] = useState('');
   const [assigningOrderId, setAssigningOrderId] = useState('');
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
@@ -63,6 +74,11 @@ const ScaleEsty = () => {
     to: defaultTo,
     search: '',
     shopName: '',
+    vendor: '',
+    orderStatus: '',
+    scaleBy: '',
+    qcBy: '',
+    hasScaleFile: '',
   });
   const canAssignCs = user?.role === 'Admin' || user?.role === 'Design Leader' || user?.role === 'Designer';
 
@@ -85,6 +101,25 @@ const ScaleEsty = () => {
       page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
+
+  const userOptions = useMemo(
+    () =>
+      csUsers.map((item) => ({
+        label: item?.full_name || item?.email || item?.username || item?._id,
+        value: item?._id,
+      })),
+    [csUsers]
+  );
+
+  const vendorOptions = useMemo(
+    () =>
+      vendors
+        .flatMap((item) => [item?.name, item?.fulfillment_type])
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index)
+        .map((value) => ({ label: value, value })),
+    [vendors]
+  );
 
   const handlePageChange = useCallback(
     (page, pageSize) => {
@@ -221,6 +256,18 @@ const ScaleEsty = () => {
     } catch (error) {
       console.error(error);
       toast.error('Failed to load CS users');
+    }
+  }, []);
+
+  const fetchVendors = useCallback(async () => {
+    try {
+      const result = await getALlVendor();
+      if (result.status === 200) {
+        setVendors(Array.isArray(result.data) ? result.data : result.data?.data || []);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load vendors');
     }
   }, []);
 
@@ -483,10 +530,12 @@ const ScaleEsty = () => {
   }, [fetchAllShop]);
 
   useEffect(() => {
-    if (canAssignCs) {
-      fetchCsUsers();
-    }
-  }, [canAssignCs, fetchCsUsers]);
+    fetchVendors();
+  }, [fetchVendors]);
+
+  useEffect(() => {
+    fetchCsUsers();
+  }, [fetchCsUsers]);
 
   useEffect(() => {
     fetchAllFulfill(filters);
@@ -535,24 +584,54 @@ const ScaleEsty = () => {
           ))}
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[40%] gap-2">
+        <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+            <div className="w-[270px] flex-none">
             <Input
               onChange={handleSearch}
-              placeholder="Search..."
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+              placeholder="Search text..."
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full"
             />
-            <div className="flex gap-2 items-center ">
-              <SelectFilter
-                title="Shop"
-                ListData={shops.map((item) => item?.name).filter(Boolean)}
-                value={selectShop}
-                onChange={(val) => {
-                  setSelectShop(val || '');
-                  updateFilter({ shopName: val || '', page: 1 });
-                }}
-              />
             </div>
+            <SelectFilter
+              title="Shop"
+              ListData={shops.map((item) => item?.name).filter(Boolean)}
+              value={selectShop}
+              onChange={(val) => {
+                setSelectShop(val || '');
+                updateFilter({ shopName: val || '', page: 1 });
+              }}
+            />
+            <SelectSeller
+              title="Vendor"
+              ListData={vendorOptions}
+              value={filters.vendor || undefined}
+              onChange={(value) => updateFilter({ vendor: value || '', page: 1 })}
+            />
+            <SelectSeller
+              title="Order Status"
+              ListData={ETSY_ORDER_STATUS_OPTIONS}
+              value={filters.orderStatus || undefined}
+              onChange={(value) => updateFilter({ orderStatus: value || '', page: 1 })}
+            />
+            <SelectSeller
+              title="Scale By"
+              ListData={userOptions}
+              value={filters.scaleBy || undefined}
+              onChange={(value) => updateFilter({ scaleBy: value || '', page: 1 })}
+            />
+            <SelectSeller
+              title="QC By / CS"
+              ListData={userOptions}
+              value={filters.qcBy || undefined}
+              onChange={(value) => updateFilter({ qcBy: value || '', page: 1 })}
+            />
+            <SelectSeller
+              title="Scale File"
+              ListData={HAS_SCALE_FILE_OPTIONS}
+              value={filters.hasScaleFile || undefined}
+              onChange={(value) => updateFilter({ hasScaleFile: value || '', page: 1 })}
+            />
             <Tooltip title="Refresh">
               <button
                 className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer"
@@ -566,7 +645,7 @@ const ScaleEsty = () => {
               </button>
             </Tooltip>
           </div>
-          <div>
+          <div className="flex-none">
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}

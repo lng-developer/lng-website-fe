@@ -748,30 +748,31 @@ const QC = () => {
           ))}
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[60%] gap-2">
+        <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+            <div className="w-[270px] flex-none">
             <Input
               onChange={handleSearch}
-              placeholder="Search..."
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full flex-1 sm:w-auto sm:max-w-72"
+              placeholder="Search text..."
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
             />
-            <div className="flex gap-2 items-center">
+            </div>
               <SelectSeller
                 title="Seller"
                 ListData={sellers}
                 value={selectSeller}
                 onChange={(val) => {
-                  setSelectSeller(val);
-                  updateFilter({ sellerId: val, page: 1 });
+                  setSelectSeller(val || undefined);
+                  updateFilter({ sellerId: val || '', page: 1 });
                 }}
               />
               <SelectFilter
                 title="Shop"
-                ListData={shops.map((item) => item.name)}
+                ListData={shops.map((item) => item.name).filter(Boolean)}
                 value={selectShop}
                 onChange={(val) => {
-                  setSelectShop(val);
-                  updateFilter({ shopName: val, page: 1 });
+                  setSelectShop(val || '');
+                  updateFilter({ shopName: val || '', page: 1 });
                 }}
               />
               <Tooltip title="Refresh">
@@ -833,10 +834,9 @@ const QC = () => {
                   Push Fulfillment LNG ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
-            </div>
           </div>
 
-          <div>
+          <div className="flex-none">
             <Pagination
               total={totalCount}
               showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}

@@ -14,6 +14,10 @@ import ModalEditConfig from './ModalEditConfig';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 const PAGE_SIZE = 10;
+const platformOptions = ['Amazon', 'Ebay', 'Etsy', 'Facebook', 'Shopbase', 'Shopify', 'Tiktok', 'Woocommerce'].map((platform) => ({
+  value: platform,
+  label: platform,
+}));
 
 const CostCenterConfig = () => {
   const { collapsed } = useOutletContext();
@@ -29,6 +33,7 @@ const CostCenterConfig = () => {
     page: currentPage,
     perPage: PAGE_SIZE,
     code: '',
+    platform: '',
     product_for_seller: '',
   });
 
@@ -420,6 +425,12 @@ const CostCenterConfig = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
+              <SelectProductType
+                title="Platform"
+                ListData={platformOptions}
+                value={filters.platform}
+                onChange={(val) => updateFilter({ platform: val || '', page: 1 })}
+              />
               <SelectProductType
                 title="Product Type"
                 ListData={productTypes}
