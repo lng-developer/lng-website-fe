@@ -47,6 +47,9 @@ import OrderLogPopover from '../../components/OrderLogPopover';
 import { useAuth } from '../../context/AuthContext';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
+const NO_COST_STATUS_OPTIONS = dataFilterStatus
+  .filter(({ status }) => !['All', 'NoCostCenter', 'openCase', 'invalidAddress', 'noPsd'].includes(status))
+  .map(({ status }) => status);
 
 const Home = () => {
   const { user } = useAuth();
@@ -450,7 +453,7 @@ const Home = () => {
       }
 
       if (status === 'NoCostCenter') {
-        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+        return updateFilter({ isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
       }
 
       if (status === 'openCase') {
@@ -465,7 +468,14 @@ const Home = () => {
         return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true, page: 1 });
       }
 
-      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+      updateFilter({ statuses: status, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+    },
+    [updateFilter]
+  );
+
+  const handleNoCostStatusChange = useCallback(
+    (status) => {
+      updateFilter({ statuses: status || '', page: 1 });
     },
     [updateFilter]
   );
@@ -1037,6 +1047,14 @@ const Home = () => {
               className="flex min-w-36 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
+              {filters.isNoCostCenter && (
+                <SelectFilter
+                  title="Status"
+                  ListData={NO_COST_STATUS_OPTIONS}
+                  value={filters.statuses || null}
+                  onChange={handleNoCostStatusChange}
+                />
+              )}
               <SelectFilter
                 title="Shipping Type"
                 ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}

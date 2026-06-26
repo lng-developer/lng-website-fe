@@ -47,6 +47,9 @@ import {
 import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
+const NO_COST_STATUS_OPTIONS = dataFilterStatusEtsy
+  .filter(({ status }) => !['All', 'NoCostCenter', 'invalidAddress', 'openCase', 'noPsd'].includes(status))
+  .map(({ status }) => status);
 
 const OrderEtsy = () => {
   const [orders, setOrders] = useState([]);
@@ -416,7 +419,7 @@ const OrderEtsy = () => {
       if (status === 'All')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'NoCostCenter')
-        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'invalidAddress')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, page: 1 });
       if (status === 'openCase')
@@ -424,7 +427,14 @@ const OrderEtsy = () => {
       if (status === 'noPsd')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, page: 1 });
       // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
-      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+      updateFilter({ status, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+    },
+    [updateFilter]
+  );
+
+  const handleNoCostStatusChange = useCallback(
+    (status) => {
+      updateFilter({ status: status || '', page: 1 });
     },
     [updateFilter]
   );
@@ -1014,6 +1024,14 @@ const OrderEtsy = () => {
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
             />
             <div className="flex gap-2 items-center ">
+              {filters.isNoCostCenter && (
+                <SelectFilter
+                  title="Status"
+                  ListData={NO_COST_STATUS_OPTIONS}
+                  value={filters.status || null}
+                  onChange={handleNoCostStatusChange}
+                />
+              )}
               <SelectFilter
                 title="Shipping Type"
                 ListData={['Second Day', 'Ground', 'Overnight', 'Economy', 'Standard', 'Expedited']}
