@@ -453,7 +453,7 @@ const Home = () => {
       }
 
       if (status === 'NoCostCenter') {
-        return updateFilter({ isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+        return updateFilter({ statuses: '', isNoCostCenter: true, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
       }
 
       if (status === 'openCase') {
@@ -468,7 +468,7 @@ const Home = () => {
         return updateFilter({ statuses: '', isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: true, page: 1 });
       }
 
-      updateFilter({ statuses: status, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
+      updateFilter({ statuses: status, isNoCostCenter: false, openCase: false, invalidAddress: false, noPsd: false, page: 1 });
     },
     [updateFilter]
   );

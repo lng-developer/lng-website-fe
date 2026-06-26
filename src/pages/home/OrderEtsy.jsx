@@ -419,7 +419,7 @@ const OrderEtsy = () => {
       if (status === 'All')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'NoCostCenter')
-        return updateFilter({ isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
       if (status === 'invalidAddress')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, page: 1 });
       if (status === 'openCase')
@@ -427,7 +427,7 @@ const OrderEtsy = () => {
       if (status === 'noPsd')
         return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, page: 1 });
       // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
-      updateFilter({ status, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
+      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, page: 1 });
     },
     [updateFilter]
   );
