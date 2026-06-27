@@ -43,6 +43,7 @@ import ScaleEsty from './pages/fulfillment/ScaleEsty';
 import CheckOder from './pages/home/checkoder/checkoder';
 import TrackingEtsy from './pages/extension/TrackingEtsy';
 import TrackingEtsyDetail from './pages/extension/TrackingEtsyDetail';
+import OrderLifecycleMonitoring from './pages/monitoring/OrderLifecycleMonitoring';
 
 function App() {
   return (
@@ -83,6 +84,7 @@ function App() {
           <Route path={routes.unauthorized} element={<UnauthorizedPage />} />
           <Route path={routes.report_ads} element={<AdsReport />} />
           <Route path={routes.report_ads_etsy} element={<AdsEtsyReport />} />
+          <Route path={routes.monitoring_order_lifecycle} element={<OrderLifecycleMonitoring />} />
 
           <Route path={routes.checkodertracking} element={<CheckOder />} />
           {/* ScalEsty */}

@@ -112,7 +112,10 @@ export const detailMenus = {
       key: 'a',
       label: 'Monitoring',
       icon: <AiOutlineFileSync size={20} />,
-      children: [{ key: 'order-missing-sync', label: 'Order Missing Sync', icon: <AiOutlineFileSync size={20} /> }],
+      children: [
+        { key: routes.monitoring_order_lifecycle, label: 'Order Lifecycle', icon: <AiOutlineFileSync size={20} /> },
+        { key: 'order-missing-sync', label: 'Order Missing Sync', icon: <AiOutlineFileSync size={20} /> },
+      ],
     },
     {
       key: 'd',
