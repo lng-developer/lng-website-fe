@@ -50,7 +50,7 @@ import { getALlVendor } from '../../apis/vendor';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 const NO_COST_STATUS_OPTIONS = dataFilterStatusEtsy
-  .filter(({ status }) => !['All', 'NoCostCenter', 'invalidAddress', 'openCase', 'noPsd'].includes(status))
+  .filter(({ status }) => !['All', 'NoCostCenter', 'invalidAddress', 'addressUnchecked', 'openCase', 'noPsd'].includes(status))
   .map(({ status }) => status);
 
 const OrderEtsy = () => {
@@ -96,6 +96,7 @@ const OrderEtsy = () => {
     search: '',
     isNoCostCenter: false,
     invalidAddress: false,
+    addressUnchecked: false,
     openCase: false,
     noPsd: false,
     shopName: '',
@@ -422,18 +423,21 @@ const OrderEtsy = () => {
     (status) => {
       setCurrentPage(1);
       setSelectVendor(null);
+      const resetSpecialFilters = { isNoCostCenter: false, invalidAddress: false, addressUnchecked: false, openCase: false, noPsd: false, vendorId: '' };
       if (status === 'All')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
+        return updateFilter({ status: '', ...resetSpecialFilters, page: 1 });
       if (status === 'NoCostCenter')
-        return updateFilter({ status: '', isNoCostCenter: true, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
+        return updateFilter({ status: '', ...resetSpecialFilters, isNoCostCenter: true, page: 1 });
+      if (status === 'addressUnchecked')
+        return updateFilter({ status: '', ...resetSpecialFilters, addressUnchecked: true, page: 1 });
       if (status === 'invalidAddress')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: true, openCase: false, noPsd: false, vendorId: '', page: 1 });
+        return updateFilter({ status: '', ...resetSpecialFilters, invalidAddress: true, page: 1 });
       if (status === 'openCase')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: true, noPsd: false, vendorId: '', page: 1 });
+        return updateFilter({ status: '', ...resetSpecialFilters, openCase: true, page: 1 });
       if (status === 'noPsd')
-        return updateFilter({ status: '', isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: true, vendorId: '', page: 1 });
+        return updateFilter({ status: '', ...resetSpecialFilters, noPsd: true, page: 1 });
       // Status thông thường: New, Fulfilled, Shipped, Cancelled, Refund
-      updateFilter({ status, isNoCostCenter: false, invalidAddress: false, openCase: false, noPsd: false, vendorId: '', page: 1 });
+      updateFilter({ status, ...resetSpecialFilters, page: 1 });
     },
     [updateFilter]
   );
@@ -666,6 +670,7 @@ const OrderEtsy = () => {
             fetchAllOrder={fetchAllOrder}
             filters={filters}
             address_validation={item?.address_validation}
+            address_validation_detail={item?.address_validation_detail}
             updateCustomerInfoRequest={updateEtsyCustomerAddress}
           />
         ),

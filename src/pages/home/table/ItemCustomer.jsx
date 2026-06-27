@@ -4,7 +4,7 @@ import { BiSolidEdit } from 'react-icons/bi';
 import { IoClose } from 'react-icons/io5';
 import { memo, useState } from 'react';
 import ModalUpdateCustomer from '../ModalUpdateCustomer';
-import { IoWarningOutline } from 'react-icons/io5';
+import { IoInformationCircleOutline, IoWarningOutline } from 'react-icons/io5';
 import { FcApproval } from 'react-icons/fc';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ const ItemCustomer = ({
   fetchCountStatus,
   filters,
   address_validation,
+  address_validation_detail,
   showMarkValidButton = false,
   updateCustomerInfoRequest,
 }) => {
@@ -206,13 +207,33 @@ const ItemCustomer = ({
   );
 
   const renderWarningAddress = () => {
-    if (address_validation) {
-      return <FcApproval size={18} />;
+    if (address_validation === true) {
+      return (
+        <Tooltip title="Address validated">
+          <span className="inline-flex"><FcApproval size={18} /></span>
+        </Tooltip>
+      );
     }
+
+    if (address_validation === false) {
+      return (
+        <Tooltip title={address_validation_detail?.errorMessage || 'Address invalid'}>
+          <button className="hover:underline cursor-pointer hover:text-blue">
+            <IoWarningOutline size={15} color={dataColors.cancelled} />
+          </button>
+        </Tooltip>
+      );
+    }
+
+    const country = String(customerInfor?.country || '').trim();
+    const title = country && !/^(us|usa|united states|united states of america)$/i.test(country)
+      ? `Non-US address (${country}) is not validated by US address check`
+      : 'Address not validated';
+
     return (
-      <Tooltip title="Warning address">
+      <Tooltip title={title}>
         <button className="hover:underline cursor-pointer hover:text-blue">
-          <IoWarningOutline size={15} color={dataColors.cancelled} />
+          <IoInformationCircleOutline size={15} color={dataColors.default} />
         </button>
       </Tooltip>
     );
@@ -251,7 +272,7 @@ const ItemCustomer = ({
         fetchAllOrder={fetchAllOrder}
         fetchCountStatus={fetchCountStatus}
         filters={filters}
-        showMarkValidButton={showMarkValidButton && !address_validation}
+        showMarkValidButton={showMarkValidButton && address_validation === false}
         updateCustomerInfoRequest={updateCustomerInfoRequest}
       />
     </>

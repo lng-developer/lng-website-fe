@@ -327,6 +327,7 @@ const dataFilterStatusEtsy = [
   { key: 'cancelled',      title: 'Cancelled',       status: 'Cancelled'    },
   { key: 'refund',         title: 'Refund',          status: 'Refund'       },
   { key: 'openCase',       title: 'Open Case',       status: 'openCase'     },
+  { key: 'addressUnchecked', title: 'Address Unchecked', status: 'addressUnchecked' },
   { key: 'invalidAddress', title: 'Address Invalid', status: 'invalidAddress'},
 ];
 

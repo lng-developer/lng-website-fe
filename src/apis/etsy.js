@@ -18,11 +18,11 @@ const getAllEtsyOrders = (params = {}) => {
     trackingInfo: params.hasTracking === true || params.hasTracking === false ? params.hasTracking : undefined,
     isNoCostCenter: params.isNoCostCenter || undefined,
     invalidAddress: params.invalidAddress || undefined,
+    addressUnchecked: params.addressUnchecked || undefined,
     openCase: params.openCase || undefined,
     noPsd: params.noPsd || undefined,
   };
 
-  console.log('[EtsyAPI] getAllEtsyOrders query:', query);
   return instance.get('/etsy', { params: query });
 };
 

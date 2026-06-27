@@ -662,6 +662,7 @@ const Home = () => {
           fetchCountStatus={fetchCountStatus}
           filters={filters}
           address_validation={item?.address_validation}
+          address_validation_detail={item?.address_validation_detail}
           showMarkValidButton={true}
         />
       ),
