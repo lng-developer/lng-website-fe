@@ -103,6 +103,10 @@ const resetEtsyScaleOrdersBulk = (payload) => {
   return instance.put('/etsy/scale/orders/reset/bulk', payload);
 };
 
+const replaceEtsyOrder = (orderId, payload) => {
+  return instance.post(`/etsy/${encodeURIComponent(orderId)}/replace`, payload);
+};
+
 const getAllEtsyQC = (params) => {
   return instance.get('/etsy/qc/list', { params });
 };
@@ -185,6 +189,7 @@ export {
   getAllEtsyScale,
   getAllEtsyScaleStatistics,
   resetEtsyScaleOrdersBulk,
+  replaceEtsyOrder,
   getAllEtsyQC,
   getAllEtsyQCStatistics,
   pushSelectedEtsyOrdersToFulfillmentPlatform,
