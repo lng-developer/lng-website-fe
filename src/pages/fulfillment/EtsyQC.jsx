@@ -250,12 +250,6 @@ const EtsyQC = () => {
         key: 'scale_overall_status',
         align: 'center',
       },
-      {
-        title: <span style={{ color: dataColors.title }}>Status QC</span>,
-        dataIndex: 'scale_overall_status',
-        key: 'scale_overall_status',
-        align: 'center',
-      },
       { title: <span style={{ color: dataColors.title }}>Created</span>, dataIndex: 'createdAt', key: 'createdAt', align: 'center' },
       {
         title: <span style={{ color: dataColors.title }}>Order Date</span>,
@@ -263,19 +257,7 @@ const EtsyQC = () => {
         key: 'purchase_date',
         align: 'center',
       },
-      {
-        title: <span style={{ color: dataColors.title }}>Order Date</span>,
-        dataIndex: 'purchase_date',
-        key: 'purchase_date',
-        align: 'center',
-      },
       { title: <span style={{ color: dataColors.title }}>Status Order</span>, dataIndex: 'status', key: 'status', align: 'center' },
-      {
-        title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
-        dataIndex: 'shipping_type',
-        key: 'shipping_type',
-        align: 'center',
-      },
       {
         title: <span style={{ color: dataColors.title }}>Shipping Type</span>,
         dataIndex: 'shipping_type',
@@ -303,36 +285,12 @@ const EtsyQC = () => {
         key: 'scale_status',
         align: 'center',
       },
-      {
-        title: <span style={{ color: dataColors.title }}>Product Info</span>,
-        dataIndex: 'product_info',
-        key: 'product_info',
-        align: 'left',
-      },
-      {
-        title: <span style={{ color: dataColors.title }}>Scale Status</span>,
-        dataIndex: 'scale_status',
-        key: 'scale_status',
-        align: 'center',
-      },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'seller', key: 'seller', align: 'center' },
-      {
-        title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
-        dataIndex: 'fulfill_name',
-        key: 'fulfill_name',
-        align: 'center',
-      },
       {
         title: <span style={{ color: dataColors.title }}>Customization</span>,
         dataIndex: 'customization',
         key: 'customization',
         align: 'left',
-      },
-      {
-        title: <span style={{ color: dataColors.title }}>Vendor Product</span>,
-        dataIndex: 'cost_center',
-        key: 'cost_center',
-        align: 'center',
       },
       {
         title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
