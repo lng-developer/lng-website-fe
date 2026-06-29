@@ -40,12 +40,13 @@ import {
   computeEtsyBaseCost,
   manualMappingEtsy,
   removeEtsyCase,
+  replaceEtsyOrder,
   resetEtsyScaleOrdersBulk,
   updateEtsyCustomerAddress,
   updateEtsyOpenCase,
   updateEtsyOrderItemQuantity,
 } from '../../apis/etsy';
-import { getALlShop, replaceOrder, syncVendorTracking } from '../../apis/order';
+import { getALlShop, syncVendorTracking } from '../../apis/order';
 import { getALlVendor } from '../../apis/vendor';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
@@ -506,8 +507,9 @@ const OrderEtsy = () => {
         return;
       }
 
-      const response = await replaceOrder(orderInfo?.orderId, {
-        orderItemIds: selectedReplaceItemIds,
+      const response = await replaceEtsyOrder(orderInfo?.orderId, {
+        transactionIds: selectedReplaceItemIds,
+        note: 'Replace wrong size',
       });
 
       if (response.status === 200) {
