@@ -287,12 +287,6 @@ const EtsyQC = () => {
       },
       { title: <span style={{ color: dataColors.title }}>Order Owner</span>, dataIndex: 'seller', key: 'seller', align: 'center' },
       {
-        title: <span style={{ color: dataColors.title }}>Customization</span>,
-        dataIndex: 'customization',
-        key: 'customization',
-        align: 'left',
-      },
-      {
         title: <span style={{ color: dataColors.title }}>Fulfill Name</span>,
         dataIndex: 'fulfill_name',
         key: 'fulfill_name',
