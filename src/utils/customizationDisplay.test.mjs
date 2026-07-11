@@ -18,6 +18,15 @@ const rows = getCustomizationRows([
     Position: { x: 150, y: 172 },
     priceDelta: { value: 0 },
     name: 'Text Input 1',
+    svgImage: 'hidden.svg',
+  },
+  {
+    label: 'Custom Date',
+    value: 'EST. 2025',
+    text: 'EST. 2025',
+    customizationType: 'TextPrinting',
+    colorName: 'Pink',
+    fontFamily: 'Mochary',
   },
 ]);
 
@@ -37,6 +46,10 @@ assert.deepEqual(rows, [
   {
     label: 'Thread Color',
     value: 'Gold',
+  },
+  {
+    label: 'Custom Date',
+    value: 'EST. 2025',
   },
 ]);
 

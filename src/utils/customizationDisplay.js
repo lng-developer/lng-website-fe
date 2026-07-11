@@ -38,6 +38,7 @@ function getExtraRows(item = {}) {
     'priceDelta',
     'name',
     'optionImage',
+    'svgImage',
   ]);
   const mainValues = new Set([
     String(item.label || ''),
@@ -54,11 +55,22 @@ function getExtraRows(item = {}) {
 }
 
 export function getCustomizationRows(items) {
-  return normalizeCustomizationItems(items).flatMap((item) => [
-    {
-      label: item?.label,
-      value: item?.value,
-    },
-    ...getExtraRows(item),
-  ]);
+  const seenExtraRows = new Set();
+
+  return normalizeCustomizationItems(items).flatMap((item) => {
+    const extraRows = getExtraRows(item).filter((row) => {
+      const key = `${row.label}::${row.value}`;
+      if (seenExtraRows.has(key)) return false;
+      seenExtraRows.add(key);
+      return true;
+    });
+
+    return [
+      {
+        label: item?.label,
+        value: item?.value,
+      },
+      ...extraRows,
+    ];
+  });
 }
