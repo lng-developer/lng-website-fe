@@ -1,18 +1,13 @@
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
-import { FcCancel } from 'react-icons/fc';
+import CustomizationRows from '../../../components/CustomizationRows';
 
 const ItemCustom = ({ items = [], customUrl, linkImage, listingId }) => {
   const listingUrl = listingId ? `https://www.etsy.com/listing/${listingId}` : '';
 
   return (
     <div className="flex-col justify-between">
-      {items.map((item, index) => (
-        <div key={index} className="mb-1 max-w-[250px] whitespace-normal break-words">
-          <span className="font-medium">{item?.label}:</span>
-          <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
-        </div>
-      ))}
+      <CustomizationRows items={items} rowClassName="mb-1" />
       <div className="flex gap-2 mb-1">
         <span className="font-medium">Customization Url: </span>
         <Link to={customUrl} className="text-[#64748B]">

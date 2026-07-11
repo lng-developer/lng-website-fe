@@ -1,11 +1,12 @@
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import CustomizationRows from '../../../../components/CustomizationRows';
 import OrderEtsyImageThumb from './OrderEtsyImageThumb';
 import { resolveCustomFileImage, resolveSnapshotImage } from './orderEtsyImageResolver';
 
 const OrderEtsySubItemCustomOptimized = ({ items = [], customUrl, linkImage, listingId, customFiles = [], orderId, transactionId }) => {
   const listingUrl = listingId ? `https://www.etsy.com/listing/${listingId}` : '';
-  const normalizedCustomFiles = Array.isArray(customFiles) ? customFiles : [];
+  const normalizedCustomFiles = useMemo(() => (Array.isArray(customFiles) ? customFiles : []), [customFiles]);
 
   const customPhotoImages = useMemo(
     () =>
@@ -20,18 +21,9 @@ const OrderEtsySubItemCustomOptimized = ({ items = [], customUrl, linkImage, lis
 
   const snapshotImage = useMemo(() => resolveSnapshotImage(linkImage), [linkImage]);
 
-  const normalizedItems = Array.isArray(items) ? items : Object.entries(items || {}).map(([label, value]) => ({ label, value }));
-
   return (
     <div className="flex-col justify-between">
-      {normalizedItems.map((item, index) => (
-        <div key={index} className="mb-0.5 max-w-[250px] whitespace-normal break-words">
-          <span className="font-medium">{item.label}:</span>
-          <span className="text-[#64748B] ml-2 whitespace-pre-wrap">
-            {item.value ? item.value : <span className="text-red-500">x</span>}
-          </span>
-        </div>
-      ))}
+      <CustomizationRows items={items} />
 
       <div className="flex gap-2 mb-0.5">
         <span className="font-medium">Customization Url: </span>
