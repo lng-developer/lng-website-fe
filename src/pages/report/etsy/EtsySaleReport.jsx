@@ -299,7 +299,7 @@ const EtsySaleReport = () => {
         { type: 'Tax', values: r.tax, money: true, totalVal: totals.tax },
         { type: 'Shipping Tax', values: r.shippingTax || [], money: true, totalVal: totals.shippingTax },
         { type: 'Discount', values: r.discount || [], money: true, totalVal: totals.discount },
-        { type: 'Offsite Ads', values: r.offsiteAds, money: true, totalVal: totals.offsiteAds },
+        { type: 'Ads', values: r.offsiteAds, money: true, totalVal: totals.offsiteAds },
         { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
         { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
