@@ -42,6 +42,7 @@ import {
   removeEtsyCase,
   replaceEtsyOrder,
   resetEtsyScaleOrdersBulk,
+  updateEtsyBaseCost,
   updateEtsyCustomerAddress,
   updateEtsyOpenCase,
   updateEtsyOrderItemQuantity,
@@ -749,7 +750,15 @@ const OrderEtsy = () => {
             </div>
           </div>
         ),
-        base_cost: <ItemBaseCost orderId={item?.orderId} base_cost={item?.base_cost} fetchAllOrder={fetchAllOrder} filters={filters} />,
+        base_cost: (
+          <ItemBaseCost
+            orderId={item?.orderId}
+            base_cost={item?.base_cost}
+            fetchAllOrder={fetchAllOrder}
+            filters={filters}
+            updateBaseCostRequest={updateEtsyBaseCost}
+          />
+        ),
         replace: (
           <div
             className="border-1 rounded-full px-2 cursor-pointer flex justify-center items-center text-sm"

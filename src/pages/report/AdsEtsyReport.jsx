@@ -1,9 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
-import { Empty, Select, Table, Tag, Tooltip } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Empty, Button, Select, Segmented, Table, Tag, Tooltip } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
+import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
 import { defaultFrom, defaultTo } from '../../utils/fomatDate';
 import DateRangePicker from '../../components/DateRangePicker';
-import { getAllAdsEtsy } from '../../apis/adsEtsy';
+import { exportAdsEtsyByEmployee, getAllAdsEtsy, getEtsyAdsEmployeeSummary } from '../../apis/adsEtsy';
 import { getAllShop } from '../../apis/shop';
 import { getAllEtsyOrders } from '../../apis/etsy';
 import { getAllSellers } from '../../apis/user';
@@ -11,6 +14,7 @@ import { getAllSellers } from '../../apis/user';
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 const fmtNum = (n) => Number(n || 0).toLocaleString('en-US');
 const fmtPercent = (n) => `${Number(n || 0).toFixed(1)}%`;
+const fmtRoas = (n) => (Number(n || 0) > 0 ? `${Number(n || 0).toFixed(2)}x` : '-');
 
 const decodeHtml = (str = '') =>
   String(str)
@@ -67,6 +71,16 @@ const hasBackendSku = (row) => {
 
 const pickTotalCount = (data) => data?.totalCount || data?.total || data?.count || data?.pagination?.total || undefined;
 
+const metricSorter = (key) => (a, b) => Number(a?.[key] || 0) - Number(b?.[key] || 0);
+
+const getFilenameFromDisposition = (disposition = '') => {
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].replace(/"/g, '').trim());
+
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  return match?.[1]?.trim() || '';
+};
+
 const explainMissingSku = (row, info, rowSku) => {
   const adsListingId = String(row?.listingId || '');
   if (!adsListingId) return 'ads_row_missing_listing_id';
@@ -94,6 +108,11 @@ const AdsEtsyReport = () => {
   const [shopId, setShopId] = useState(null);
   const [orders, setOrders] = useState([]);
   const [sellers, setSellers] = useState([]);
+  const [exporting, setExporting] = useState(false);
+  const [activeView, setActiveView] = useState('listing');
+  const [employeeCode, setEmployeeCode] = useState(null);
+  const [employeeSummary, setEmployeeSummary] = useState(null);
+  const [employeeLoading, setEmployeeLoading] = useState(false);
   const [filters, setFilters] = useState({
     from: defaultFrom,
     to: defaultTo,
@@ -316,6 +335,32 @@ const AdsEtsyReport = () => {
     }
   };
 
+  const fetchEmployeeSummary = useCallback(async () => {
+    const from = toYMD(filters.from);
+    const to = toYMD(filters.to);
+
+    if (!from || !to) {
+      setEmployeeSummary(null);
+      return;
+    }
+
+    try {
+      setEmployeeLoading(true);
+      const params = { from, to };
+      if (employeeCode) params.employeeCode = employeeCode;
+      if (shopId) params.shopId = shopId;
+
+      const res = await getEtsyAdsEmployeeSummary(params);
+      setEmployeeSummary(res?.data || null);
+    } catch (error) {
+      console.error('Error fetching Etsy Ads employee summary:', error);
+      toast.error(error?.response?.data?.message || 'Failed to fetch Etsy ads by employee');
+      setEmployeeSummary(null);
+    } finally {
+      setEmployeeLoading(false);
+    }
+  }, [employeeCode, filters.from, filters.to, shopId]);
+
   const sellerByEmployeeId = useMemo(() => {
     const map = new Map();
     (sellers || []).forEach((s) => {
@@ -435,6 +480,10 @@ const AdsEtsyReport = () => {
     if (shopId) getADSEtsyReport(filters, shopId);
     else setItems([]);
   }, [filters.from, filters.to, shopId]);
+
+  useEffect(() => {
+    if (activeView === 'employee') fetchEmployeeSummary();
+  }, [activeView, fetchEmployeeSummary]);
 
     const summary = useMemo(() => {
       return items.reduce(
@@ -560,6 +609,52 @@ const AdsEtsyReport = () => {
 
       return rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
     }, [items, listingInfoMap, sellerByEmployeeId]);
+
+    const employeeOptions = useMemo(
+      () =>
+        (sellers || [])
+          .filter((seller) => seller?.employee_id)
+          .map((seller) => ({
+            label: `${seller.employee_id} - ${seller.full_name || seller.name || ''}`.trim(),
+            value: String(seller.employee_id).trim().toUpperCase(),
+          })),
+      [sellers]
+    );
+
+    const employeeTotals = employeeSummary?.totals || {};
+    const employeeRows = employeeSummary?.employees || [];
+    const shopRows = employeeSummary?.byShop || [];
+    const dayRows = employeeSummary?.byDay || [];
+    const detailRows = employeeSummary?.details || [];
+
+    const handleExportByEmployee = useCallback(async () => {
+      const from = toYMD(filters.from);
+      const to = toYMD(filters.to);
+
+      if (!from || !to) {
+        toast.error('Please select a valid date range before exporting');
+        return;
+      }
+
+      try {
+        setExporting(true);
+
+        const response = await exportAdsEtsyByEmployee({ from, to, shopId });
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const disposition = response.headers?.['content-disposition'] || response.headers?.['Content-Disposition'] || '';
+        const filename = getFilenameFromDisposition(disposition) || `etsy_ads_by_employee_${from}_to_${to}.xlsx`;
+
+        saveAs(blob, filename);
+        toast.success('Exported Etsy ads by employee');
+      } catch (error) {
+        console.error('Export Etsy Ads by employee error:', error);
+        toast.error(error?.response?.data?.message || 'Failed to export Etsy ads by employee');
+      } finally {
+        setExporting(false);
+      }
+    }, [filters.from, filters.to, shopId]);
 
     const columns = [
       {
@@ -703,6 +798,222 @@ const AdsEtsyReport = () => {
       </div>
     );
 
+    const employeeMetricColumns = [
+      {
+        title: 'Spend',
+        dataIndex: 'totalSpend',
+        key: 'totalSpend',
+        width: 120,
+        align: 'right',
+        sorter: metricSorter('totalSpend'),
+        render: fmtMoney,
+      },
+      {
+        title: 'Views',
+        dataIndex: 'totalViews',
+        key: 'totalViews',
+        width: 110,
+        align: 'right',
+        sorter: metricSorter('totalViews'),
+        render: fmtNum,
+      },
+      {
+        title: 'Clicks',
+        dataIndex: 'totalClicks',
+        key: 'totalClicks',
+        width: 110,
+        align: 'right',
+        sorter: metricSorter('totalClicks'),
+        render: fmtNum,
+      },
+      {
+        title: 'Orders',
+        dataIndex: 'totalOrders',
+        key: 'totalOrders',
+        width: 110,
+        align: 'right',
+        sorter: metricSorter('totalOrders'),
+        render: fmtNum,
+      },
+      {
+        title: 'Revenue',
+        dataIndex: 'totalRevenue',
+        key: 'totalRevenue',
+        width: 130,
+        align: 'right',
+        sorter: metricSorter('totalRevenue'),
+        render: fmtMoney,
+      },
+      {
+        title: 'ROAS',
+        dataIndex: 'roas',
+        key: 'roas',
+        width: 100,
+        align: 'right',
+        sorter: metricSorter('roas'),
+        render: fmtRoas,
+      },
+    ];
+
+    const employeeColumns = [
+      {
+        title: 'Employee',
+        key: 'employee',
+        width: 240,
+        render: (_, record) => (
+          <div className="flex flex-col">
+            <span className="font-semibold text-black">{record.employeeName || '-'}</span>
+            <span className="text-xs text-gray-500 font-mono">{record.employeeCode || '-'}</span>
+          </div>
+        ),
+      },
+      ...employeeMetricColumns,
+    ];
+
+    const shopSummaryColumns = [
+      {
+        title: 'Shop',
+        key: 'shop',
+        width: 260,
+        render: (_, record) => (
+          <div className="flex flex-col">
+            <span className="font-semibold text-black">{record.shopName || '-'}</span>
+            <span className="text-xs text-gray-500 font-mono">{record.etsyShopId || '-'}</span>
+          </div>
+        ),
+      },
+      ...employeeMetricColumns,
+    ];
+
+    const daySummaryColumns = [
+      {
+        title: 'Day',
+        dataIndex: 'day',
+        key: 'day',
+        width: 140,
+        render: (value) => <span className="font-mono text-xs">{String(value || '').slice(0, 10)}</span>,
+      },
+      ...employeeMetricColumns,
+    ];
+
+    const detailColumns = [
+      {
+        title: 'Day',
+        dataIndex: 'day',
+        key: 'day',
+        width: 120,
+        render: (value) => <span className="font-mono text-xs">{String(value || '').slice(0, 10)}</span>,
+      },
+      {
+        title: 'Shop',
+        dataIndex: 'shopName',
+        key: 'shopName',
+        width: 180,
+        ellipsis: true,
+      },
+      {
+        title: 'Employee',
+        key: 'employee',
+        width: 190,
+        render: (_, record) => (
+          <div className="flex flex-col">
+            <span className="text-gray-900">{record.employeeName || '-'}</span>
+            <span className="text-xs text-gray-500 font-mono">{record.employeeCode || '-'}</span>
+          </div>
+        ),
+      },
+      {
+        title: 'SKU',
+        dataIndex: 'sku',
+        key: 'sku',
+        width: 200,
+        ellipsis: true,
+        render: (value) => (
+          <Tooltip title={value}>
+            <span className="font-mono text-xs">{value || '-'}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: 'Listing',
+        dataIndex: 'title',
+        key: 'title',
+        width: 360,
+        ellipsis: true,
+        render: (value, record) => (
+          <Tooltip title={decodeHtml(value || '')}>
+            <div className="flex flex-col">
+              <span className="truncate">{decodeHtml(value || '') || '-'}</span>
+              <span className="text-xs text-gray-500 font-mono">ID: {record.listingId || '-'}</span>
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        title: 'Spend',
+        dataIndex: 'spend',
+        key: 'spend',
+        width: 110,
+        align: 'right',
+        sorter: metricSorter('spend'),
+        render: fmtMoney,
+      },
+      {
+        title: 'Views',
+        dataIndex: 'views',
+        key: 'views',
+        width: 100,
+        align: 'right',
+        sorter: metricSorter('views'),
+        render: fmtNum,
+      },
+      {
+        title: 'Clicks',
+        dataIndex: 'clicks',
+        key: 'clicks',
+        width: 100,
+        align: 'right',
+        sorter: metricSorter('clicks'),
+        render: fmtNum,
+      },
+      {
+        title: 'Orders',
+        dataIndex: 'orders',
+        key: 'orders',
+        width: 100,
+        align: 'right',
+        sorter: metricSorter('orders'),
+        render: fmtNum,
+      },
+      {
+        title: 'Revenue',
+        dataIndex: 'revenue',
+        key: 'revenue',
+        width: 120,
+        align: 'right',
+        sorter: metricSorter('revenue'),
+        render: fmtMoney,
+      },
+      {
+        title: 'ROAS',
+        dataIndex: 'roas',
+        key: 'roas',
+        width: 90,
+        align: 'right',
+        sorter: metricSorter('roas'),
+        render: fmtRoas,
+      },
+      {
+        title: 'CTR',
+        dataIndex: 'clickRate',
+        key: 'clickRate',
+        width: 90,
+        align: 'right',
+        sorter: metricSorter('clickRate'),
+        render: fmtPercent,
+      },
+    ];
+
     return (
       <div className="bg-white h-screen overflow-hidden flex flex-col">
         <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300 border-b border-gray-200`}>
@@ -712,6 +1023,17 @@ const AdsEtsyReport = () => {
               <h1 className="text-2xl font-bold !mb-0 text-black">Etsy Ads Report</h1>
             </div>
             <div className="flex justify-center items-center gap-2">
+              <Tooltip title="Export Excel">
+                <Button
+                  size="large"
+                  icon={<DownloadOutlined />}
+                  onClick={handleExportByEmployee}
+                  loading={exporting}
+                  disabled={!filters.from || !filters.to}
+                >
+                  Export by Employee
+                </Button>
+              </Tooltip>
               <Select
                 value={shopId}
                 onChange={(val) => setShopId(val)}
@@ -742,6 +1064,31 @@ const AdsEtsyReport = () => {
         </div>
 
         <div className="mt-[60px] px-8 py-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <Segmented
+              value={activeView}
+              onChange={setActiveView}
+              options={[
+                { label: 'Listing Ads', value: 'listing' },
+                { label: 'Ads by Employee', value: 'employee' },
+              ]}
+            />
+            {activeView === 'employee' && (
+              <Select
+                value={employeeCode}
+                onChange={setEmployeeCode}
+                placeholder="All employees"
+                style={{ width: 280 }}
+                options={employeeOptions}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+              />
+            )}
+          </div>
+
+          {activeView === 'listing' ? (
+            <>
           {/* Summary cards */}
           <div className="flex gap-4 flex-wrap">
             <StatCard label="Total Spend" value={fmtMoney(summary.totalSpend)} sub={`${items.length} shop(s)`} />
@@ -802,6 +1149,89 @@ const AdsEtsyReport = () => {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex gap-4 flex-wrap">
+                <StatCard
+                  label="Total Spend"
+                  value={fmtMoney(employeeTotals.totalSpend)}
+                  sub={`${employeeSummary?.count?.employees || employeeRows.length} employee(s)`}
+                />
+                <StatCard label="Revenue" value={fmtMoney(employeeTotals.totalRevenue)} sub={`${fmtNum(employeeTotals.totalOrders)} orders`} />
+                <StatCard label="ROAS" value={fmtRoas(employeeTotals.roas)} sub="Return on ad spend" />
+                <StatCard label="Views" value={fmtNum(employeeTotals.totalViews)} sub={`${fmtNum(employeeTotals.totalClicks)} clicks`} />
+                <StatCard
+                  label="CTR"
+                  value={employeeTotals.totalViews > 0 ? fmtPercent((employeeTotals.totalClicks / employeeTotals.totalViews) * 100) : '0.0%'}
+                  sub={`${employeeSummary?.count?.shops || shopRows.length} shop(s)`}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+                  <div className="px-4 py-3 border-b border-gray-200 font-semibold">Employees</div>
+                  <Table
+                    loading={employeeLoading}
+                    dataSource={employeeRows}
+                    columns={employeeColumns}
+                    rowKey={(record) => record.employeeCode || record.employeeId || record.employeeName}
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    size="middle"
+                    scroll={{ x: 920, y: 360 }}
+                    className="ads-etsy-table"
+                  />
+                </div>
+
+                <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+                  <div className="px-4 py-3 border-b border-gray-200 font-semibold">By Shop</div>
+                  <Table
+                    loading={employeeLoading}
+                    dataSource={shopRows}
+                    columns={shopSummaryColumns}
+                    rowKey={(record) => record.etsyShopId || record.shopName}
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    size="middle"
+                    scroll={{ x: 940, y: 360 }}
+                    className="ads-etsy-table"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+                <div className="px-4 py-3 border-b border-gray-200 font-semibold">By Day</div>
+                <Table
+                  loading={employeeLoading}
+                  dataSource={dayRows}
+                  columns={daySummaryColumns}
+                  rowKey={(record) => record.day}
+                  pagination={{ pageSize: 10, showSizeChanger: true }}
+                  size="middle"
+                  scroll={{ x: 900 }}
+                  className="ads-etsy-table"
+                />
+              </div>
+
+              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+                <div className="px-4 py-3 border-b border-gray-200 font-semibold">Details</div>
+                <Table
+                  loading={employeeLoading}
+                  dataSource={detailRows}
+                  columns={detailColumns}
+                  rowKey={(record, index) => `${record.day || ''}-${record.shopName || ''}-${record.employeeCode || ''}-${record.listingId || ''}-${index}`}
+                  pagination={{
+                    pageSize: 20,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                    showTotal: (total) => `Total ${total} details`,
+                  }}
+                  size="middle"
+                  scroll={{ x: 1760, y: 'calc(100vh - 620px)' }}
+                  className="ads-etsy-table"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <style>{`
