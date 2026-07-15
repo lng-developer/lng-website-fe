@@ -42,6 +42,13 @@ const computeEtsyBaseCost = (body) => {
   return instance.post('/etsy/compute-base-cost', body);
 };
 
+const updateEtsyBaseCost = (orderId, base_cost) => {
+  return instance.put('/etsy/update-base-cost', {
+    orderId,
+    base_cost,
+  });
+};
+
 const manualMappingEtsy = (payload) => {
   return instance.put('/etsy/manual-mapping', payload);
 };
@@ -176,6 +183,7 @@ export {
   importEtsyOrders,
   getEtsyStatistic,
   computeEtsyBaseCost,
+  updateEtsyBaseCost,
   manualMappingEtsy,
   updateEtsyOpenCase,
   removeEtsyCase,
