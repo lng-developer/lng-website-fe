@@ -1,16 +1,12 @@
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
 import NoImage from '../../../assets/NoImage.jpg';
+import CustomizationRows from '../../../components/CustomizationRows';
 
 const SubItemCustom = ({ items = [], customUrl, linkImage }) => {
   return (
     <div className="flex-col justify-between">
-      {items.map((item, index) => (
-        <div key={index} className="mb-0.5 max-w-[250px] whitespace-normal break-words">
-          <span className="font-medium">{item?.label}:</span>
-          <span className="text-[#64748B] ml-2">{item?.value ? item?.value : <span className="text-red-500">x</span>}</span>
-        </div>
-      ))}
+      <CustomizationRows items={items} />
       <div className="flex gap-2 mb-0.5">
         <span className="font-medium">Customization Url: </span>
         <Link to={customUrl} className="text-[#64748B]">
