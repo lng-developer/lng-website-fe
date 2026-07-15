@@ -299,8 +299,8 @@ const EtsySaleReport = () => {
         { type: 'Tax', values: r.tax, money: true, totalVal: totals.tax },
         { type: 'Shipping Tax', values: r.shippingTax || [], money: true, totalVal: totals.shippingTax },
         { type: 'Discount', values: r.discount || [], money: true, totalVal: totals.discount },
-        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Offsite Ads', values: r.offsiteAds, money: true, totalVal: totals.offsiteAds },
+        { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
         { type: 'Refund', values: r.refund, money: true, totalVal: totals.refund },
         { type: 'Profit 2', values: profit2, money: true, totalVal: totals.profit2, signAware: true },
@@ -389,12 +389,14 @@ const EtsySaleReport = () => {
     const entries = Object.values(normalizedView);
     const totals = entries.map((r) => r.totals).filter(Boolean);
     const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
+    const getOffsiteAds = () =>
+      entries.reduce((acc, r) => acc + numberSafe(r.totals?.offsiteAds ?? sum(r.offsiteAds)), 0);
     return [
       { key: 'order', label: 'Order Items', value: get('items'), icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
       { key: 'revenue', label: 'Revenue', value: get('revenue'), prefix: '$', icon: <FaMoneyBillWave className="text-white" />, iconBg: 'bg-emerald-500' },
       { key: 'baseCost', label: 'Base Cost', value: get('baseCost'), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-amber-500' },
       { key: 'fee', label: 'Fee', value: get('fee'), prefix: '$', icon: <FaDolly className="text-white" />, iconBg: 'bg-fuchsia-500' },
-      { key: 'ads', label: 'Ads', value: get('offsiteAds'), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-blue-500' },
+      { key: 'ads', label: 'Ads', value: getOffsiteAds(), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-blue-500' },
       { key: 'discount', label: 'Discount', value: get('discount'), prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-orange-500' },
       { key: 'refund', label: 'Refund', value: get('refund'), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-red-500' },
       { key: 'profit', label: 'Profit', value: get('profit2'), prefix: '$', icon: <FaUser className="text-white" />, iconBg: 'bg-emerald-500' },
@@ -538,8 +540,8 @@ const EtsySaleReport = () => {
           { label: 'Tax', values: r.tax, total: r.totals?.tax, money: true },
           { label: 'Shipping Tax', values: r.shippingTax || [], total: r.totals?.shippingTax || sumArr(r.shippingTax || []), money: true },
           { label: 'Discount', values: r.discount || [], total: sumArr(r.discount || []), money: true },
-          { label: 'Profit 1', values: profit1, total: r.totals?.profit1, money: true, signAware: true },
           { label: 'Offsite Ads', values: r.offsiteAds, total: r.totals?.offsiteAds, money: true },
+          { label: 'Profit 1', values: profit1, total: r.totals?.profit1, money: true, signAware: true },
           { label: 'Operation Cost', values: r.opCost, total: r.totals?.opCost, money: true },
           { label: 'Refund', values: r.refund, total: r.totals?.refund, money: true },
           { label: 'Profit 2', values: profit2, total: r.totals?.profit2, money: true, signAware: true },
