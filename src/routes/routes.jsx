@@ -3,6 +3,7 @@ const routes = {
   home: '/',
   order: '/order',
   sale_listing: '/sales/listing',
+  sale_etsy_listing: '/sales/listing/etsy',
   order_amazon: '/order/amazon',
   order_shopify: '/order/shopify',
   order_etsy: '/order/etsy',

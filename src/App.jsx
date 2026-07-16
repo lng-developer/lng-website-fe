@@ -12,6 +12,7 @@ import VendorProduct from './pages/vendor/VendorProduct';
 import ProductCostCenter from './pages/vendor/ProductCostCenter';
 import FulfillmentScale from './pages/fulfillment';
 import Listing from './pages/listing';
+import EtsyListing from './pages/listing/EtsyListing';
 import CostCenterProductTypes from './pages/cost_center';
 import CostCenterConfig from './pages/cost_center/CostCenterConfig';
 import ReportOrderCost from './pages/report/ReportOrderCost';
@@ -64,6 +65,7 @@ function App() {
           <Route path={routes.order_etsy} element={<OrderEtsy />} />
           <Route path={routes.team_task} element={<Dashboard />} />
           <Route path={routes.sale_listing} element={<Listing />} />
+          <Route path={routes.sale_etsy_listing} element={<EtsyListing />} />
           <Route path={routes.vendor_list} element={<Vendor />} />
           <Route path={routes.vendor_products} element={<VendorProduct />} />
           <Route path={routes.product_cost_center} element={<ProductCostCenter />} />

@@ -64,9 +64,13 @@ export const detailMenus = {
     },
 
     {
-      key: routes.sale_listing,
-      label: 'Listings',
+      key: 'listing',
+      label: 'Listing',
       icon: <LuLayoutList size={20} />,
+      children: [
+        { key: routes.sale_listing, label: 'Amz Listing', icon: <FaAmazon size={20} /> },
+        { key: routes.sale_etsy_listing, label: 'Etsy Listing', icon: <FaEtsy size={20} /> },
+      ],
     },
     {
       key: routes.cost_center,

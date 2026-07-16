@@ -57,6 +57,9 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     if (selectedKey.startsWith(routes.vendor)) {
       return routes.vendor;
     }
+    if (selectedKey.startsWith(routes.sale_listing)) {
+      return 'listing';
+    }
     return '';
   };
 
