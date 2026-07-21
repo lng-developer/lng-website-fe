@@ -4,7 +4,8 @@ import { useLocation } from 'react-router-dom';
 const TITLES = {
   '/order/amazon': 'Orders Amazon',
   '/order/etsy': 'Orders Etsy',
-  '/sales/listing': 'Manage Listing',
+  '/sales/listing': 'Amz Listing',
+  '/sales/listing/etsy': 'Etsy Listing',
   '/fulfillment/scale': 'Fulfillment Scale',
   '/fulfillment/qc': 'QC Fulfillment',
   '/fulfillment/qc/etsy': 'Etsy QC',
