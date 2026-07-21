@@ -23,4 +23,8 @@ const updateShopifyFulfillment = (shopifyOrderId, payload) => {
   return instance.post(`/shopify/orders/${shopifyOrderId}/fulfillment`, payload);
 };
 
-export { getAllShopifyOrders, updateShopifyFulfillment };
+const cancelShopifyOrder = (shopifyOrderId, payload) => {
+  return instance.post(`/shopify/orders/${shopifyOrderId}/cancel`, payload);
+};
+
+export { getAllShopifyOrders, updateShopifyFulfillment, cancelShopifyOrder };

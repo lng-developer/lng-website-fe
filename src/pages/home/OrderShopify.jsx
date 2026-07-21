@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Flex, Form, Input, Modal, Pagination, Select, Table, Tooltip } from 'antd';
+import { Button, Checkbox, Flex, Form, Input, Modal, Pagination, Select, Table, Tooltip } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
@@ -16,7 +16,7 @@ import ItemCustomer from './table/ItemCustomer';
 import SubItemSku from './table/SubItemSku';
 import { dataColors } from '../../utils/dataColors';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
-import { getAllShopifyOrders, updateShopifyFulfillment } from '../../apis/shopify';
+import { cancelShopifyOrder, getAllShopifyOrders, updateShopifyFulfillment } from '../../apis/shopify';
 import dayjs from 'dayjs';
 
 const LAST_UPDATED_KEY = 'orders_shopify_last_updated_at';
@@ -36,6 +36,14 @@ const shopifyStatusFilters = [
 const importStatusOptions = ['preview', 'imported', 'skipped', 'failed'];
 const financialStatusOptions = ['paid', 'pending', 'refunded', 'partially_refunded', 'voided'];
 const fulfillmentStatusOptions = ['fulfilled', 'partial', 'unfulfilled'];
+const cancelReasonOptions = ['CUSTOMER', 'DECLINED', 'FRAUD', 'INVENTORY', 'STAFF', 'OTHER'];
+const defaultCancelValues = {
+  reason: 'CUSTOMER',
+  notifyCustomer: false,
+  restock: false,
+  refundOriginalPayment: false,
+  staffNote: 'Cancelled from LNG portal',
+};
 
 const getDateValue = (value) => {
   if (!value) return '';
@@ -287,6 +295,18 @@ const ShopifyQuantityCell = ({ quantity }) => (
   </div>
 );
 
+const ShopifyQtyPriceCell = ({ quantity, price }) => (
+  <div className="flex flex-col items-center justify-center gap-3">
+    <ShopifyQuantityCell quantity={quantity} />
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs font-medium" style={{ color: dataColors.title }}>
+        Price
+      </span>
+      <StatusComponent title={formatMoney(price)} color={dataColors.process} />
+    </div>
+  </div>
+);
+
 const ShopifyActionLink = ({ href, children }) => {
   if (!href) {
     return <StatusComponent title="No link" color={dataColors.default} />;
@@ -459,7 +479,10 @@ const OrderShopify = () => {
   const [financialStatus, setFinancialStatus] = useState('');
   const [fulfillmentStatus, setFulfillmentStatus] = useState('');
   const [selectedOrderDetail, setSelectedOrderDetail] = useState(null);
+  const [selectedCancelOrder, setSelectedCancelOrder] = useState(null);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [printFilePreviewUrls, setPrintFilePreviewUrls] = useState([]);
+  const [cancelForm] = Form.useForm();
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
     return saved ? new Date(saved) : null;
@@ -558,6 +581,69 @@ const OrderShopify = () => {
     setIsShowRowKeys((prev) => !prev);
   }, [isShowRowkeys, orders]);
 
+  const handleOpenCancelOrder = useCallback(
+    (order) => {
+      setSelectedCancelOrder(order);
+      cancelForm.setFieldsValue(defaultCancelValues);
+    },
+    [cancelForm]
+  );
+
+  const submitCancelOrder = useCallback(
+    async (values, extraPayload = {}) => {
+      const shopifyOrderId = selectedCancelOrder?.shopifyOrderId;
+
+      if (!shopifyOrderId) {
+        toast.error('Missing Shopify order ID');
+        return;
+      }
+
+      const payload = {
+        reason: values.reason || defaultCancelValues.reason,
+        notifyCustomer: Boolean(values.notifyCustomer),
+        restock: Boolean(values.restock),
+        refundOriginalPayment: Boolean(values.refundOriginalPayment),
+        staffNote: values.staffNote || defaultCancelValues.staffNote,
+        ...extraPayload,
+      };
+
+      setIsCanceling(true);
+      try {
+        const response = await cancelShopifyOrder(shopifyOrderId, payload);
+
+        if (response.status >= 200 && response.status < 300) {
+          toast.success(response.data?.alreadyCancelled ? 'Shopify order already cancelled' : 'Cancel Shopify order success!');
+          setSelectedCancelOrder(null);
+          cancelForm.resetFields();
+          fetchAllOrder(filters);
+        }
+      } catch (error) {
+        const message = error?.response?.data?.message || 'Cancel Shopify order error!';
+        const isAlreadyShipped = error?.response?.status === 400 && /already shipped/i.test(message);
+
+        if (isAlreadyShipped && !payload.force) {
+          Modal.confirm({
+            title: 'Force cancel shipped order?',
+            content: message,
+            okText: 'Force Cancel',
+            okButtonProps: { danger: true },
+            cancelText: 'Back',
+            onOk: () =>
+              submitCancelOrder(values, {
+                force: true,
+                staffNote: values.staffNote || 'Force cancel from LNG portal',
+              }),
+          });
+        } else {
+          toast.error(message);
+        }
+      } finally {
+        setIsCanceling(false);
+      }
+    },
+    [cancelForm, fetchAllOrder, filters, selectedCancelOrder?.shopifyOrderId]
+  );
+
   const columns = useMemo(
     () => [
       { title: <span style={{ color: dataColors.title }}>Order ID</span>, dataIndex: 'order', key: 'order', align: 'center' },
@@ -572,7 +658,6 @@ const OrderShopify = () => {
       { title: <span style={{ color: dataColors.title }}>Financial</span>, dataIndex: 'financial', key: 'financial', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Fulfillment</span>, dataIndex: 'fulfillment', key: 'fulfillment', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Sync</span>, dataIndex: 'sync', key: 'sync', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Details</span>, dataIndex: 'details', key: 'details', align: 'center' },
     ],
     [collapsed]
   );
@@ -581,10 +666,10 @@ const OrderShopify = () => {
     const subColumns = [
       { title: <span style={{ color: dataColors.title }}>Product Image</span>, dataIndex: 'image', key: 'image', align: 'center', width: 120 },
       { title: <span style={{ color: dataColors.title }}>Product</span>, dataIndex: 'product', key: 'product', width: 320 },
-      { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku' },
-      { title: <span style={{ color: dataColors.title }}>QTY</span>, dataIndex: 'quantity', key: 'quantity', align: 'center' },
-      { title: <span style={{ color: dataColors.title }}>Price</span>, dataIndex: 'price', key: 'price', align: 'center' },
+      { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku', width: 330 },
       { title: <span style={{ color: dataColors.title }}>Files & Link</span>, dataIndex: 'file_actions', key: 'file_actions', align: 'center', width: 180 },
+      { title: <span style={{ color: dataColors.title }}>QTY & Price</span>, dataIndex: 'qty_price', key: 'qty_price', align: 'center', width: 140 },
+      { title: <span style={{ color: dataColors.title }}>Actions</span>, dataIndex: 'details', key: 'details', align: 'center', width: 140 },
       {
         title: <span style={{ color: dataColors.title }}>Tracking & Note</span>,
         dataIndex: 'tracking_note',
@@ -602,6 +687,7 @@ const OrderShopify = () => {
         rowClassName={() => 'table-row-center'}
         style={{ padding: 16 }}
         tableLayout="fixed"
+        scroll={{ x: 1530 }}
       />
     );
   }, []);
@@ -652,16 +738,6 @@ const OrderShopify = () => {
               </span>
             </Flex>
           ),
-          details: (
-            <Button
-              type="primary"
-              size="small"
-              className="!rounded-md !px-3 !font-medium shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
-              onClick={() => setSelectedOrderDetail(item)}
-            >
-              View Details
-            </Button>
-          ),
           subItems: (item?.items || item?.rawShopifyOrder?.line_items || []).map((lineItem, lineIndex) => {
             const lineItemId = getLineItemId(lineItem, lineIndex);
             const previewImageUrl = resolveImageValue(getCustomFieldValue(lineItem, '_customall_preview')) || getShopifyImageUrl(lineItem, item);
@@ -682,8 +758,6 @@ const OrderShopify = () => {
                 </Flex>
               ),
               sku: <SubItemSku sku={lineItem?.sku} sellerName={lineItem?.vendor || item?.shopDomain || 'Shopify'} />,
-              quantity: <ShopifyQuantityCell quantity={lineItem?.quantity} />,
-              price: <StatusComponent title={formatMoney(lineItem?.originalUnitPrice || lineItem?.price)} color={dataColors.process} />,
               file_actions: (
                 <ShopifyFileActions
                   printFiles={printFiles}
@@ -699,11 +773,33 @@ const OrderShopify = () => {
                   onUpdated={() => fetchAllOrder(filters)}
                 />
               ),
+              details: (
+                <div className="flex flex-col items-center gap-2">
+                  <Button
+                    type="primary"
+                    size="small"
+                    className="!rounded-md !px-3 !font-medium shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
+                    onClick={() => setSelectedOrderDetail(item)}
+                  >
+                    View Details
+                  </Button>
+                  <Button
+                    danger
+                    size="small"
+                    className="!rounded-md !px-3 !font-medium shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
+                    disabled={String(item?.processStatus || '').toLowerCase() === 'cancelled'}
+                    onClick={() => handleOpenCancelOrder(item)}
+                  >
+                    Cancelled
+                  </Button>
+                </div>
+              ),
+              qty_price: <ShopifyQtyPriceCell quantity={lineItem?.quantity} price={lineItem?.originalUnitPrice || lineItem?.price} />,
             };
           }),
         };
       }),
-    [fetchAllOrder, filters, handleCopy, orders]
+    [fetchAllOrder, filters, handleCopy, handleOpenCancelOrder, orders]
   );
 
   useEffect(() => {
@@ -923,6 +1019,59 @@ const OrderShopify = () => {
             </div>
           </Flex>
         )}
+      </Modal>
+      <Modal
+        title="Cancel Shopify Order"
+        width={520}
+        open={Boolean(selectedCancelOrder)}
+        onCancel={() => {
+          if (isCanceling) return;
+          setSelectedCancelOrder(null);
+          cancelForm.resetFields();
+        }}
+        footer={null}
+        destroyOnHidden
+      >
+        <Form form={cancelForm} layout="vertical" initialValues={defaultCancelValues} onFinish={submitCancelOrder}>
+          <div className="mb-3 rounded border border-[#fee2e2] bg-[#fef2f2] p-3 text-sm text-[#991b1b]">
+            Cancellation on Shopify cannot be reversed.
+          </div>
+          <DetailRow label="Shopify ID" value={selectedCancelOrder?.shopifyOrderId} />
+          <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'Please select cancel reason' }]} className="!mt-3">
+            <Select
+              options={cancelReasonOptions.map((reason) => ({ value: reason, label: reason }))}
+              placeholder="Select reason"
+            />
+          </Form.Item>
+          <Form.Item name="staffNote" label="Staff Note" rules={[{ max: 255, message: 'Staff note max 255 characters' }]}>
+            <Input.TextArea rows={3} maxLength={255} placeholder="Cancelled from LNG portal" />
+          </Form.Item>
+          <div className="grid grid-cols-1 gap-1">
+            <Form.Item name="notifyCustomer" valuePropName="checked" className="!mb-1">
+              <Checkbox>Notify customer</Checkbox>
+            </Form.Item>
+            <Form.Item name="restock" valuePropName="checked" className="!mb-1">
+              <Checkbox>Restock inventory</Checkbox>
+            </Form.Item>
+            <Form.Item name="refundOriginalPayment" valuePropName="checked" className="!mb-3">
+              <Checkbox>Refund original payment</Checkbox>
+            </Form.Item>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              onClick={() => {
+                setSelectedCancelOrder(null);
+                cancelForm.resetFields();
+              }}
+              disabled={isCanceling}
+            >
+              Close
+            </Button>
+            <Button danger type="primary" htmlType="submit" loading={isCanceling}>
+              Cancel Order
+            </Button>
+          </div>
+        </Form>
       </Modal>
       <Modal
         title="File Print"
