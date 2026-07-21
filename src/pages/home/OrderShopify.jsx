@@ -825,7 +825,7 @@ const OrderShopify = () => {
                   paymentsUrl={getOrderStatusUrl(item)}
                   onShowPrintFiles={setPrintFilePreviewUrls}
                   onViewDetails={() => setSelectedOrderDetail(item)}
-                  cancelDisabled={String(item?.processStatus || '').toLowerCase() === 'cancelled'}
+                  cancelDisabled={['cancelled', 'shipped'].includes(String(item?.processStatus || '').toLowerCase())}
                   onCancel={() => handleOpenCancelOrder(item)}
                 />
               ),
