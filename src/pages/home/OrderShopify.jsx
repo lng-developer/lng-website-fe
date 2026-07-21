@@ -44,6 +44,8 @@ const defaultCancelValues = {
   refundOriginalPayment: false,
   staffNote: 'Cancelled from LNG portal',
 };
+const shopifyActionButtonClass =
+  'inline-flex h-8 w-[112px] items-center justify-center rounded-md border px-3 text-xs font-semibold shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#94a3b8] disabled:cursor-not-allowed disabled:opacity-60';
 
 const getDateValue = (value) => {
   if (!value) return '';
@@ -70,6 +72,13 @@ const normalizeCustomerInfo = (order) => {
 
 const getOrderId = (order) => order?.shopifyOrderName || order?.name || order?.shopifyOrderId || order?._id;
 const getLineItemId = (item, index) => item?.shopifyLineItemId || item?.id || item?.shopifyLineItemGid || String(index);
+const getOrderStatusUrl = (order = {}) =>
+  order?.orderStatusUrl ||
+  order?.order_status_url ||
+  order?.rawShopifyOrder?.order_status_url ||
+  order?.rawShopifyOrder?.orderStatusUrl ||
+  order?.rawShopifyOrder?.status_url ||
+  '';
 const formatMoney = (money) => {
   const amount = money?.amount || money?.shopAmount || money;
   const currency = money?.currencyCode || money?.shopCurrencyCode || '';
@@ -250,28 +259,44 @@ const getShopifyImageUrl = (lineItem = {}, order = {}) => {
   return getShopifyImageUrls(lineItem, order)[0] || '';
 };
 
-const ShopifyProductImages = ({ imageUrls = [], imageSize = 72 }) => {
+const ShopifyProductImages = ({ imageUrls = [], imageSize = 72, onImageClick }) => {
   if (!imageUrls.length) {
     return <StatusComponent title="No image" color={dataColors.default} />;
   }
 
   return (
     <div className="flex flex-wrap gap-2 justify-center">
-      {imageUrls.map((imageUrl) => (
-        <a key={imageUrl} href={imageUrl} target="_blank" className="inline-flex">
+      {imageUrls.map((imageUrl) => {
+        const imageNode = (
           <img
             src={imageUrl}
             alt="Product Image"
             className="rounded border border-[#e2e8f0]"
             style={{ width: imageSize, height: imageSize, objectFit: 'contain' }}
           />
-        </a>
-      ))}
+        );
+
+        if (onImageClick) {
+          return (
+            <button key={imageUrl} className="inline-flex cursor-pointer" onClick={() => onImageClick(imageUrl)}>
+              {imageNode}
+            </button>
+          );
+        }
+
+        return (
+          <a key={imageUrl} href={imageUrl} target="_blank" className="inline-flex">
+            {imageNode}
+          </a>
+        );
+      })}
     </div>
   );
 };
 
-const ShopifyProductImage = ({ imageUrl }) => <ShopifyProductImages imageUrls={imageUrl ? [imageUrl] : []} />;
+const ShopifyProductImage = ({ imageUrl, onPreview }) => (
+  <ShopifyProductImages imageUrls={imageUrl ? [imageUrl] : []} onImageClick={onPreview ? () => onPreview(imageUrl) : undefined} />
+);
 
 const ShopifySizeField = ({ size }) => {
   if (!size) return null;
@@ -317,8 +342,7 @@ const ShopifyActionLink = ({ href, children }) => {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-xs font-semibold !text-black transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#94a3b8]"
-      style={{ borderColor: dataColors.pending }}
+      className={`${shopifyActionButtonClass} !border-[#0f766e] !bg-[#0f766e] !text-white hover:!bg-[#0d9488]`}
     >
       {children}
     </a>
@@ -333,11 +357,10 @@ const ShopifyPrintFilesPreview = ({ printFiles = [], onShow }) => {
 
   return (
     <button
-      className="inline-flex items-center justify-center rounded-md border px-4 py-1.5 text-xs font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#94a3b8] cursor-pointer"
-      style={{ borderColor: dataColors.pending, color: dataColors.pending }}
+      className={`${shopifyActionButtonClass} cursor-pointer border-[#64748b] bg-[#64748b] !text-white hover:bg-[#475569]`}
       onClick={() => onShow?.(imageUrls)}
     >
-      SHOW
+      Print Files
     </button>
   );
 };
@@ -430,20 +453,57 @@ const ShopifyTrackingAndNote = ({ shopifyOrderId, trackingInfo = {}, status, onU
   );
 };
 
-const ShopifyFileActions = ({ printFiles, customizedUrl, onShowPrintFiles }) => (
-  <div className="flex flex-col items-center gap-3">
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-xs font-medium" style={{ color: dataColors.title }}>
-        File Print
-      </span>
+const ShopifyLineItemActions = ({
+  printFiles,
+  customizedUrl,
+  paymentsUrl,
+  onShowPrintFiles,
+  onViewDetails,
+  onCancel,
+  cancelDisabled,
+}) => (
+  <div className="grid grid-cols-1 gap-2 justify-items-center">
+    <div className="flex flex-col items-center">
       <ShopifyPrintFilesPreview printFiles={printFiles} onShow={onShowPrintFiles} />
     </div>
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-xs font-medium" style={{ color: dataColors.title }}>
-        Product Link
-      </span>
+    <div className="flex flex-col items-center">
       <ShopifyActionLink href={customizedUrl}>Product Link</ShopifyActionLink>
     </div>
+    <Button
+      type="primary"
+      size="small"
+      className="!h-8 !w-[112px] !rounded-md !px-3 !text-xs !font-semibold shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
+      onClick={onViewDetails}
+    >
+      View Details
+    </Button>
+    {paymentsUrl ? (
+      <a
+        href={paymentsUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex h-8 w-[112px] items-center justify-center rounded-md border !border-[#f59e0b] !bg-[#f59e0b] px-3 text-xs font-semibold !text-white shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:!bg-[#d97706] hover:!text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#fbbf24]"
+      >
+        Payments
+      </a>
+    ) : (
+      <Button
+        size="small"
+        className="!h-8 !w-[112px] !rounded-md !border-[#f59e0b] !bg-[#f59e0b] !px-3 !text-xs !font-semibold !text-white opacity-60 [&>span]:!text-white"
+        disabled
+      >
+        Payments
+      </Button>
+    )}
+    <Button
+      danger
+      size="small"
+      className="!h-8 !w-[112px] !rounded-md !px-3 !text-xs !font-semibold shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
+      disabled={cancelDisabled}
+      onClick={onCancel}
+    >
+      Cancelled
+    </Button>
   </div>
 );
 
@@ -482,6 +542,7 @@ const OrderShopify = () => {
   const [selectedCancelOrder, setSelectedCancelOrder] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false);
   const [printFilePreviewUrls, setPrintFilePreviewUrls] = useState([]);
+  const [productPreviewUrl, setProductPreviewUrl] = useState('');
   const [cancelForm] = Form.useForm();
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
@@ -667,9 +728,8 @@ const OrderShopify = () => {
       { title: <span style={{ color: dataColors.title }}>Product Image</span>, dataIndex: 'image', key: 'image', align: 'center', width: 120 },
       { title: <span style={{ color: dataColors.title }}>Product</span>, dataIndex: 'product', key: 'product', width: 320 },
       { title: <span style={{ color: dataColors.title }}>SKU, Variant & Seller</span>, dataIndex: 'sku', key: 'sku', width: 330 },
-      { title: <span style={{ color: dataColors.title }}>Files & Link</span>, dataIndex: 'file_actions', key: 'file_actions', align: 'center', width: 180 },
       { title: <span style={{ color: dataColors.title }}>QTY & Price</span>, dataIndex: 'qty_price', key: 'qty_price', align: 'center', width: 140 },
-      { title: <span style={{ color: dataColors.title }}>Actions</span>, dataIndex: 'details', key: 'details', align: 'center', width: 140 },
+      { title: <span style={{ color: dataColors.title }}>Actions</span>, dataIndex: 'actions', key: 'actions', align: 'center', width: 150 },
       {
         title: <span style={{ color: dataColors.title }}>Tracking & Note</span>,
         dataIndex: 'tracking_note',
@@ -747,7 +807,7 @@ const OrderShopify = () => {
             const customizedUrl = resolveImageValue(getCustomFieldValue(lineItem, '_customized_url'));
             return {
               key: `${index}-${lineItemId}`,
-              image: <ShopifyProductImage imageUrl={previewImageUrl} />,
+              image: <ShopifyProductImage imageUrl={previewImageUrl} onPreview={setProductPreviewUrl} />,
               product: (
                 <Flex vertical gap={4}>
                   <span className="font-medium">{lineItem?.title || lineItem?.name || 'No product title'}</span>
@@ -758,11 +818,15 @@ const OrderShopify = () => {
                 </Flex>
               ),
               sku: <SubItemSku sku={lineItem?.sku} sellerName={lineItem?.vendor || item?.shopDomain || 'Shopify'} />,
-              file_actions: (
-                <ShopifyFileActions
+              actions: (
+                <ShopifyLineItemActions
                   printFiles={printFiles}
                   customizedUrl={customizedUrl}
+                  paymentsUrl={getOrderStatusUrl(item)}
                   onShowPrintFiles={setPrintFilePreviewUrls}
+                  onViewDetails={() => setSelectedOrderDetail(item)}
+                  cancelDisabled={String(item?.processStatus || '').toLowerCase() === 'cancelled'}
+                  onCancel={() => handleOpenCancelOrder(item)}
                 />
               ),
               tracking_note: (
@@ -772,27 +836,6 @@ const OrderShopify = () => {
                   status={item?.processStatus}
                   onUpdated={() => fetchAllOrder(filters)}
                 />
-              ),
-              details: (
-                <div className="flex flex-col items-center gap-2">
-                  <Button
-                    type="primary"
-                    size="small"
-                    className="!rounded-md !px-3 !font-medium shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
-                    onClick={() => setSelectedOrderDetail(item)}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    danger
-                    size="small"
-                    className="!rounded-md !px-3 !font-medium shadow-sm transition-all duration-150 hover:!-translate-y-0.5 hover:!shadow-md"
-                    disabled={String(item?.processStatus || '').toLowerCase() === 'cancelled'}
-                    onClick={() => handleOpenCancelOrder(item)}
-                  >
-                    Cancelled
-                  </Button>
-                </div>
               ),
               qty_price: <ShopifyQtyPriceCell quantity={lineItem?.quantity} price={lineItem?.originalUnitPrice || lineItem?.price} />,
             };
@@ -1081,6 +1124,15 @@ const OrderShopify = () => {
         footer={null}
       >
         <ShopifyProductImages imageUrls={printFilePreviewUrls} imageSize={720} />
+      </Modal>
+      <Modal
+        title="Product Image"
+        width={900}
+        open={Boolean(productPreviewUrl)}
+        onCancel={() => setProductPreviewUrl('')}
+        footer={null}
+      >
+        <ShopifyProductImages imageUrls={productPreviewUrl ? [productPreviewUrl] : []} imageSize={720} />
       </Modal>
     </div>
   );
