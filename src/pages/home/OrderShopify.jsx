@@ -250,7 +250,7 @@ const getShopifyImageUrl = (lineItem = {}, order = {}) => {
   return getShopifyImageUrls(lineItem, order)[0] || '';
 };
 
-const ShopifyProductImages = ({ imageUrls = [] }) => {
+const ShopifyProductImages = ({ imageUrls = [], imageSize = 72 }) => {
   if (!imageUrls.length) {
     return <StatusComponent title="No image" color={dataColors.default} />;
   }
@@ -263,7 +263,7 @@ const ShopifyProductImages = ({ imageUrls = [] }) => {
             src={imageUrl}
             alt="Product Image"
             className="rounded border border-[#e2e8f0]"
-            style={{ width: 72, height: 72, objectFit: 'cover' }}
+            style={{ width: imageSize, height: imageSize, objectFit: 'contain' }}
           />
         </a>
       ))}
@@ -1075,12 +1075,12 @@ const OrderShopify = () => {
       </Modal>
       <Modal
         title="File Print"
-        width={760}
+        width={900}
         open={printFilePreviewUrls.length > 0}
         onCancel={() => setPrintFilePreviewUrls([])}
         footer={null}
       >
-        <ShopifyProductImages imageUrls={printFilePreviewUrls} />
+        <ShopifyProductImages imageUrls={printFilePreviewUrls} imageSize={720} />
       </Modal>
     </div>
   );
