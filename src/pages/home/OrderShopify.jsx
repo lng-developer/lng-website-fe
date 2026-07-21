@@ -372,7 +372,7 @@ const ShopifyTrackingAndNote = ({ shopifyOrderId, trackingInfo = {}, status, onU
         initialValues={{
           fulfillment: trackingInfo?.fulfillment || trackingInfo?.trackingCompany || '',
           tracking: trackingInfo?.trackingNumber || '',
-          status: trackingInfo?.status || status || 'Fulfilled',
+          status: status || 'Fulfilled',
           note: trackingInfo?.note || trackingInfo?.message || '',
         }}
       >
@@ -695,7 +695,7 @@ const OrderShopify = () => {
                 <ShopifyTrackingAndNote
                   shopifyOrderId={item?.shopifyOrderId}
                   trackingInfo={item?.trackingInfo}
-                  status={item?.fulfillmentStatus || item?.processStatus}
+                  status={item?.processStatus}
                   onUpdated={() => fetchAllOrder(filters)}
                 />
               ),
