@@ -54,7 +54,7 @@ export const detailMenus = {
       children: [
         { key: routes.order_amazon, label: 'Amazon', icon: <FaAmazon size={20} /> },
         { key: routes.order_etsy, label: 'Etsy', icon: <FaEtsy size={20} /> },
-        // { key: '/order/shopify', label: 'Shopify', icon: <FaShopify size={20} /> },
+        { key: routes.order_shopify, label: 'Shopify', icon: <FaShopify size={20} /> },
       ],
     },
     {
