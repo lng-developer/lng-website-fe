@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Button, Descriptions, Drawer, Empty, Image, Input, Pagination, Table, Tooltip } from 'antd';
+import { Button, Descriptions, Drawer, Empty, Image, Input, Pagination, Select, Table, Tooltip } from 'antd';
 import { debounce } from 'lodash';
 import { toast } from 'sonner';
 import { FaDatabase, FaDollarSign, FaEtsy } from 'react-icons/fa';
@@ -11,6 +11,7 @@ import { dataColors } from '../../utils/dataColors';
 import ButtonFilter from '../../components/ButtonFilter';
 import StatusComponent from '../../components/StatusComponent';
 import { getEtsyListings, getEtsyListingDetail } from '../../apis/etsyListing';
+import { getAllShop } from '../../apis/shop';
 
 const PAGE_SIZE = 10;
 
@@ -21,7 +22,7 @@ const ETSY_LISTING_FILTERS = [
   { key: 'outOfStock', title: 'Out of Stock', filter: 'out_of_stock', count: 0 },
 ];
 
-const createEtsyListingColumns = ({ handleViewDetail }) => [
+const createEtsyListingColumns = ({ handleViewDetail, shopNameById }) => [
   {
     title: <span style={{ color: dataColors.title }}>Image</span>,
     dataIndex: 'imageUrl',
@@ -62,11 +63,11 @@ const createEtsyListingColumns = ({ handleViewDetail }) => [
     render: (data) => <span className="font-medium">{data || '-'}</span>,
   },
   {
-    title: <span style={{ color: dataColors.title }}>Shop Name</span>,
-    dataIndex: 'shopName',
-    key: 'shopName',
+    title: <span style={{ color: dataColors.title }}>Shop</span>,
+    dataIndex: 'shopId',
+    key: 'shop',
     align: 'center',
-    render: (data) => <StatusComponent title={data || '-'} color={dataColors.pending} />,
+    render: (shopId, record) => <StatusComponent title={shopNameById.get(String(shopId)) || record?.shopName || '-'} color={dataColors.pending} />,
   },
   {
     title: <span style={{ color: dataColors.title }}>Etsy Shop ID</span>,
@@ -81,27 +82,6 @@ const createEtsyListingColumns = ({ handleViewDetail }) => [
     key: 'price',
     align: 'center',
     render: (data) => <span className="font-medium">{data || data === 0 ? `$${Number(data).toFixed(2)}` : '-'}</span>,
-  },
-  {
-    title: <span style={{ color: dataColors.title }}>Quantity</span>,
-    dataIndex: 'quantity',
-    key: 'quantity',
-    align: 'center',
-    render: (data) => <span className="font-medium">{data ?? '-'}</span>,
-  },
-  {
-    title: <span style={{ color: dataColors.title }}>Synced At</span>,
-    dataIndex: 'syncedAt',
-    key: 'syncedAt',
-    align: 'center',
-    render: (data) => <span className="whitespace-nowrap">{formatDateTime(data)}</span>,
-  },
-  {
-    title: <span style={{ color: dataColors.title }}>Updated At</span>,
-    dataIndex: 'updatedAt',
-    key: 'updatedAt',
-    align: 'center',
-    render: (data) => <span className="whitespace-nowrap">{formatDateTime(data)}</span>,
   },
   {
     title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -123,6 +103,13 @@ const formatDateTime = (value) => {
   return date.toLocaleString();
 };
 
+const pickShopId = (shop) => shop?._id || shop?.shopId || shop?.id || '';
+const pickShopName = (shop) => shop?.name || shop?.shopName || shop?.storeName || pickShopId(shop) || 'Unnamed shop';
+const isEtsyShop = (shop) => {
+  const merchant = String(shop?.merchant || shop?.platform || shop?.type || '').toLowerCase();
+  return !merchant || merchant === 'etsy';
+};
+
 const EtsyListing = () => {
   const { collapsed } = useOutletContext();
   const [isActiveFilter, setIsActivefilter] = useState(ETSY_LISTING_FILTERS[0]);
@@ -135,6 +122,8 @@ const EtsyListing = () => {
   const [openDetail, setOpenDetail] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailData, setDetailData] = useState(null);
+  const [shops, setShops] = useState([]);
+  const [shopLoading, setShopLoading] = useState(false);
   const [filters, setFilters] = useState({
     page: 1,
     perPage: PAGE_SIZE,
@@ -158,6 +147,25 @@ const EtsyListing = () => {
       };
     },
     [dataSource, totalCount]
+  );
+
+  const shopOptions = useMemo(
+    () =>
+      shops.map((shop) => ({
+        value: pickShopId(shop),
+        label: pickShopName(shop),
+      })),
+    [shops]
+  );
+
+  const shopNameById = useMemo(
+    () =>
+      new Map(
+        shops
+          .map((shop) => [String(pickShopId(shop)), pickShopName(shop)])
+          .filter(([shopId]) => shopId)
+      ),
+    [shops]
   );
 
   const updateFilter = useCallback((newValues) => {
@@ -220,6 +228,19 @@ const EtsyListing = () => {
     }
   }, []);
 
+  const fetchAllShop = useCallback(async () => {
+    setShopLoading(true);
+    try {
+      const response = await getAllShop();
+      const list = Array.isArray(response.data) ? response.data : Array.isArray(response.data?.data) ? response.data.data : [];
+      setShops(list.filter(isEtsyShop).filter((shop) => pickShopId(shop)));
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Get shop list failed');
+    } finally {
+      setShopLoading(false);
+    }
+  }, []);
+
   const handleRefresh = () => {
     setTabFilter(ETSY_LISTING_FILTERS);
     setDetailData(null);
@@ -250,7 +271,7 @@ const EtsyListing = () => {
     }
   }, []);
 
-  const etsyListingColumns = useMemo(() => createEtsyListingColumns({ handleViewDetail }), [handleViewDetail]);
+  const etsyListingColumns = useMemo(() => createEtsyListingColumns({ handleViewDetail, shopNameById }), [handleViewDetail, shopNameById]);
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
@@ -274,6 +295,10 @@ const EtsyListing = () => {
   useEffect(() => {
     fetchAllEtsyListings(filters);
   }, [fetchAllEtsyListings, filters]);
+
+  useEffect(() => {
+    fetchAllShop();
+  }, [fetchAllShop]);
 
   return (
     <div className="overflow-hidden">
@@ -363,11 +388,22 @@ const EtsyListing = () => {
         </div>
 
         <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[40%] gap-2">
+          <div className="flex w-[55%] gap-2">
             <Input
               onChange={handleSearch}
               placeholder="Search Etsy listing"
               className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+            />
+            <Select
+              allowClear
+              showSearch
+              loading={shopLoading}
+              placeholder="Select Etsy shop"
+              value={filters.shopId || undefined}
+              options={shopOptions}
+              optionFilterProp="label"
+              className="min-w-[220px]"
+              onChange={(value) => updateFilter({ shopId: value || '', page: 1 })}
             />
             <div className="flex gap-2 items-center">
               <Tooltip title="Refresh">
@@ -424,7 +460,6 @@ const EtsyListing = () => {
             <Descriptions.Item label="Title">{detailData?.title || '-'}</Descriptions.Item>
             <Descriptions.Item label="SKU">{detailData?.SKU || '-'}</Descriptions.Item>
             <Descriptions.Item label="Price">{detailData?.price ?? '-'}</Descriptions.Item>
-            <Descriptions.Item label="Quantity">{detailData?.quantity ?? '-'}</Descriptions.Item>
             <Descriptions.Item label="Synced At">{formatDateTime(detailData?.syncedAt)}</Descriptions.Item>
             <Descriptions.Item label="Updated At">{formatDateTime(detailData?.updatedAt)}</Descriptions.Item>
           </Descriptions>
