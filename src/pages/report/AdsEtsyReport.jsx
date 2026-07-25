@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Empty, Button, Select, Segmented, Table, Tag, Tooltip } from 'antd';
+import { Collapse, Empty, Button, Select, Segmented, Table, Tag, Tooltip } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
@@ -617,6 +617,55 @@ const AdsEtsyReport = () => {
     const employeeTotals = getEmployeeReportTotals(employeeSummary);
     const employeeRows = getEmployeeReportRows(employeeSummary);
 
+    const dayGroups = useMemo(() => {
+      return items
+        .map((it) => {
+          const date = it?.overviewApiDate || String(it?.day || '').slice(0, 10);
+          const rows = (it?.rows || [])
+            .map((r, idx) => {
+              const adsListingId = String(r.listingId || '');
+              const info = getListingInfo(adsListingId);
+              const rowSku = String(r.sku || r.SKU || r.productSku || '').trim();
+              const rowSkus = Array.isArray(r.skus) ? r.skus.filter(Boolean) : r.skus;
+              const rowSeller = String(r.seller || r.sellerName || '').trim();
+              const finalSku = rowSku || info.sku;
+              const sellerFromVisibleSku = resolveSellerNamesFromSkus([
+                ...splitSkuValues(rowSku),
+                ...splitSkuValues(rowSkus),
+                ...splitSkuValues(info.sku),
+              ]);
+
+              return {
+                key: `${it._id}-${r.listingId}-${idx}`,
+                shopName: it.shopName,
+                ...r,
+                date: r.date || date,
+                title: decodeHtml(r.title),
+                sku: finalSku,
+                seller: sellerFromVisibleSku || rowSeller || info.seller,
+              };
+            })
+            .sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
+
+          return {
+            key: it?._id || date,
+            date,
+            shopName: it?.shopName,
+            etsyShopId: it?.etsyShopId,
+            rows,
+            totals: {
+              spend: Number(it?.totalSpend || it?.overviewTotals?.spendUsd || 0),
+              views: Number(it?.totalViews || it?.overviewTotals?.views || 0),
+              clicks: Number(it?.totalClicks || it?.overviewTotals?.clicks || 0),
+              orders: Number(it?.totalOrders || it?.overviewTotals?.orders || 0),
+              revenue: Number(it?.totalRevenue || it?.overviewTotals?.revenueUsd || 0),
+              rows: Number(it?.totalRows || rows.length || 0),
+            },
+          };
+        })
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    }, [items, listingInfoMap, sellerByEmployeeId]);
+
     const handleExportByEmployee = useCallback(async () => {
       const from = toYMD(filters.from);
       const to = toYMD(filters.to);
@@ -1020,6 +1069,7 @@ const AdsEtsyReport = () => {
               onChange={setActiveView}
               options={[
                 { label: 'Listing Ads', value: 'listing' },
+                { label: 'Ads by Day', value: 'day' },
                 { label: 'Ads by Employee', value: 'employee' },
               ]}
             />
@@ -1088,6 +1138,62 @@ const AdsEtsyReport = () => {
             )}
           </div>
             </>
+          ) : activeView === 'day' ? (
+            <div className="space-y-4">
+              {dayGroups.length > 0 ? (
+                <Collapse
+                  defaultActiveKey={dayGroups.slice(0, 1).map((group) => group.key)}
+                  className="ads-etsy-day-collapse"
+                  items={dayGroups.map((group) => ({
+                    key: group.key,
+                    label: (
+                      <div className="flex flex-wrap items-center justify-between gap-3 pr-4">
+                        <div className="flex flex-col">
+                          <span className="text-base font-semibold text-black">{group.date || '-'}</span>
+                          <span className="text-xs text-gray-500">
+                            {group.shopName || 'Etsy Shop'} {group.etsyShopId ? `- ${group.etsyShopId}` : ''}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-700">
+                          <span>
+                            Spend: <strong className="text-black">{fmtMoney(group.totals.spend)}</strong>
+                          </span>
+                          <span>
+                            Revenue: <strong className="text-black">{fmtMoney(group.totals.revenue)}</strong>
+                          </span>
+                          <span>
+                            Orders: <strong className="text-black">{fmtNum(group.totals.orders)}</strong>
+                          </span>
+                          <span>
+                            Rows: <strong className="text-black">{fmtNum(group.totals.rows)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    ),
+                    children: (
+                      <Table
+                        loading={loading}
+                        dataSource={group.rows}
+                        columns={columns}
+                        pagination={{
+                          pageSize: 20,
+                          showSizeChanger: true,
+                          pageSizeOptions: ['10', '20', '50', '100'],
+                          showTotal: (total) => `Total ${total} listings`,
+                        }}
+                        size="middle"
+                        scroll={{ x: 1420 }}
+                        className="ads-etsy-table"
+                      />
+                    ),
+                  }))}
+                />
+              ) : (
+                <div className="py-16 rounded-xl border border-gray-200 bg-white">
+                  <Empty description={!shopId ? 'Please select an Etsy shop to view the report' : loading ? 'Loading...' : 'No data'} />
+                </div>
+              )}
+            </div>
           ) : (
             <div className="space-y-6">
               <div className="flex gap-4 flex-wrap">
@@ -1177,6 +1283,20 @@ const AdsEtsyReport = () => {
         }
         .ads-etsy-table .ant-table-body::-webkit-scrollbar-thumb:hover {
           background: #9ca3af;
+        }
+        .ads-etsy-day-collapse {
+          border: 1px solid #e5e7eb !important;
+          background: #fff !important;
+        }
+        .ads-etsy-day-collapse .ant-collapse-item {
+          border-bottom: 1px solid #e5e7eb !important;
+        }
+        .ads-etsy-day-collapse .ant-collapse-header {
+          align-items: center !important;
+          background: #f9fafb !important;
+        }
+        .ads-etsy-day-collapse .ant-collapse-content-box {
+          padding: 0 !important;
         }
       `}</style>
       </div>
