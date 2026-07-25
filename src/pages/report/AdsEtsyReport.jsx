@@ -1014,7 +1014,7 @@ const AdsEtsyReport = () => {
     ];
 
     return (
-      <div className="bg-white h-screen overflow-hidden flex flex-col">
+      <div className="bg-white min-h-screen flex flex-col">
         <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300 border-b border-gray-200`}>
           <div className="h-[60px] gap-4 p-4 md:px-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
