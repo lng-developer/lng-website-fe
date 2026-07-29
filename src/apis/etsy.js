@@ -123,6 +123,7 @@ const getAllEtsyQCStatistics = (params) => {
 };
 
 const pushSelectedEtsyOrdersToFulfillmentPlatform = (payload) => {
+  console.log('payload', payload);
   return instance.post('/etsy/qc/push-platform-orders', payload);
 };
 

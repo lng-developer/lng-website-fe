@@ -1,59 +1,64 @@
-/**
- * useEtsyOrderCost.js
- * ─────────────────────────────────────────────────────────────
- * Custom hook chứa toàn bộ logic cho trang Etsy Order Cost.
- * Tách riêng khỏi UI để dễ maintain và đổi sang API thực.
- *
- * Khi có API:
- *   1. Xóa import generateMockEtsyOrders / computeEtsyOrderStats
- *   2. Thay fetchOrders bằng API call
- *   3. Thay fetchStats bằng API call
- * ─────────────────────────────────────────────────────────────
- */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'lodash';
 import { defaultFrom, defaultTo } from '../../../../utils/fomatDate';
-import { generateMockEtsyOrders, computeEtsyOrderStats } from '../mock/etsy.mockData';
+import { getAllEtsyOrders } from '../../../../apis/etsy';
+import {
+  computeEtsyOrderStats,
+  normalizeEtsyOrderCostResponse,
+} from '../etsyOrderCostMapper';
 
 const PAGE_SIZE = 10;
 
 export function useEtsyOrderCost() {
-  // ── raw data from "API" ─────────────────────────────────────
   const [allOrders, setAllOrders] = useState([]);
-  const [stats, setStats]         = useState({});
-  const [loading, setLoading]     = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const latestRequestRef = useRef(0);
 
-  // ── filter state ────────────────────────────────────────────
   const [filters, setFilters] = useState({
-    from:     defaultFrom,
-    to:       defaultTo,
-    search:   '',
+    from: defaultFrom,
+    to: defaultTo,
+    search: '',
     shopName: '',
-    status:   '',
+    status: '',
   });
 
-  // ── pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize]       = useState(PAGE_SIZE);
-
-  // ── expand state ─────────────────────────────────────────────
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [expandedRowKeys, setExpandedRowKeys] = useState([]);
-  const [allExpanded, setAllExpanded]         = useState(true);
+  const [allExpanded, setAllExpanded] = useState(true);
 
-  // ── fetch (mock) ─────────────────────────────────────────────
-  const fetchOrders = useCallback((params) => {
+  const fetchOrders = useCallback(async (params) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
     setLoading(true);
-    // TODO: replace with API call
-    // const res = await getEtsyOrderCost(params);
-    setTimeout(() => {
-      const data = generateMockEtsyOrders(params.from, params.to);
-      setAllOrders(data);
-      setStats(computeEtsyOrderStats(data));
-      setLoading(false);
-    }, 350);
+
+    try {
+      const res = await getAllEtsyOrders({
+        page: params.page,
+        perPage: params.limit,
+        from: params.from,
+        to: params.to,
+        search: params.search,
+        shopName: params.shopName,
+        status: params.status,
+      });
+
+      if (latestRequestRef.current !== requestId) return;
+
+      const payload = normalizeEtsyOrderCostResponse(res?.data);
+      setAllOrders(payload.orders);
+      setTotalCount(payload.totalCount);
+    } catch (error) {
+      if (latestRequestRef.current !== requestId) return;
+      console.error('Failed to fetch Etsy order cost report:', error);
+      setAllOrders([]);
+      setTotalCount(0);
+    } finally {
+      if (latestRequestRef.current === requestId) setLoading(false);
+    }
   }, []);
 
-  // ── filter helpers ───────────────────────────────────────────
   const updateFilter = (newValues) => {
     setFilters((prev) => ({ ...prev, ...newValues }));
     setCurrentPage(1);
@@ -65,44 +70,26 @@ export function useEtsyOrderCost() {
     []
   );
 
-  // ── filtered + paginated data ────────────────────────────────
-  const filteredOrders = useMemo(() => {
-    let data = allOrders;
-    const q = filters.search?.trim().toLowerCase();
-    if (q) {
-      data = data.filter(
-        (o) =>
-          o.orderId.toLowerCase().includes(q) ||
-          o.buyerName?.toLowerCase().includes(q) ||
-          o.shopName?.toLowerCase().includes(q)
-      );
-    }
-    if (filters.shopName) {
-      data = data.filter((o) => o.shopName === filters.shopName);
-    }
-    if (filters.status) {
-      data = data.filter((o) => o.status === filters.status);
-    }
-    return data;
-  }, [allOrders, filters.search, filters.shopName, filters.status]);
+  const pagedOrders = allOrders;
 
-  const pagedOrders = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredOrders.slice(start, start + pageSize);
-  }, [filteredOrders, currentPage, pageSize]);
-
-  const totalCount = filteredOrders.length;
-
-  // ── live stats computed from filtered orders ─────────────────
   const filteredStats = useMemo(
-    () => computeEtsyOrderStats(filteredOrders),
-    [filteredOrders]
+    () => computeEtsyOrderStats(allOrders),
+    [allOrders]
   );
 
-  // ── expand helpers ────────────────────────────────────────────
+  const shopOptions = useMemo(
+    () => [...new Set(allOrders.map((o) => o.shopName).filter(Boolean))],
+    [allOrders]
+  );
+
+  const statusOptions = useMemo(
+    () => [...new Set(allOrders.map((o) => o.status).filter(Boolean))],
+    [allOrders]
+  );
+
   const handleExpand = (expanded, record) => {
     setExpandedRowKeys((prev) =>
-      expanded ? [...prev, record.key] : prev.filter((k) => k !== record.key)
+      expanded ? [...prev, record.key] : prev.filter((key) => key !== record.key)
     );
   };
 
@@ -110,50 +97,49 @@ export function useEtsyOrderCost() {
     if (allExpanded) {
       setExpandedRowKeys([]);
     } else {
-      setExpandedRowKeys(pagedOrders.map((o) => o.orderId));
+      setExpandedRowKeys(pagedOrders.map((order) => order.orderId));
     }
     setAllExpanded((prev) => !prev);
   };
 
-  // ── pagination ────────────────────────────────────────────────
   const handlePageChange = (page, size) => {
     setCurrentPage(page);
     setPageSize(size || PAGE_SIZE);
   };
 
-  // ── keep expand keys in sync when page changes ────────────────
   useEffect(() => {
     if (allExpanded) {
-      setExpandedRowKeys(pagedOrders.map((o) => o.orderId));
+      setExpandedRowKeys(pagedOrders.map((order) => order.orderId));
     }
   }, [pagedOrders, allExpanded]);
 
-  // ── initial fetch & re-fetch on date change ───────────────────
   useEffect(() => {
-    fetchOrders(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.from, filters.to]);
+    fetchOrders({
+      ...filters,
+      page: currentPage,
+      limit: pageSize,
+    });
+  }, [currentPage, fetchOrders, filters, pageSize]);
+
+  useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
 
   return {
-    // data
     pagedOrders,
     filteredStats,
     totalCount,
     loading,
-    // filters
     filters,
     updateFilter,
     debouncedSearch,
-    // pagination
+    shopOptions,
+    statusOptions,
     currentPage,
     pageSize,
     handlePageChange,
-    // expand
     expandedRowKeys,
     allExpanded,
     handleExpand,
     toggleAllExpanded,
-    // actions
-    refresh: () => fetchOrders(filters),
+    refresh: () => fetchOrders({ ...filters, page: currentPage, limit: pageSize }),
   };
 }

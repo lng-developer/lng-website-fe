@@ -7,7 +7,7 @@
  */
 import { useCallback, useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Image, Input, Pagination, Table, Tooltip, Tag, Select } from 'antd';
+import { Descriptions, Image, Input, Modal, Pagination, Table, Tooltip, Tag, Select } from 'antd';
 import { FaBox, FaDollarSign, FaUser, FaRedo, FaPercentage, FaEtsy } from 'react-icons/fa';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { BiSolidFileExport } from 'react-icons/bi';
@@ -20,6 +20,7 @@ import DateRangePicker from '../../../components/DateRangePicker';
 import StatusComponent from '../../../components/StatusComponent';
 import { dataColors } from '../../../utils/dataColors';
 import { useEtsyOrderCost } from './hooks/useEtsyOrderCost';
+import { getEtsyOrderCostDetails } from './etsyOrderCostMapper';
 
 const num = (v) => (Number.isFinite(+v) ? +v : 0);
 const fmtMoney = (v) => {
@@ -31,15 +32,8 @@ const fmtNum = (n) =>
     ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : n;
 
-const SHOPS   = ['Etsy Shop A', 'Etsy Shop B', 'Etsy Shop C'];
-const STATUSES = [
-  { label: 'Completed', value: 'completed' },
-  { label: 'Shipped',   value: 'shipped'   },
-  { label: 'Processing',value: 'processing'},
-];
-
 // ── Status badge ─────────────────────────────────────────────
-const statusColor = { completed: 'green', shipped: 'blue', processing: 'orange' };
+const statusColor = { completed: 'green', shipped: 'blue', processing: 'orange', New: 'cyan' };
 const StatusBadge = ({ status }) => (
   <Tag color={statusColor[status] || 'default'} style={{ fontSize: 11 }}>
     {status?.toUpperCase()}
@@ -82,6 +76,7 @@ const Card = ({ item }) => {
 const EtsyOrderCost = () => {
   const { collapsed } = useOutletContext();
   const [tableHeight, setTableHeight] = useState(0);
+  const [selectedCostOrder, setSelectedCostOrder] = useState(null);
 
   const {
     pagedOrders,
@@ -91,6 +86,8 @@ const EtsyOrderCost = () => {
     filters,
     updateFilter,
     debouncedSearch,
+    shopOptions,
+    statusOptions,
     currentPage,
     pageSize,
     handlePageChange,
@@ -118,7 +115,7 @@ const EtsyOrderCost = () => {
     { key: 'revenue',         label: 'Revenue',         value: num(s.revenue),         prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-emerald-500' },
     { key: 'profit',          label: 'Profit',          value: num(s.profit),          prefix: '$', icon: <FaUser className="text-white" />,         iconBg: 'bg-blue-500' },
     { key: 'baseCost',        label: 'Base Cost',       value: num(s.baseCost),        prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-amber-500' },
-    { key: 'listingFee',      label: 'Listing Fee',     value: num(s.listingFee),      prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-fuchsia-500' },
+   // { key: 'listingFee',      label: 'Listing Fee',     value: num(s.listingFee),      prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-fuchsia-500' },
     { key: 'transactionFee',  label: 'Transaction Fee', value: num(s.transactionFee),  prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-orange-500' },
     { key: 'offsiteAds',      label: 'Offsite Ads',     value: num(s.offsiteAds),      prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-rose-500' },
     { key: 'refund',          label: 'Refund',          value: num(s.refund),          prefix: '$', icon: <FaRedo className="text-white" />,         iconBg: 'bg-violet-500' },
@@ -177,52 +174,59 @@ const EtsyOrderCost = () => {
       align: 'right',
       width: 100,
     },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Listing Fee</span>,
+    //   dataIndex: 'listingFeeCell',
+    //   key: 'listingFee',
+    //   align: 'right',
+    //   width: 100,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Txn Fee</span>,
+    //   dataIndex: 'transactionFeeCell',
+    //   key: 'transactionFee',
+    //   align: 'right',
+    //   width: 90,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Pay Fee</span>,
+    //   dataIndex: 'paymentFeeCell',
+    //   key: 'paymentFee',
+    //   align: 'right',
+    //   width: 90,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Tax</span>,
+    //   dataIndex: 'taxCell',
+    //   key: 'tax',
+    //   align: 'right',
+    //   width: 80,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Offsite Ads</span>,
+    //   dataIndex: 'offsiteAdsCell',
+    //   key: 'offsiteAds',
+    //   align: 'right',
+    //   width: 100,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Discount</span>,
+    //   dataIndex: 'discountCell',
+    //   key: 'discount',
+    //   align: 'right',
+    //   width: 90,
+    // },
+    // {
+    //   title: <span style={{ color: dataColors.title }}>Refund</span>,
+    //   dataIndex: 'refundCell',
+    //   key: 'refund',
+    //   align: 'right',
+    //   width: 80,
+    // },
     {
-      title: <span style={{ color: dataColors.title }}>Listing Fee</span>,
-      dataIndex: 'listingFeeCell',
-      key: 'listingFee',
-      align: 'right',
-      width: 100,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Txn Fee</span>,
-      dataIndex: 'transactionFeeCell',
-      key: 'transactionFee',
-      align: 'right',
-      width: 90,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Pay Fee</span>,
-      dataIndex: 'paymentFeeCell',
-      key: 'paymentFee',
-      align: 'right',
-      width: 90,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Tax</span>,
-      dataIndex: 'taxCell',
-      key: 'tax',
-      align: 'right',
-      width: 80,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Offsite Ads</span>,
-      dataIndex: 'offsiteAdsCell',
-      key: 'offsiteAds',
-      align: 'right',
-      width: 100,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Discount</span>,
-      dataIndex: 'discountCell',
-      key: 'discount',
-      align: 'right',
-      width: 90,
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>Refund</span>,
-      dataIndex: 'refundCell',
-      key: 'refund',
+      title: <span style={{ color: dataColors.title }}>Free</span>,
+      dataIndex: 'freeCell',
+      key: 'free',
       align: 'right',
       width: 80,
     },
@@ -231,6 +235,14 @@ const EtsyOrderCost = () => {
       dataIndex: 'profitCell',
       key: 'profit',
       align: 'right',
+      width: 100,
+      fixed: 'right',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Actions</span>,
+      dataIndex: 'actions',
+      key: 'actions',
+      align: 'center',
       width: 100,
       fixed: 'right',
     },
@@ -300,6 +312,7 @@ const EtsyOrderCost = () => {
     offsiteAdsCell:      <span className="font-medium">{o.offsiteAds > 0 ? fmtMoney(o.offsiteAds) : '-'}</span>,
     discountCell:        <span className="font-medium">{o.discount > 0 ? fmtMoney(o.discount) : '-'}</span>,
     refundCell:          <span className="font-medium">{o.refund > 0 ? fmtMoney(o.refund) : '-'}</span>,
+    freeCell:            <span className="font-medium">{fmtMoney(o.free)}</span>,
     profitCell: (
       <span
         className="font-semibold"
@@ -307,6 +320,14 @@ const EtsyOrderCost = () => {
       >
         {fmtMoney(o.profit)}
       </span>
+    ),
+    actions: (
+      <button
+        className="inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-[#f8fafc] px-3 text-xs font-medium text-slate-700 hover:bg-[#eef2f7] cursor-pointer"
+        onClick={() => setSelectedCostOrder(o)}
+      >
+        Details
+      </button>
     ),
     // sub-items
     subItems: o.items.map((item, idx) => ({
@@ -316,7 +337,13 @@ const EtsyOrderCost = () => {
           className="w-[80px] h-[80px] rounded-lg overflow-hidden"
           style={{ boxShadow: 'rgba(9,30,66,.25) 0 4px 8px -2px, rgba(9,30,66,.08) 0 0 0 1px' }}
         >
-          <Image height={80} width={80} src={item.imageUrl} className="rounded-lg object-cover" />
+          <Image
+            height={80}
+            width={80}
+            src={item.imageUrl}
+            preview={{ src: item.previewImageUrl || item.imageUrl }}
+            className="rounded-lg object-cover"
+          />
         </div>
       ),
       title:       item.title,
@@ -339,6 +366,27 @@ const EtsyOrderCost = () => {
     />
   );
 
+  const costDetails = selectedCostOrder ? getEtsyOrderCostDetails(selectedCostOrder) : [];
+  const costDetailItems = costDetails.map((item) => ({
+    key: item.key,
+    label: item.label,
+    children: (
+      <span
+        className="font-semibold tabular-nums"
+        style={{
+          color:
+            item.key === 'profit'
+              ? item.value < 0
+                ? dataColors.cancelled
+                : dataColors.success
+              : '#1e293b',
+        }}
+      >
+        {fmtMoney(item.value)}
+      </span>
+    ),
+  }));
+
   // ── Export Excel ──────────────────────────────────────────
   const handleExport = async () => {
     try {
@@ -351,7 +399,7 @@ const EtsyOrderCost = () => {
       const headers = [
         'Order ID','Order Date','Shop','Buyer','Status',
         'Revenue','Base Cost','Listing Fee','Transaction Fee','Payment Fee',
-        'Tax','Offsite Ads','Discount','Refund','Profit',
+        'Tax','Offsite Ads','Discount','Refund','Free','Profit',
       ];
       const headerRow = ws.getRow(1);
       headers.forEach((h, i) => {
@@ -367,20 +415,20 @@ const EtsyOrderCost = () => {
         const vals = [
           o.orderId, o.orderDateFmt, o.shopName, o.buyerName, o.status,
           o.revenue, o.baseCost, o.listingFee, o.transactionFee, o.paymentFee,
-          o.tax, o.offsiteAds, o.discount, o.refund, o.profit,
+          o.tax, o.offsiteAds, o.discount, o.refund, o.free, o.profit,
         ];
         vals.forEach((v, ci) => {
           const c = row.getCell(ci + 1);
           c.value = v; c.border = borderThin;
           c.alignment = { horizontal: ci < 5 ? 'center' : 'right' };
           if (ci >= 5) c.numFmt = moneyFmt;
-          if (ci === 14 && typeof v === 'number') {
+          if (ci === 15 && typeof v === 'number') {
             c.font = { color: { argb: v >= 0 ? '008000' : 'FF0000' }, bold: true };
           }
         });
       });
 
-      [18, 20, 14, 18, 12, 12, 12, 12, 16, 11, 11, 12, 11, 11, 12].forEach((w, i) => {
+      [18, 20, 14, 18, 12, 12, 12, 12, 16, 11, 11, 12, 11, 11, 10, 12].forEach((w, i) => {
         ws.getColumn(i + 1).width = w;
       });
 
@@ -426,7 +474,7 @@ const EtsyOrderCost = () => {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>Etsy Orders Cost</h1>
             <Tag color="orange" style={{ marginLeft: 4 }}>
-              <span className="flex items-center gap-1"><FaEtsy /> Mock Data</span>
+              <span className="flex items-center gap-1"><FaEtsy /> API Data</span>
             </Tag>
           </div>
           <div className="flex items-center gap-2">
@@ -469,7 +517,7 @@ const EtsyOrderCost = () => {
               allowClear
               placeholder="All Shops"
               style={{ width: 150, height: 40 }}
-              options={SHOPS.map((s) => ({ label: s, value: s }))}
+              options={shopOptions.map((s) => ({ label: s, value: s }))}
               onChange={(val) => updateFilter({ shopName: val || '' })}
             />
 
@@ -478,7 +526,7 @@ const EtsyOrderCost = () => {
               allowClear
               placeholder="All Statuses"
               style={{ width: 150, height: 40 }}
-              options={STATUSES}
+              options={statusOptions.map((s) => ({ label: s, value: s }))}
               onChange={(val) => updateFilter({ status: val || '' })}
             />
 
@@ -542,6 +590,88 @@ const EtsyOrderCost = () => {
             tableLayout="auto"
           />
         </div>
+
+        <Modal
+          title={
+            selectedCostOrder
+              ? `Order Cost Details - ${selectedCostOrder.orderId}`
+              : 'Order Cost Details'
+          }
+          open={Boolean(selectedCostOrder)}
+          onCancel={() => setSelectedCostOrder(null)}
+          footer={null}
+          width={720}
+        >
+          {selectedCostOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm sm:grid-cols-2">
+                <div>
+                  <span className="text-slate-500">Buyer: </span>
+                  <span className="font-medium text-slate-800">{selectedCostOrder.buyerName || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Shop: </span>
+                  <span className="font-medium text-slate-800">{selectedCostOrder.shopName || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Order Date: </span>
+                  <span className="font-medium text-slate-800">{selectedCostOrder.orderDateFmt || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Status: </span>
+                  <StatusBadge status={selectedCostOrder.status} />
+                </div>
+              </div>
+
+              <Descriptions
+                bordered
+                size="small"
+                column={2}
+                items={costDetailItems}
+              />
+
+              <Table
+                size="small"
+                pagination={false}
+                rowKey="key"
+                columns={[
+                  {
+                    title: 'SKU',
+                    dataIndex: 'sku',
+                    key: 'sku',
+                  },
+                  {
+                    title: 'Qty',
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    align: 'center',
+                    width: 70,
+                  },
+                  {
+                    title: 'Unit Price',
+                    dataIndex: 'price',
+                    key: 'price',
+                    align: 'right',
+                    width: 110,
+                    render: (value) => fmtMoney(value),
+                  },
+                  {
+                    title: 'Unit Base Cost',
+                    dataIndex: 'baseCost',
+                    key: 'baseCost',
+                    align: 'right',
+                    width: 130,
+                    render: (value) => fmtMoney(value),
+                  },
+                ]}
+                dataSource={(selectedCostOrder.items || []).map((item, idx) => ({
+                  key: `${selectedCostOrder.orderId}-cost-${idx}`,
+                  ...item,
+                }))}
+              />
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );
