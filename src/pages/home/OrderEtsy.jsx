@@ -34,6 +34,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
+import { buildReplaceItemRows } from './orderEtsyReplaceItems';
 import {
   getAllEtsyOrders,
   getEtsyStatistic,
@@ -503,28 +504,52 @@ const OrderEtsy = () => {
 
   const handleReplace = useCallback(async () => {
     try {
-      if (!selectedReplaceItemIds?.length) {
+      const transactionIds = buildReplaceItemRows(orderInfo?.items || [])
+        .filter((item) => selectedReplaceItemIds.includes(item.key))
+        .map((item) => item.transactionId)
+        .filter(Boolean);
+
+      if (!transactionIds?.length) {
         toast.error('Please select at least one item to replace');
         return;
       }
 
-      const response = await replaceEtsyOrder(orderInfo?.orderId, {
-        transactionIds: selectedReplaceItemIds,
+      const replacePayload = {
+        transactionIds,
         note: 'Replace wrong size',
+      };
+
+      console.log('[Etsy Replace] request', {
+        orderId: orderInfo?.orderId,
+        selectedReplaceItemIds,
+        payload: replacePayload,
+      });
+
+      const response = await replaceEtsyOrder(orderInfo?.orderId, replacePayload);
+
+      console.log('[Etsy Replace] response', {
+        status: response?.status,
+        data: response?.data,
       });
 
       if (response.status === 200) {
         toast.success('Replace success!');
       }
     } catch (error) {
-      console.error(error);
+      console.error('[Etsy Replace] error', {
+        orderId: orderInfo?.orderId,
+        selectedReplaceItemIds,
+        error,
+        response: error?.response?.data,
+      });
       toast.error('Replace error!');
     } finally {
       fetchAllOrder(filters);
       fetchEtsyStatistic();
       setIsShowModalReplace(false);
+      setSelectedReplaceItemIds([]);
     }
-  }, [orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchEtsyStatistic, filters]);
+  }, [orderInfo?.items, orderInfo?.orderId, selectedReplaceItemIds, fetchAllOrder, fetchEtsyStatistic, filters]);
 
   const handleResetOrder = useCallback(async () => {
     if (!selectedResetOrderId) {
@@ -765,6 +790,7 @@ const OrderEtsy = () => {
             style={{ borderColor: dataColors.pending }}
             onClick={() => {
               setOrderInfo(item);
+              setSelectedReplaceItemIds([]);
               setIsShowModalReplace(true);
             }}
           >
@@ -935,14 +961,7 @@ const OrderEtsy = () => {
   }, [orders, isShowRowkeys]);
 
   const replaceItemData = useMemo(() => {
-    return (orderInfo?.items || []).map((it, idx) => ({
-      key: it?.transactionId || String(idx), // Etsy dùng transactionId
-      orderItemId: it?.transactionId, // Map transactionId thành orderItemId cho UI
-      baseImageUrl: it?.baseImageUrl, // Hiện tại API chưa có
-      sku: it?.sku,
-      mapped_sku: it?.mapped_sku,
-      quantity: it?.quantity,
-    }));
+    return buildReplaceItemRows(orderInfo?.items || []);
   }, [orderInfo]);
 
   const replaceItemColumns = useMemo(
@@ -1191,7 +1210,10 @@ const OrderEtsy = () => {
         closable={{ 'aria-label': 'Custom Close Button' }}
         open={isShowModalReplace}
         onOk={handleReplace}
-        onCancel={() => setIsShowModalReplace(false)}
+        onCancel={() => {
+          setIsShowModalReplace(false);
+          setSelectedReplaceItemIds([]);
+        }}
         okButtonProps={{ disabled: !selectedReplaceItemIds?.length }}
       >
         <Flex vertical gap={12}>
@@ -1212,7 +1234,7 @@ const OrderEtsy = () => {
             size="small"
             bordered
             pagination={false}
-            rowKey="orderItemId"
+            rowKey="key"
             columns={replaceItemColumns}
             dataSource={replaceItemData}
             rowSelection={{
