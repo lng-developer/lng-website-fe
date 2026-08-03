@@ -1,7 +1,10 @@
 import instance from '.';
 
-export const getAllAdsEtsy = (start,end,shopid) => {
-  return instance.get(`/etsy-ads?from=${start}&to=${end}&shopId=${shopid}`);
+export const getAllAdsEtsy = (start, end, shopid) => {
+  const params = { from: start, to: end };
+  if (shopid) params.shopId = shopid;
+
+  return instance.get('/etsy-ads', { params });
 };
 
 export const getEtsyAdsByEmployee = (params) => {

@@ -106,6 +106,61 @@ const logSkuDebug = (stage, data) => {
   }
 };
 
+const emptyDayTotals = () => ({
+  spend: 0,
+  views: 0,
+  clicks: 0,
+  orders: 0,
+  revenue: 0,
+  rows: 0,
+});
+
+const addDayTotals = (target, source = {}) => {
+  target.spend += Number(source.spend || 0);
+  target.views += Number(source.views || 0);
+  target.clicks += Number(source.clicks || 0);
+  target.orders += Number(source.orders || 0);
+  target.revenue += Number(source.revenue || 0);
+  target.rows += Number(source.rows || 0);
+};
+
+const groupAdsEtsyDaysByDate = (shopDayGroups = [], combineShops = false) => {
+  if (!combineShops) return shopDayGroups;
+
+  const byDate = new Map();
+
+  shopDayGroups.forEach((group) => {
+    const date = group?.date || '';
+    const entry = byDate.get(date) || {
+      key: `day-${date || 'unknown'}`,
+      date,
+      shopName: '',
+      etsyShopId: '',
+      rows: [],
+      shopGroups: [],
+      totals: emptyDayTotals(),
+    };
+
+    const shopGroup = {
+      ...group,
+      rows: Array.isArray(group?.rows) ? group.rows : [],
+    };
+
+    entry.shopGroups.push(shopGroup);
+    entry.rows.push(...shopGroup.rows);
+    addDayTotals(entry.totals, group?.totals);
+    byDate.set(date, entry);
+  });
+
+  return Array.from(byDate.values())
+    .map((group) => ({
+      ...group,
+      shopGroups: group.shopGroups.sort((a, b) => String(a.shopName || '').localeCompare(String(b.shopName || ''))),
+      rows: group.rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0)),
+    }))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+};
+
 const AdsEtsyReport = () => {
   const { collapsed } = useOutletContext();
   const [loading, setLoading] = useState(false);
@@ -131,7 +186,6 @@ const AdsEtsyReport = () => {
   };
 
   const getADSEtsyReport = async (params, shop) => {
-    if (!shop) return;
     try {
       setLoading(true);
       const from = toYMD(params?.from);
@@ -481,8 +535,7 @@ const AdsEtsyReport = () => {
   }, []);
 
   useEffect(() => {
-    if (shopId) getADSEtsyReport(filters, shopId);
-    else setItems([]);
+    getADSEtsyReport(filters, shopId);
   }, [filters.from, filters.to, shopId]);
 
   useEffect(() => {
@@ -618,7 +671,7 @@ const AdsEtsyReport = () => {
     const employeeRows = getEmployeeReportRows(employeeSummary);
 
     const dayGroups = useMemo(() => {
-      return items
+      const shopDayGroups = items
         .map((it) => {
           const date = it?.overviewApiDate || String(it?.day || '').slice(0, 10);
           const rows = (it?.rows || [])
@@ -664,7 +717,9 @@ const AdsEtsyReport = () => {
           };
         })
         .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-    }, [items, listingInfoMap, sellerByEmployeeId]);
+
+      return groupAdsEtsyDaysByDate(shopDayGroups, !shopId);
+    }, [items, listingInfoMap, sellerByEmployeeId, shopId]);
 
     const handleExportByEmployee = useCallback(async () => {
       const from = toYMD(filters.from);
@@ -716,6 +771,20 @@ const AdsEtsyReport = () => {
             </div>
           </Tooltip>
         ),
+      },
+      {
+        title: 'Shop Name',
+        dataIndex: 'shopName',
+        key: 'shopName',
+        width: 180,
+        render: (v) =>
+          v ? (
+            <Tooltip title={v}>
+              <span className="text-xs text-gray-800 truncate inline-block max-w-[160px] align-middle">{v}</span>
+            </Tooltip>
+          ) : (
+            <span className="text-gray-400">-</span>
+          ),
       },
       {
         title: 'SKU',
@@ -1127,13 +1196,13 @@ const AdsEtsyReport = () => {
                   showTotal: (total) => `Total ${total} listings`,
                 }}
                 size="middle"
-                scroll={{ x: 1420, y: 'calc(100vh - 430px)' }}
+                scroll={{ x: 1600, y: 'calc(100vh - 430px)' }}
                 sticky
                 className="ads-etsy-table"
               />
             ) : (
               <div className="py-16">
-                <Empty description={!shopId ? 'Please select an Etsy shop to view the report' : loading ? 'Loading...' : 'No data'} />
+                <Empty description={loading ? 'Loading...' : 'No data'} />
               </div>
             )}
           </div>
@@ -1151,7 +1220,9 @@ const AdsEtsyReport = () => {
                         <div className="flex flex-col">
                           <span className="text-base font-semibold text-black">{group.date || '-'}</span>
                           <span className="text-xs text-gray-500">
-                            {group.shopName || 'Etsy Shop'} {group.etsyShopId ? `- ${group.etsyShopId}` : ''}
+                            {group.shopGroups?.length
+                              ? `${fmtNum(group.shopGroups.length)} shop(s)`
+                              : `${group.shopName || 'Etsy Shop'} ${group.etsyShopId ? `- ${group.etsyShopId}` : ''}`}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-700">
@@ -1171,26 +1242,74 @@ const AdsEtsyReport = () => {
                       </div>
                     ),
                     children: (
-                      <Table
-                        loading={loading}
-                        dataSource={group.rows}
-                        columns={columns}
-                        pagination={{
-                          pageSize: 20,
-                          showSizeChanger: true,
-                          pageSizeOptions: ['10', '20', '50', '100'],
-                          showTotal: (total) => `Total ${total} listings`,
-                        }}
-                        size="middle"
-                        scroll={{ x: 1420 }}
-                        className="ads-etsy-table"
-                      />
+                      group.shopGroups?.length ? (
+                        <Collapse
+                          defaultActiveKey={[]}
+                          className="ads-etsy-shop-collapse"
+                          items={group.shopGroups.map((shopGroup) => ({
+                            key: shopGroup.key,
+                            label: (
+                              <div className="flex flex-wrap items-center justify-between gap-3 pr-4">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold text-black">{shopGroup.shopName || 'Etsy Shop'}</span>
+                                  {shopGroup.etsyShopId && <span className="text-xs text-gray-500 font-mono">Etsy Shop ID: {shopGroup.etsyShopId}</span>}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-700">
+                                  <span>
+                                    Spend: <strong className="text-black">{fmtMoney(shopGroup.totals.spend)}</strong>
+                                  </span>
+                                  <span>
+                                    Revenue: <strong className="text-black">{fmtMoney(shopGroup.totals.revenue)}</strong>
+                                  </span>
+                                  <span>
+                                    Orders: <strong className="text-black">{fmtNum(shopGroup.totals.orders)}</strong>
+                                  </span>
+                                  <span>
+                                    Rows: <strong className="text-black">{fmtNum(shopGroup.totals.rows)}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            ),
+                            children: (
+                              <Table
+                                loading={loading}
+                                dataSource={shopGroup.rows}
+                                columns={columns}
+                                pagination={{
+                                  pageSize: 20,
+                                  showSizeChanger: true,
+                                  pageSizeOptions: ['10', '20', '50', '100'],
+                                  showTotal: (total) => `Total ${total} listings`,
+                                }}
+                                size="middle"
+                                scroll={{ x: 1600 }}
+                                className="ads-etsy-table"
+                              />
+                            ),
+                          }))}
+                        />
+                      ) : (
+                        <Table
+                          loading={loading}
+                          dataSource={group.rows}
+                          columns={columns}
+                          pagination={{
+                            pageSize: 20,
+                            showSizeChanger: true,
+                            pageSizeOptions: ['10', '20', '50', '100'],
+                            showTotal: (total) => `Total ${total} listings`,
+                          }}
+                          size="middle"
+                          scroll={{ x: 1600 }}
+                          className="ads-etsy-table"
+                        />
+                      )
                     ),
                   }))}
                 />
               ) : (
                 <div className="py-16 rounded-xl border border-gray-200 bg-white">
-                  <Empty description={!shopId ? 'Please select an Etsy shop to view the report' : loading ? 'Loading...' : 'No data'} />
+                  <Empty description={loading ? 'Loading...' : 'No data'} />
                 </div>
               )}
             </div>
@@ -1296,6 +1415,21 @@ const AdsEtsyReport = () => {
           background: #f9fafb !important;
         }
         .ads-etsy-day-collapse .ant-collapse-content-box {
+          padding: 0 !important;
+        }
+        .ads-etsy-shop-collapse {
+          border: 0 !important;
+          background: #fff !important;
+        }
+        .ads-etsy-shop-collapse .ant-collapse-item {
+          border-bottom: 1px solid #e5e7eb !important;
+        }
+        .ads-etsy-shop-collapse .ant-collapse-header {
+          align-items: center !important;
+          background: #fff !important;
+          padding-left: 24px !important;
+        }
+        .ads-etsy-shop-collapse .ant-collapse-content-box {
           padding: 0 !important;
         }
       `}</style>
