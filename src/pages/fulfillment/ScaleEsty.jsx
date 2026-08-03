@@ -17,11 +17,13 @@ import TextArea from 'antd/es/input/TextArea';
 import { defaultFrom, defaultTo, formatDate } from '../../utils/fomatDate';
 import { formatDistanceToNow } from 'date-fns';
 import DynamicImageUpload from '../../components/DynamicImageUpload';
+import LazyImage from '../../components/LazyImage';
 import { handleColorStatus, handleColorStatusScale } from '../../utils/handleColor';
 import DateRangePicker from '../../components/DateRangePicker';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
+import NoImage from '../../assets/NoImage.jpg';
 import { getALlShop } from '../../apis/order';
 import {
   assignEtsyOrderToCs,
@@ -44,6 +46,48 @@ const HAS_SCALE_FILE_OPTIONS = [
   { label: 'Has scale file', value: 'true' },
   { label: 'Missing scale file', value: 'false' },
 ];
+
+const getImageUrlFromMasked = (url = '') => {
+  if (typeof url !== 'string') return '';
+  const match = url.match(/^(.+\.(?:png|jpe?g|webp|gif))/i);
+  return match?.[1] || '';
+};
+
+const getFullSizeCustomPhotoUrl = (url = '') => {
+  if (typeof url !== 'string') return '';
+  return url.replace(/\/ipf_[^/.]+(?=\.)/i, '/ipf_fullxfull');
+};
+
+const getCustomerPhotoUrls = (customFiles = []) => {
+  if (!Array.isArray(customFiles)) return [];
+  return customFiles
+    .map((file) => getFullSizeCustomPhotoUrl(getImageUrlFromMasked(file?.downloadUrlMasked)))
+    .filter(Boolean);
+};
+
+const CustomerPhotoCell = ({ urls = [], rowKey = '' }) => {
+  if (!urls.length) return <span className="text-gray-400">-</span>;
+
+  return (
+    <div className={urls.length > 1 ? 'inline-grid grid-cols-2 gap-3' : 'inline-flex'}>
+      {urls.map((url, index) => (
+        <LazyImage
+          key={`${rowKey || 'customer-photo'}-${index}`}
+          src={url || NoImage}
+          alt="Customer Photo"
+          width={96}
+          height={96}
+          objectFit="cover"
+          preview={{
+            src: url || NoImage,
+            mask: 'View full',
+            scaleStep: 0.75,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 const ScaleEsty = () => {
   const { user } = useAuth();
@@ -339,6 +383,7 @@ const ScaleEsty = () => {
     () => [
       { title: <span style={{ color: dataColors.title }}>Product Info</span>, dataIndex: 'product_info', key: 'product_info', width: 220 },
       { title: <span style={{ color: dataColors.title }}>Customization</span>, dataIndex: 'customization', key: 'customization' },
+      { title: <span style={{ color: dataColors.title }}>Customer Photo</span>, dataIndex: 'customer_photo', key: 'customer_photo', width: 160, align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Task Status</span>, dataIndex: 'task_status', key: 'task_status' },
       { title: <span style={{ color: dataColors.title }}>Cost Center</span>, dataIndex: 'cost_center', key: 'cost_center', width: 220 },
       { title: <span style={{ color: dataColors.title }}>CS Note</span>, dataIndex: 'cs_note', key: 'cs_note' },
@@ -438,9 +483,10 @@ const ScaleEsty = () => {
         subItems: (item?.items || []).map((itemSub, indexItem) => {
           const transactionId = itemSub?.transactionId || itemSub?.orderItemId;
           const customItems = normalizeCustomItems(itemSub);
+          const rowKey = `${item?.orderId}-${transactionId || indexItem}`;
 
           return {
-            key: `${item?.orderId}-${transactionId || indexItem}`,
+            key: rowKey,
             product_info: (
               <ItemProductInfo
                 listing={itemSub?.listing}
@@ -458,6 +504,7 @@ const ScaleEsty = () => {
                 listingId={itemSub?.listingId}
               />
             ),
+            customer_photo: <CustomerPhotoCell urls={getCustomerPhotoUrls(itemSub?.customFiles)} rowKey={rowKey} />,
             task_status: <StatusComponent title={itemSub?.scale_status} color={handleColorStatusScale(itemSub?.scale_status)} />,
             cost_center: <ItemCostCenter cost_center={itemSub?.cost_center} />,
             cs_note: (
