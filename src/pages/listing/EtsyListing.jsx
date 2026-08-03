@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Button, Descriptions, Drawer, Empty, Image, Input, Pagination, Select, Table, Tooltip } from 'antd';
+import { Button, Descriptions, Drawer, Empty, Image, Input, Pagination, Select, Space, Spin, Table, Tooltip, Upload } from 'antd';
+import { DeleteOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { debounce } from 'lodash';
 import { toast } from 'sonner';
 import { FaDatabase, FaDollarSign, FaEtsy } from 'react-icons/fa';
@@ -10,8 +11,15 @@ import { MdAdd, MdOutlineRefresh } from 'react-icons/md';
 import { dataColors } from '../../utils/dataColors';
 import ButtonFilter from '../../components/ButtonFilter';
 import StatusComponent from '../../components/StatusComponent';
-import { getEtsyListings, getEtsyListingDetail } from '../../apis/etsyListing';
+import {
+  deleteEtsyListingDesignFile,
+  downloadEtsyListingDesignFile,
+  getEtsyListings,
+  getEtsyListingDetail,
+  uploadEtsyListingDesignFile,
+} from '../../apis/etsyListing';
 import { getAllShop } from '../../apis/shop';
+import ModalDelete from '../../components/ModalDelete';
 
 const PAGE_SIZE = 10;
 
@@ -22,7 +30,116 @@ const ETSY_LISTING_FILTERS = [
   { key: 'outOfStock', title: 'Out of Stock', filter: 'out_of_stock', count: 0 },
 ];
 
-const createEtsyListingColumns = ({ handleViewDetail, shopNameById }) => [
+const EtsyListingActions = ({ record, fetchAllEtsyListings, filters }) => {
+  const [fileList, setFileList] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [openModalDelete, setOpenModalDelete] = useState(false);
+  const listingId = record?.listingId;
+
+  const uploadProps = {
+    multiple: false,
+    maxCount: 1,
+    fileList,
+    showUploadList: false,
+    disabled: !listingId || uploading,
+    customRequest: async ({ file, onSuccess, onError, onProgress }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        setUploading(true);
+        const response = await uploadEtsyListingDesignFile(listingId, formData, {
+          onUploadProgress: (evt) => {
+            if (evt.total) {
+              onProgress?.({ percent: Math.round((evt.loaded / evt.total) * 100) });
+            }
+          },
+        });
+        onSuccess?.(response.data);
+        toast.success(`${file.name} uploaded success!`);
+        await fetchAllEtsyListings?.(filters);
+      } catch (error) {
+        onError?.(error);
+        toast.error(error?.response?.data?.message || `${file.name} upload failed!`);
+      } finally {
+        setUploading(false);
+        setFileList([]);
+      }
+    },
+    onChange(info) {
+      setFileList(info.fileList);
+    },
+  };
+
+  const handleDownload = async () => {
+    try {
+      const response = await downloadEtsyListingDesignFile(listingId);
+      const data = response.data || {};
+      const downloadUrl = data.signed_url || data.signedUrl || data.downloadUrl || data.url;
+
+      if (!downloadUrl) {
+        toast.error('Download link not found');
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', String(listingId));
+      link.setAttribute('target', '_parent');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('Download success!');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Download failed!');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteEtsyListingDesignFile(listingId);
+      toast.success('Delete success!');
+      setOpenModalDelete(false);
+      await fetchAllEtsyListings?.(filters);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Delete failed!');
+    }
+  };
+
+  return (
+    <>
+      <Space size="small" align="center">
+        {uploading ? (
+          <div style={{ width: 32, display: 'flex', justifyContent: 'center' }}>
+            <Spin size="small" />
+          </div>
+        ) : (
+          <Tooltip title="Upload">
+            <Upload {...uploadProps}>
+              <Button icon={<UploadOutlined />} disabled={!listingId} />
+            </Upload>
+          </Tooltip>
+        )}
+        <Tooltip title="Download">
+          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!listingId} />
+        </Tooltip>
+        <Tooltip title="Delete">
+          <Button icon={<DeleteOutlined />} onClick={() => setOpenModalDelete(true)} disabled={!listingId} danger />
+        </Tooltip>
+      </Space>
+
+      <ModalDelete
+        title="Delete design file"
+        isShowModalDelete={openModalDelete}
+        setIsShowModalDelete={setOpenModalDelete}
+        handleDelete={handleDelete}
+        text="design file"
+      />
+    </>
+  );
+};
+
+const createEtsyListingColumns = ({ handleViewDetail, shopNameById, fetchAllEtsyListings, filters }) => [
   {
     title: <span style={{ color: dataColors.title }}>Image</span>,
     dataIndex: 'imageUrl',
@@ -89,9 +206,12 @@ const createEtsyListingColumns = ({ handleViewDetail, shopNameById }) => [
     key: 'actions',
     align: 'center',
     render: (_, record) => (
-      <Button size="small" onClick={() => handleViewDetail(record)} disabled={!record?._id}>
-        Detail
-      </Button>
+      <Space size="small" align="center">
+        <EtsyListingActions record={record} fetchAllEtsyListings={fetchAllEtsyListings} filters={filters} />
+        <Button size="small" onClick={() => handleViewDetail(record)} disabled={!record?._id}>
+          Detail
+        </Button>
+      </Space>
     ),
   },
 ];
@@ -271,7 +391,10 @@ const EtsyListing = () => {
     }
   }, []);
 
-  const etsyListingColumns = useMemo(() => createEtsyListingColumns({ handleViewDetail, shopNameById }), [handleViewDetail, shopNameById]);
+  const etsyListingColumns = useMemo(
+    () => createEtsyListingColumns({ handleViewDetail, shopNameById, fetchAllEtsyListings, filters }),
+    [handleViewDetail, shopNameById, fetchAllEtsyListings, filters]
+  );
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
