@@ -35,6 +35,7 @@ const EtsyListingActions = ({ record, fetchAllEtsyListings, filters }) => {
   const [uploading, setUploading] = useState(false);
   const [openModalDelete, setOpenModalDelete] = useState(false);
   const listingId = record?.listingId;
+  const hasPsdFile = record?.PSDstatus === true;
 
   const uploadProps = {
     multiple: false,
@@ -121,10 +122,10 @@ const EtsyListingActions = ({ record, fetchAllEtsyListings, filters }) => {
           </Tooltip>
         )}
         <Tooltip title="Download">
-          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!listingId} />
+          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!listingId || !hasPsdFile} />
         </Tooltip>
         <Tooltip title="Delete">
-          <Button icon={<DeleteOutlined />} onClick={() => setOpenModalDelete(true)} disabled={!listingId} danger />
+          <Button icon={<DeleteOutlined />} onClick={() => setOpenModalDelete(true)} disabled={!listingId || !hasPsdFile} danger />
         </Tooltip>
       </Space>
 
@@ -178,6 +179,18 @@ const createEtsyListingColumns = ({ handleViewDetail, shopNameById, fetchAllEtsy
     key: 'SKU',
     align: 'center',
     render: (data) => <span className="font-medium">{data || '-'}</span>,
+  },
+  {
+    title: <span style={{ color: dataColors.title }}>PSD Status</span>,
+    dataIndex: 'PSDstatus',
+    key: 'PSDstatus',
+    align: 'center',
+    render: (data) => (
+      <StatusComponent
+        title={data === true ? 'Ready' : 'Missing'}
+        color={data === true ? dataColors.success : dataColors.cancelled}
+      />
+    ),
   },
   {
     title: <span style={{ color: dataColors.title }}>Shop</span>,
