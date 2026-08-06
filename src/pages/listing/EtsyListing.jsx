@@ -200,7 +200,7 @@ const createEtsyListingColumns = ({ handleViewDetail, shopNameById, fetchAllEtsy
     render: (shopId, record) => <StatusComponent title={shopNameById.get(String(shopId)) || record?.shopName || '-'} color={dataColors.pending} />,
   },
   {
-    title: <span style={{ color: dataColors.title }}>Etsy Shop ID</span>,
+    title: <span style={{ color: dataColors.title }}> Shop ID</span>,
     dataIndex: 'etsyShopId',
     key: 'etsyShopId',
     align: 'center',
@@ -533,6 +533,7 @@ const EtsyListing = () => {
             <Select
               allowClear
               showSearch
+              size="large"
               loading={shopLoading}
               placeholder="Select Etsy shop"
               value={filters.shopId || undefined}
