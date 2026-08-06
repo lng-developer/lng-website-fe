@@ -161,6 +161,118 @@ const groupAdsEtsyDaysByDate = (shopDayGroups = [], combineShops = false) => {
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 };
 
+const PAGE_TOKENS = {
+  bg: '#f8fafc',
+  surface: '#ffffff',
+  surfaceSubtle: '#f1f5f9',
+  border: '#e2e8f0',
+  borderStrong: '#cbd5e1',
+  text: '#0f172a',
+  muted: '#64748b',
+  primary: '#0958d7',
+  primaryHover: '#0747a6',
+  success: '#166534',
+  successBg: '#dcfce7',
+  successBorder: '#86efac',
+  warning: '#92400e',
+  warningBg: '#fef3c7',
+  warningBorder: '#fcd34d',
+  info: '#0369a1',
+  infoBg: '#e0f2fe',
+  infoBorder: '#7dd3fc',
+};
+
+const PAGE_CSS = `
+  .ads-etsy-page .ant-btn-primary,
+  .ads-etsy-page .ant-pagination .ant-pagination-item-active {
+    background: ${PAGE_TOKENS.primary} !important;
+    border-color: ${PAGE_TOKENS.primary} !important;
+  }
+  .ads-etsy-page .ant-btn-primary:hover {
+    background: ${PAGE_TOKENS.primaryHover} !important;
+    border-color: ${PAGE_TOKENS.primaryHover} !important;
+  }
+  .ads-etsy-page .ant-segmented {
+    padding: 4px;
+    background: ${PAGE_TOKENS.surfaceSubtle};
+    border: 1px solid ${PAGE_TOKENS.border};
+  }
+  .ads-etsy-page .ant-segmented-item-selected {
+    color: ${PAGE_TOKENS.text} !important;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+  .ads-etsy-page .text-black,
+  .ads-etsy-page .text-gray-800 {
+    color: ${PAGE_TOKENS.text} !important;
+  }
+  .ads-etsy-page .text-gray-400,
+  .ads-etsy-page .text-gray-500,
+  .ads-etsy-page .text-gray-700 {
+    color: ${PAGE_TOKENS.muted} !important;
+  }
+  .ads-etsy-page .border-gray-200 {
+    border-color: ${PAGE_TOKENS.border} !important;
+  }
+  .ads-etsy-page .bg-white {
+    background-color: ${PAGE_TOKENS.surface} !important;
+  }
+  .ads-etsy-table .ant-table {
+    color: ${PAGE_TOKENS.text};
+  }
+  .ads-etsy-table .ant-table-thead > tr > th {
+    background: ${PAGE_TOKENS.surfaceSubtle} !important;
+    color: ${PAGE_TOKENS.muted} !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    border-bottom: 1px solid ${PAGE_TOKENS.border} !important;
+  }
+  .ads-etsy-table .ant-table-tbody > tr:hover > td {
+    background: #eff6ff !important;
+  }
+  .ads-etsy-table .ant-table-tbody > tr > td {
+    border-bottom: 1px solid #edf2f7 !important;
+  }
+  .ads-etsy-table .ant-pagination .ant-pagination-item-active a {
+    color: #fff !important;
+  }
+  .ads-etsy-table .ant-table-body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .ads-etsy-table .ant-table-body::-webkit-scrollbar-thumb {
+    background: ${PAGE_TOKENS.borderStrong};
+    border-radius: 999px;
+  }
+  .ads-etsy-day-collapse {
+    border: 1px solid ${PAGE_TOKENS.border} !important;
+    background: ${PAGE_TOKENS.surface} !important;
+    border-radius: 8px !important;
+  }
+  .ads-etsy-day-collapse .ant-collapse-item,
+  .ads-etsy-shop-collapse .ant-collapse-item {
+    border-bottom: 1px solid ${PAGE_TOKENS.border} !important;
+  }
+  .ads-etsy-day-collapse .ant-collapse-header {
+    align-items: center !important;
+    background: ${PAGE_TOKENS.surfaceSubtle} !important;
+  }
+  .ads-etsy-day-collapse .ant-collapse-content-box,
+  .ads-etsy-shop-collapse .ant-collapse-content-box {
+    padding: 0 !important;
+  }
+  .ads-etsy-shop-collapse {
+    border: 0 !important;
+    background: ${PAGE_TOKENS.surface} !important;
+  }
+  .ads-etsy-shop-collapse .ant-collapse-header {
+    align-items: center !important;
+    background: ${PAGE_TOKENS.surface} !important;
+    padding-left: 24px !important;
+  }
+`;
+
 const AdsEtsyReport = () => {
   const { collapsed } = useOutletContext();
   const [loading, setLoading] = useState(false);
@@ -867,7 +979,9 @@ const AdsEtsyReport = () => {
         sorter: (a, b) => a.orders - b.orders,
         render: (v) =>
           Number(v) > 0 ? (
-            <Tag className="!bg-black !text-white !border-black !m-0">{fmtNum(v)}</Tag>
+            <Tag className="!m-0" style={{ backgroundColor: PAGE_TOKENS.successBg, borderColor: PAGE_TOKENS.successBorder, color: PAGE_TOKENS.success }}>
+              {fmtNum(v)}
+            </Tag>
           ) : (
             <span className="text-gray-400">0</span>
           ),
@@ -891,20 +1005,45 @@ const AdsEtsyReport = () => {
         sorter: (a, b) => a.roas - b.roas,
         render: (v) =>
           Number(v) > 0 ? (
-            <Tag className="!bg-white !text-black !border-black !m-0">{Number(v).toFixed(2)}x</Tag>
+            <Tag className="!m-0" style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', color: PAGE_TOKENS.primary }}>
+              {Number(v).toFixed(2)}x
+            </Tag>
           ) : (
             <span className="text-gray-400">-</span>
           ),
       },
     ];
 
-    const StatCard = ({ label, value, sub }) => (
-      <div className="flex-1 p-4 rounded-xl border border-gray-200 bg-white hover:border-black transition-colors">
-        <div className="text-xs uppercase tracking-wider text-gray-500 font-medium">{label}</div>
-        <div className="text-2xl font-bold text-black mt-1">{value}</div>
-        {sub && <div className="text-xs text-gray-500 mt-1">{sub}</div>}
+    const StatCard = ({ label, value, sub, tone = 'primary' }) => {
+      const toneMap = {
+        primary: { color: PAGE_TOKENS.primary, bg: '#eff6ff', border: '#bfdbfe' },
+        success: { color: PAGE_TOKENS.success, bg: PAGE_TOKENS.successBg, border: PAGE_TOKENS.successBorder },
+        warning: { color: PAGE_TOKENS.warning, bg: PAGE_TOKENS.warningBg, border: PAGE_TOKENS.warningBorder },
+        info: { color: PAGE_TOKENS.info, bg: PAGE_TOKENS.infoBg, border: PAGE_TOKENS.infoBorder },
+      };
+      const meta = toneMap[tone] || toneMap.primary;
+
+      return (
+      <div
+        className="min-w-[180px] flex-1 rounded-lg border p-4 shadow-sm transition-colors hover:shadow-md"
+        style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase" style={{ color: PAGE_TOKENS.muted }}>{label}</div>
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
+        </div>
+        <div className="mt-2 text-2xl font-bold tabular-nums" style={{ color: PAGE_TOKENS.text }}>{value}</div>
+        {sub && (
+          <div
+            className="mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold"
+            style={{ color: meta.color, backgroundColor: meta.bg, borderColor: meta.border }}
+          >
+            {sub}
+          </div>
+        )}
       </div>
-    );
+      );
+    };
 
     const employeeColumns = [
       {
@@ -1083,26 +1222,43 @@ const AdsEtsyReport = () => {
     ];
 
     return (
-      <div className="bg-white min-h-screen flex flex-col">
-        <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300 border-b border-gray-200`}>
-          <div className="h-[60px] gap-4 p-4 md:px-8 flex items-center justify-between">
+      <div className="ads-etsy-page min-h-screen flex flex-col" style={{ backgroundColor: PAGE_TOKENS.bg, color: PAGE_TOKENS.text }}>
+        <style>{PAGE_CSS}</style>
+        <div
+          className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 border-b transition-all duration-300`}
+          style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+        >
+          <div className="h-[60px] gap-4 px-6 md:px-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-7 bg-black rounded-full" />
-              <h1 className="text-2xl font-bold !mb-0 text-black">Etsy Ads Report</h1>
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white"
+                style={{ backgroundColor: PAGE_TOKENS.primary }}
+              >
+                EA
+              </div>
+              <div>
+                <h1 className="text-lg font-bold !mb-0 leading-tight" style={{ color: PAGE_TOKENS.text }}>Etsy Ads Report</h1>
+                <p className="m-0 text-xs leading-tight" style={{ color: PAGE_TOKENS.muted }}>
+                  Spend, revenue, ROAS, and employee attribution
+                </p>
+              </div>
             </div>
             <div className="flex justify-center items-center gap-2">
               <Tooltip title="Export Excel">
                 <Button
                   size="large"
+                  aria-label="Export Etsy ads by employee"
                   icon={<DownloadOutlined />}
                   onClick={handleExportByEmployee}
                   loading={exporting}
                   disabled={!filters.from || !filters.to}
+                  type="primary"
                 >
                   Export by Employee
                 </Button>
               </Tooltip>
               <Select
+                aria-label="Filter report by Etsy shop"
                 value={shopId}
                 onChange={(val) => setShopId(val)}
                 placeholder="Select Etsy Shop"
@@ -1121,7 +1277,7 @@ const AdsEtsyReport = () => {
                 }}
                 modifiersStyles={{
                   range_middle: {
-                    backgroundColor: '#f3f4f6',
+                    backgroundColor: PAGE_TOKENS.surfaceSubtle,
                     fontWeight: 'normal',
                   },
                 }}
@@ -1131,8 +1287,17 @@ const AdsEtsyReport = () => {
           </div>
         </div>
 
-        <div className="mt-[60px] px-8 py-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-[60px] px-6 py-5 md:px-8">
+          <div
+            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 shadow-sm"
+            style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+          >
+            <div>
+              <div className="text-sm font-semibold" style={{ color: PAGE_TOKENS.text }}>Report view</div>
+              <div className="text-xs" style={{ color: PAGE_TOKENS.muted }}>
+                Switch between listing detail, daily grouping, and employee attribution.
+              </div>
+            </div>
             <Segmented
               value={activeView}
               onChange={setActiveView}
@@ -1147,43 +1312,54 @@ const AdsEtsyReport = () => {
           {activeView === 'listing' ? (
             <>
           {/* Summary cards */}
-          <div className="flex gap-4 flex-wrap">
-            <StatCard label="Total Spend" value={fmtMoney(summary.totalSpend)} sub={`${items.length} shop(s)`} />
-            <StatCard label="Revenue" value={fmtMoney(summary.totalRevenue)} sub={`${summary.totalOrders} orders`} />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <StatCard label="Total Spend" value={fmtMoney(summary.totalSpend)} sub={`${items.length} shop(s)`} tone="warning" />
+            <StatCard label="Revenue" value={fmtMoney(summary.totalRevenue)} sub={`${summary.totalOrders} orders`} tone="success" />
             <StatCard
               label="ROAS"
               value={summary.totalSpend > 0 ? `${(summary.totalRevenue / summary.totalSpend).toFixed(2)}x` : '-'}
               sub="Return on ad spend"
+              tone="primary"
             />
-            <StatCard label="Views" value={fmtNum(summary.totalViews)} sub={`${fmtNum(summary.totalClicks)} clicks`} />
+            <StatCard label="Views" value={fmtNum(summary.totalViews)} sub={`${fmtNum(summary.totalClicks)} clicks`} tone="info" />
             <StatCard
               label="CTR"
               value={summary.totalViews > 0 ? fmtPercent((summary.totalClicks / summary.totalViews) * 100) : '0.0%'}
               sub={`${summary.totalRows} listings`}
+              tone="primary"
             />
           </div>
 
           {/* Shop header */}
           {items?.length > 0 && (
-            <div className="mt-6 flex items-center justify-between p-4 rounded-xl bg-black text-white">
+            <div
+              className="mt-5 flex items-center justify-between rounded-lg border p-4 shadow-sm"
+              style={{ backgroundColor: '#eef6ff', borderColor: '#bfdbfe', color: PAGE_TOKENS.text }}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold">
+                <div
+                  className="w-10 h-10 rounded-lg text-white flex items-center justify-center font-bold"
+                  style={{ backgroundColor: PAGE_TOKENS.primary }}
+                >
                   {items[0]?.shopName?.charAt(0) || 'E'}
                 </div>
                 <div>
-                  <div className="text-lg font-bold">{items[0]?.shopName}</div>
-                  <div className="text-xs text-gray-300 font-mono">Etsy Shop ID: {items[0]?.etsyShopId}</div>
+                  <div className="text-base font-bold">{items[0]?.shopName}</div>
+                  <div className="text-xs font-mono" style={{ color: PAGE_TOKENS.muted }}>Etsy Shop ID: {items[0]?.etsyShopId}</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-gray-300 uppercase tracking-wider">Day</div>
-                <div className="font-semibold">{items[0]?.day?.slice(0, 10)}</div>
+                <div className="text-xs font-semibold uppercase" style={{ color: PAGE_TOKENS.muted }}>Latest day</div>
+                <div className="font-semibold tabular-nums">{items[0]?.day?.slice(0, 10)}</div>
               </div>
             </div>
           )}
 
           {/* Table */}
-          <div className="mt-6 rounded-xl border border-gray-200 overflow-hidden bg-white">
+          <div
+            className="mt-5 overflow-hidden rounded-lg border shadow-sm"
+            style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+          >
             {tableData.length > 0 ? (
               <Table
                 loading={loading}
@@ -1308,31 +1484,44 @@ const AdsEtsyReport = () => {
                   }))}
                 />
               ) : (
-                <div className="py-16 rounded-xl border border-gray-200 bg-white">
+                <div
+                  className="rounded-lg border py-16 shadow-sm"
+                  style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+                >
                   <Empty description={loading ? 'Loading...' : 'No data'} />
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex gap-4 flex-wrap">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <StatCard
                   label="Total Spend"
                   value={fmtMoney(employeeTotals.spend)}
                   sub={`${employeeSummary?.count || employeeRows.length} employee group(s)`}
+                  tone="warning"
                 />
-                <StatCard label="Revenue" value={fmtMoney(employeeTotals.revenue)} sub={`${fmtNum(employeeTotals.orders)} orders`} />
-                <StatCard label="ROAS" value={fmtRoas(employeeTotals.roas)} sub="Return on ad spend" />
-                <StatCard label="Views" value={fmtNum(employeeTotals.views)} sub={`${fmtNum(employeeTotals.clicks)} clicks`} />
+                <StatCard label="Revenue" value={fmtMoney(employeeTotals.revenue)} sub={`${fmtNum(employeeTotals.orders)} orders`} tone="success" />
+                <StatCard label="ROAS" value={fmtRoas(employeeTotals.roas)} sub="Return on ad spend" tone="primary" />
+                <StatCard label="Views" value={fmtNum(employeeTotals.views)} sub={`${fmtNum(employeeTotals.clicks)} clicks`} tone="info" />
                 <StatCard
                   label="CTR"
                   value={employeeTotals.views > 0 ? fmtPercent((employeeTotals.clicks / employeeTotals.views) * 100) : '0.0%'}
                   sub={`${fmtNum(employeeTotals.rows)} listing row(s)`}
+                  tone="primary"
                 />
               </div>
 
-              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-4 py-3 border-b border-gray-200 font-semibold">Employees</div>
+              <div
+                className="overflow-hidden rounded-lg border shadow-sm"
+                style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+              >
+                <div
+                  className="border-b px-4 py-3 font-semibold"
+                  style={{ backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}
+                >
+                  Employees
+                </div>
                 <Table
                   loading={employeeLoading}
                   dataSource={employeeRows}
@@ -1371,68 +1560,6 @@ const AdsEtsyReport = () => {
             </div>
           )}
         </div>
-
-        <style>{`
-        .ads-etsy-table .ant-table-thead > tr > th {
-          background: #f9fafb !important;
-          color: #000 !important;
-          font-weight: 600;
-          border-bottom: 1px solid #e5e7eb !important;
-        }
-        .ads-etsy-table .ant-table-tbody > tr:hover > td {
-          background: #f9fafb !important;
-        }
-        .ads-etsy-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid #f3f4f6 !important;
-        }
-        .ads-etsy-table .ant-pagination .ant-pagination-item-active {
-          background: #000 !important;
-          border-color: #000 !important;
-        }
-        .ads-etsy-table .ant-pagination .ant-pagination-item-active a {
-          color: #fff !important;
-        }
-        .ads-etsy-table .ant-table-body::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        .ads-etsy-table .ant-table-body::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-          border-radius: 4px;
-        }
-        .ads-etsy-table .ant-table-body::-webkit-scrollbar-thumb:hover {
-          background: #9ca3af;
-        }
-        .ads-etsy-day-collapse {
-          border: 1px solid #e5e7eb !important;
-          background: #fff !important;
-        }
-        .ads-etsy-day-collapse .ant-collapse-item {
-          border-bottom: 1px solid #e5e7eb !important;
-        }
-        .ads-etsy-day-collapse .ant-collapse-header {
-          align-items: center !important;
-          background: #f9fafb !important;
-        }
-        .ads-etsy-day-collapse .ant-collapse-content-box {
-          padding: 0 !important;
-        }
-        .ads-etsy-shop-collapse {
-          border: 0 !important;
-          background: #fff !important;
-        }
-        .ads-etsy-shop-collapse .ant-collapse-item {
-          border-bottom: 1px solid #e5e7eb !important;
-        }
-        .ads-etsy-shop-collapse .ant-collapse-header {
-          align-items: center !important;
-          background: #fff !important;
-          padding-left: 24px !important;
-        }
-        .ads-etsy-shop-collapse .ant-collapse-content-box {
-          padding: 0 !important;
-        }
-      `}</style>
       </div>
     );
   };
