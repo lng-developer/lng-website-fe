@@ -1,31 +1,32 @@
-/* LogManager.css - Monochrome theme */
+/* LogManager.css - LNG Ops theme */
 .log-manager {
-  --lm-bg: #ffffff;
-  --lm-surface: #fafafa;
-  --lm-surface-2: #f4f4f5;
-  --lm-border: #e5e7eb;
-  --lm-border-strong: #d4d4d8;
-  --lm-text: #0a0a0a;
-  --lm-text-muted: #6b7280;
-  --lm-text-subtle: #9ca3af;
-  --lm-hover: #f5f5f5;
-  --lm-black: #000000;
-  --lm-accent-success: #16a34a;
-  --lm-accent-danger: #dc2626;
-  --lm-accent-warn: #d97706;
-  --lm-accent-info: #2563eb;
+  --lm-bg: #f8fafc;
+  --lm-surface: #ffffff;
+  --lm-surface-2: #f1f5f9;
+  --lm-border: #e2e8f0;
+  --lm-border-strong: #cbd5e1;
+  --lm-text: #0f172a;
+  --lm-text-muted: #64748b;
+  --lm-text-subtle: #94a3b8;
+  --lm-hover: #f8fafc;
+  --lm-primary: #0958d7;
+  --lm-primary-hover: #0747a6;
+  --lm-accent-success: #2f8f14;
+  --lm-accent-danger: #cd1323;
+  --lm-accent-warn: #d46a08;
+  --lm-accent-info: #08969b;
   color: var(--lm-text);
   background: var(--lm-bg);
 }
 
 /* Layout - chỉ cho Table body scroll */
 .log-manager .lm-content {
-  height: calc(100vh - 48px);
+  height: calc(100vh - 60px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px 16px !important;
+  gap: 12px;
+  padding: 16px 32px !important;
 }
 .log-manager .lm-content > *:not(:last-child) {
   flex-shrink: 0;
@@ -57,42 +58,41 @@
   flex-direction: column;
 }
 
-/* Header - compact 48px */
+/* Header */
 .log-manager .lm-header {
-  background: var(--lm-bg);
+  background: var(--lm-surface);
   border-bottom: 1px solid var(--lm-border);
   box-shadow: none;
-  height: 48px !important;
-  padding: 0 16px !important;
+  height: 60px !important;
+  padding: 0 32px !important;
 }
 
 .log-manager .lm-title {
-  font-size: 14px;
+  font-size: 24px;
   font-weight: 600;
-  letter-spacing: -0.01em;
   color: var(--lm-text);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   line-height: 1;
 }
 .log-manager .lm-title .anticon {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 /* Buttons - monochrome */
 .log-manager .lm-btn-primary.ant-btn,
 .log-manager .lm-btn-primary.ant-btn-primary {
-  background: var(--lm-black);
-  border-color: var(--lm-black);
+  background: var(--lm-primary);
+  border-color: var(--lm-primary);
   color: #ffffff;
   box-shadow: none;
 }
 .log-manager .lm-btn-primary.ant-btn:hover,
 .log-manager .lm-btn-primary.ant-btn-primary:hover {
-  background: #262626;
-  border-color: #262626;
+  background: var(--lm-primary-hover);
+  border-color: var(--lm-primary-hover);
   color: #ffffff;
 }
 
@@ -103,7 +103,7 @@
 }
 .log-manager .lm-btn-ghost.ant-btn:hover {
   background: var(--lm-hover);
-  border-color: var(--lm-black);
+  border-color: var(--lm-primary);
   color: var(--lm-text);
 }
 
@@ -119,12 +119,12 @@
   font-size: 11px;
 }
 .log-manager .lm-chip.ant-btn:hover {
-  border-color: var(--lm-black);
+  border-color: var(--lm-primary);
   color: var(--lm-text);
 }
 .log-manager .lm-chip.lm-chip-active.ant-btn {
-  background: var(--lm-black);
-  border-color: var(--lm-black);
+  background: var(--lm-primary);
+  border-color: var(--lm-primary);
   color: #ffffff;
 }
 .log-manager .lm-chip .lm-chip-dot {
@@ -178,9 +178,9 @@
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 3px;
-  background: var(--lm-black);
+  background: var(--lm-primary);
 }
-.log-manager .lm-stat-total::before { background: var(--lm-black); }
+.log-manager .lm-stat-total::before { background: var(--lm-primary); }
 .log-manager .lm-stat-error::before { background: var(--lm-accent-danger); }
 .log-manager .lm-stat-success::before { background: var(--lm-accent-success); }
 .log-manager .lm-stat-tasks::before { background: var(--lm-accent-info); }
@@ -221,13 +221,13 @@
 .log-manager .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
 .log-manager .ant-input:hover,
 .log-manager .ant-input-affix-wrapper:hover {
-  border-color: var(--lm-black);
+  border-color: var(--lm-primary);
 }
 .log-manager .ant-select-focused:not(.ant-select-disabled) .ant-select-selector,
 .log-manager .ant-input:focus,
 .log-manager .ant-input-affix-wrapper-focused {
-  border-color: var(--lm-black) !important;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.06) !important;
+  border-color: var(--lm-primary) !important;
+  box-shadow: 0 0 0 2px rgba(9, 88, 215, 0.12) !important;
 }
 
 /* Extension cards (active overview) */
@@ -240,8 +240,8 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .log-manager .lm-ext-card:hover {
-  border-color: var(--lm-black);
-  background: var(--lm-surface);
+  border-color: var(--lm-primary);
+  background: var(--lm-hover);
 }
 .log-manager .lm-ext-title {
   font-weight: 600;
@@ -293,7 +293,7 @@
   font-size: 12px;
 }
 .log-manager .ant-table-thead > tr > th {
-  background: var(--lm-surface) !important;
+  background: var(--lm-surface-2) !important;
   color: var(--lm-text-muted) !important;
   font-weight: 600;
   font-size: 10px;
@@ -373,7 +373,8 @@
   line-height: 1.3;
 }
 .log-manager .lm-cell-task-link:hover {
-  text-decoration-color: var(--lm-black);
+  color: var(--lm-primary);
+  text-decoration-color: var(--lm-primary);
 }
 .log-manager .lm-cell-batch {
   font-size: 10px;
@@ -410,7 +411,7 @@
   margin-bottom: 2px;
 }
 .log-manager-modal .lm-detail-value {
-  color: #0a0a0a;
+  color: #0f172a;
   font-size: 13px;
   font-weight: 500;
   word-break: break-word;
@@ -418,17 +419,17 @@
 .log-manager-modal .lm-message-box {
   margin-top: 8px;
   padding: 12px;
-  background: #fafafa;
-  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 13px;
-  color: #0a0a0a;
+  color: #0f172a;
   line-height: 1.5;
 }
 .log-manager-modal .lm-code-box {
   margin-top: 8px;
   padding: 12px;
-  background: #0a0a0a;
+  background: #0f172a;
   color: #f5f5f5;
   border-radius: 8px;
   font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
@@ -439,14 +440,14 @@
   white-space: pre;
 }
 .log-manager-modal .lm-code-box-light {
-  background: #f4f4f5;
-  color: #0a0a0a;
-  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
 }
 
 /* Drawer / Timeline */
 .log-manager-drawer .ant-drawer-header {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
 }
 .log-manager-drawer .ant-drawer-title {
   font-size: 14px;
@@ -460,7 +461,7 @@
 .log-manager-drawer .lm-tl-type {
   font-weight: 600;
   font-size: 12px;
-  color: #0a0a0a;
+  color: #0f172a;
   margin-top: 2px;
 }
 .log-manager-drawer .lm-tl-msg {
@@ -500,8 +501,8 @@
 
 /* Pagination */
 .log-manager .ant-pagination .ant-pagination-item-active {
-  background: var(--lm-black);
-  border-color: var(--lm-black);
+  background: var(--lm-primary);
+  border-color: var(--lm-primary);
 }
 .log-manager .ant-pagination .ant-pagination-item-active a {
   color: #ffffff;

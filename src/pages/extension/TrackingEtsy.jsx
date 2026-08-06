@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Button, DatePicker, Image, Input, Modal, Select, Table, Tag, Tooltip } from 'antd';
+import { Button, DatePicker, Image, Input, Modal, Select, Table, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { FaEtsy } from 'react-icons/fa';
 import { LuRefreshCw, LuUpload } from 'react-icons/lu';
@@ -13,6 +13,51 @@ const { RangePicker } = DatePicker;
 const DEFAULT_LIMIT = 100;
 const LIMIT_OPTIONS = [20, 100, 500, 1000];
 const ALL_FILTER = 'all';
+const PAGE_TOKENS = {
+  bg: '#f8fafc',
+  surface: '#ffffff',
+  surfaceSubtle: '#f1f5f9',
+  border: '#e2e8f0',
+  text: '#0f172a',
+  muted: '#64748b',
+  primary: '#0958d7',
+  primaryHover: '#0747a6',
+  successText: '#166534',
+  successBg: '#dcfce7',
+  successBorder: '#86efac',
+  warningText: '#92400e',
+  warningBg: '#fef3c7',
+  warningBorder: '#fcd34d',
+};
+
+const StatusBadge = ({ tone = 'neutral', children }) => {
+  const tones = {
+    success: {
+      color: PAGE_TOKENS.successText,
+      backgroundColor: PAGE_TOKENS.successBg,
+      borderColor: PAGE_TOKENS.successBorder,
+    },
+    warning: {
+      color: PAGE_TOKENS.warningText,
+      backgroundColor: PAGE_TOKENS.warningBg,
+      borderColor: PAGE_TOKENS.warningBorder,
+    },
+    neutral: {
+      color: PAGE_TOKENS.muted,
+      backgroundColor: PAGE_TOKENS.surfaceSubtle,
+      borderColor: PAGE_TOKENS.border,
+    },
+  };
+
+  return (
+    <span
+      className="inline-flex h-6 items-center rounded-full border px-2 text-xs font-semibold"
+      style={tones[tone] || tones.neutral}
+    >
+      {children}
+    </span>
+  );
+};
 
 const pickOrders = (data) => {
   if (Array.isArray(data)) return data;
@@ -302,7 +347,11 @@ const TrackingEtsy = () => {
       key: 'orderId',
       width: 130,
       fixed: 'left',
-      render: (value) => <span className="font-semibold text-neutral-950">{value}</span>,
+      render: (value) => (
+        <span className="font-semibold tabular-nums" style={{ color: PAGE_TOKENS.text }}>
+          {value}
+        </span>
+      ),
     },
     {
       title: 'Shop Name',
@@ -318,10 +367,12 @@ const TrackingEtsy = () => {
       render: (value) => {
         const text = formatTracking(value);
         return text === '-' ? (
-          <Tag color="default">No tracking</Tag>
+          <StatusBadge tone="warning">No tracking</StatusBadge>
         ) : (
           <Tooltip title={text}>
-            <span className="block max-w-[220px] truncate font-medium text-neutral-900">{text}</span>
+            <span className="block max-w-[220px] truncate font-medium tabular-nums" style={{ color: PAGE_TOKENS.text }}>
+              {text}
+            </span>
           </Tooltip>
         );
       },
@@ -331,14 +382,20 @@ const TrackingEtsy = () => {
       dataIndex: 'sumbittedoetsy',
       key: 'sumbittedoetsy',
       width: 140,
-      render: (value) => <Tag color={value ? 'green' : 'default'}>{value ? 'Submitted' : 'Not Submitted'}</Tag>,
+      render: (value) => (
+        <StatusBadge tone={value ? 'success' : 'neutral'}>{value ? 'Submitted' : 'Not Submitted'}</StatusBadge>
+      ),
     },
     {
       title: 'Listing ID',
       dataIndex: 'listingId',
       key: 'listingId',
       width: 140,
-      render: (value) => <span className="font-mono text-xs text-neutral-700">{value}</span>,
+      render: (value) => (
+        <span className="font-mono text-xs tabular-nums" style={{ color: PAGE_TOKENS.muted }}>
+          {value}
+        </span>
+      ),
     },
     {
       title: 'Image',
@@ -351,11 +408,15 @@ const TrackingEtsy = () => {
             src={value}
             width={46}
             height={46}
-            className="rounded border border-neutral-200 object-cover"
+            className="rounded-md border object-cover"
+            style={{ borderColor: PAGE_TOKENS.border }}
             preview={{ mask: 'View' }}
           />
         ) : (
-          <div className="w-[46px] h-[46px] rounded border border-neutral-200 bg-neutral-50" />
+          <div
+            className="h-[46px] w-[46px] rounded-md border"
+            style={{ backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.border }}
+          />
         ),
     },
     {
@@ -363,29 +424,42 @@ const TrackingEtsy = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      render: (value) => <span className="text-neutral-700">{formatDateTime(value)}</span>,
+      render: (value) => (
+        <span className="tabular-nums" style={{ color: PAGE_TOKENS.muted }}>
+          {formatDateTime(value)}
+        </span>
+      ),
     },
   ];
 
   return (
-    <div className="h-screen overflow-hidden bg-white text-neutral-950">
+    <div className="h-screen overflow-hidden" style={{ backgroundColor: PAGE_TOKENS.bg, color: PAGE_TOKENS.text }}>
       <div
         className={`fixed top-0 ${
           collapsed ? 'left-64' : 'left-13.5'
-        } right-0 z-50 bg-white border-b border-neutral-200 transition-all duration-300`}
+        } right-0 z-50 border-b transition-all duration-300`}
+        style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
       >
-        <div className="h-12 px-4 flex items-center justify-between">
+        <div className="flex h-[60px] items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-neutral-950 text-white flex items-center justify-center">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+              style={{ backgroundColor: PAGE_TOKENS.primary }}
+            >
               <FaEtsy size={16} />
             </div>
             <div>
-              <h1 className="m-0 text-[15px] font-bold text-neutral-950 leading-tight">Tracking Etsy</h1>
-              <p className="m-0 text-[11px] text-neutral-500 leading-tight">Upload tracking qua extension</p>
+              <h1 className="m-0 text-[16px] font-bold leading-tight" style={{ color: PAGE_TOKENS.text }}>
+                Tracking Etsy
+              </h1>
+              <p className="m-0 text-xs leading-tight" style={{ color: PAGE_TOKENS.muted }}>
+                Upload tracking qua extension
+              </p>
             </div>
           </div>
 
           <Button
+            aria-label="Refresh Etsy tracking orders"
             icon={<LuRefreshCw size={16} className={loading ? 'animate-spin' : ''} />}
             disabled={loading}
             onClick={fetchOrders}
@@ -395,10 +469,14 @@ const TrackingEtsy = () => {
         </div>
       </div>
 
-      <div className="h-full pt-15 px-4 pb-4 flex flex-col overflow-hidden">
-        <div className="mb-2 w-full max-w-full shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-white px-3 py-2">
+      <div className="flex h-full flex-col overflow-hidden px-6 pb-4 pt-[76px]">
+        <div
+          className="mb-3 w-full max-w-full shrink-0 overflow-hidden rounded-lg border px-3 py-3 shadow-sm"
+          style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+        >
           <div className="flex w-full max-w-full flex-wrap items-center gap-2">
             <Select
+              aria-label="Filter by Etsy extension shop"
               allowClear
               showSearch
               placeholder="Select extension / shop"
@@ -412,6 +490,7 @@ const TrackingEtsy = () => {
               onChange={(value) => updateFilter({ shopName: value || '' })}
             />
             <Input.Search
+              aria-label="Search Etsy order"
               allowClear
               placeholder="Search order..."
               className="min-w-[170px] flex-1"
@@ -422,6 +501,7 @@ const TrackingEtsy = () => {
               onSearch={(value) => updateFilter({ search: value.trim() })}
             />
             <RangePicker
+              aria-label="Filter Etsy orders by date range"
               className="min-w-[230px] flex-1"
               value={[dayjs(filters.from), dayjs(filters.to)]}
               format="YYYY-MM-DD"
@@ -433,6 +513,7 @@ const TrackingEtsy = () => {
               }}
             />
             <Select
+              aria-label="Filter by Submitted Etsy status"
               allowClear
               placeholder="Submitted Etsy"
               className="min-w-[150px] flex-1"
@@ -444,6 +525,7 @@ const TrackingEtsy = () => {
               onChange={(value) => updateFilter({ submittedStatus: value || ALL_FILTER })}
             />
             <Select
+              aria-label="Filter by tracking info status"
               allowClear
               placeholder="Tracking Info"
               className="min-w-[150px] flex-1"
@@ -455,6 +537,7 @@ const TrackingEtsy = () => {
               onChange={(value) => updateFilter({ trackingStatus: value || ALL_FILTER })}
             />
             <Select
+              aria-label="Select page limit"
               className="min-w-[110px] flex-1"
               value={filters.perPage}
               options={LIMIT_OPTIONS.map((value) => ({ value, label: `Limit ${value}` }))}
@@ -463,23 +546,28 @@ const TrackingEtsy = () => {
 
             <Button
               type="primary"
+              aria-label="Upload selected tracking to Etsy"
               icon={<LuUpload size={16} />}
               disabled={selectedRows.length === 0}
               onClick={openUploadModal}
-              className="ml-auto shrink-0 !bg-neutral-950 hover:!bg-neutral-800"
+              className="ml-auto shrink-0"
+              style={{ backgroundColor: PAGE_TOKENS.primary, borderColor: PAGE_TOKENS.primary }}
             >
               Upload Tracking{selectedRows.length ? ` (${selectedRows.length})` : ''}
             </Button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 rounded-lg border border-neutral-200 bg-white overflow-hidden flex flex-col">
+        <div
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border shadow-sm"
+          style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+        >
           <Table
             columns={columns}
             dataSource={rows}
             loading={loading}
             className="min-h-0"
-            scroll={{ x: 1100, y: 'calc(100vh - 235px)' }}
+            scroll={{ x: 1100, y: 'calc(100vh - 252px)' }}
             pagination={false}
             rowSelection={{
               type: 'checkbox',
@@ -490,14 +578,17 @@ const TrackingEtsy = () => {
               },
             }}
           />
-          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-neutral-200 px-4 py-2">
-            <div className="text-xs text-neutral-500">
-              Selected: <span className="font-semibold text-neutral-900">{selectedRows.length}</span>
+          <div
+            className="flex shrink-0 items-center justify-between gap-3 border-t px-4 py-2"
+            style={{ borderColor: PAGE_TOKENS.border, backgroundColor: PAGE_TOKENS.surfaceSubtle }}
+          >
+            <div className="text-xs" style={{ color: PAGE_TOKENS.muted }}>
+              Selected: <span className="font-semibold" style={{ color: PAGE_TOKENS.text }}>{selectedRows.length}</span>
             </div>
-            <div className="text-xs text-neutral-500">
-              Loaded: <span className="font-semibold text-neutral-900">{orders.length}</span>
+            <div className="text-xs" style={{ color: PAGE_TOKENS.muted }}>
+              Loaded: <span className="font-semibold" style={{ color: PAGE_TOKENS.text }}>{orders.length}</span>
               <span className="mx-1">/</span>
-              Total: <span className="font-semibold text-neutral-900">{total}</span>
+              Total: <span className="font-semibold" style={{ color: PAGE_TOKENS.text }}>{total}</span>
             </div>
           </div>
         </div>
@@ -510,27 +601,31 @@ const TrackingEtsy = () => {
         onOk={handleUploadTracking}
         confirmLoading={uploading}
         okText="Upload"
-        okButtonProps={{ className: '!bg-neutral-950 hover:!bg-neutral-800' }}
+        okButtonProps={{ style: { backgroundColor: PAGE_TOKENS.primary, borderColor: PAGE_TOKENS.primary } }}
       >
         <div className="space-y-4 pt-2">
           {selectedRows.length === 1 ? (
             <div>
-              <div className="mb-1 text-xs font-semibold text-neutral-600">Order ID</div>
+              <div className="mb-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.muted }}>Order ID</div>
               <Input value={selectedOrder?.orderId || ''} disabled />
             </div>
           ) : (
-            <div className="rounded border border-neutral-200 p-3 text-sm text-neutral-700">
+            <div
+              className="rounded-lg border p-3 text-sm"
+              style={{ backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.muted }}
+            >
               {selectedRows.length} orders selected. Payload se gui theo batch items.
             </div>
           )}
           <div>
-            <div className="mb-1 text-xs font-semibold text-neutral-600">Shop / Machine ID</div>
+            <div className="mb-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.muted }}>Shop / Machine ID</div>
             <Input value={selectedRows[0]?.shopId || ''} disabled />
           </div>
           {selectedRows.length === 1 && (
             <div>
-              <div className="mb-1 text-xs font-semibold text-neutral-600">Tracking Number</div>
+              <div className="mb-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.muted }}>Tracking Number</div>
               <Input
+                aria-label="Tracking number"
                 value={selectedOrder?.trackingNumber || uploadForm.trackingNumber}
                 disabled={!!selectedOrder?.trackingNumber}
                 placeholder="123456"

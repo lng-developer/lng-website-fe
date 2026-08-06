@@ -3,32 +3,21 @@ import { useOutletContext } from 'react-router-dom';
 import {
   Table,
   Select,
-  Input,
-  DatePicker,
   Button,
   Card,
-  Statistic,
-  Badge,
   Tag,
-  Tooltip,
   Modal,
   Tabs,
   Timeline,
   Progress,
-  Space,
   Drawer
 } from 'antd';
 import {
   ReloadOutlined,
-  SearchOutlined,
-  FilterOutlined,
-  DownloadOutlined,
   EyeOutlined,
   DeleteOutlined,
   BarChartOutlined,
-  ClockCircleOutlined,
   ExclamationCircleOutlined,
-  CheckCircleOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { toast } from 'sonner';
@@ -38,14 +27,12 @@ import {
   getExtensionStats,
   getAllExtensionLogs,
   getLogsByTask,
-  getLogsByBatch,
   cleanupLogs
 } from '../../apis/extensionLogs';
 import { getALlShop } from '../../apis/order';
 import './LogManager.css';
 
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 const { TabPane } = Tabs;
 
 const LogManager = () => {
@@ -345,7 +332,7 @@ const LogManager = () => {
       key: 'performance',
       width: 100,
       render: (_, record) => {
-        if (!record.performance) return <span className="lm-cell-perf">—</span>;
+        if (!record.performance) return <span className="lm-cell-perf">-</span>;
         return (
           <div className="lm-cell-perf">
             {record.performance.duration && (
@@ -367,6 +354,7 @@ const LogManager = () => {
       width: 80,
       render: (_, record) => (
         <Button
+          aria-label="View log detail"
           type="text"
           icon={<EyeOutlined />}
           size="small"
@@ -465,7 +453,7 @@ const LogManager = () => {
         </div>
       </div>
 
-      <div className="lm-content mt-[48px]">
+      <div className="lm-content mt-[60px]">
         {/* Stats Cards */}
         {/* {selectedMachine !== 'all' && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -639,7 +627,7 @@ const LogManager = () => {
                 handleFilterChange('limit', size);
               }
             }}
-            scroll={{ x: 1200, y: 600 }}
+            scroll={{ x: 1200, y: tableBodyHeight }}
           />
         </Card>
         </div>
@@ -730,7 +718,7 @@ const LogManager = () => {
                     {selectedLog.uploadInfo.progress !== undefined && (
                       <div className="col-span-2">
                         <div className="lm-detail-label">Progress</div>
-                        <Progress percent={selectedLog.uploadInfo.progress} strokeColor="#0a0a0a" />
+                        <Progress percent={selectedLog.uploadInfo.progress} strokeColor="#0958d7" />
                       </div>
                     )}
                   </div>
