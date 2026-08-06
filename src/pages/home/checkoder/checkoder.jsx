@@ -32,6 +32,83 @@ const generateFakeTracking = () => {
     return prefix + suffix;
 };
 
+const PAGE_TOKENS = {
+    bg: '#f8fafc',
+    surface: '#ffffff',
+    surfaceSubtle: '#f1f5f9',
+    border: '#e2e8f0',
+    borderStrong: '#cbd5e1',
+    text: '#0f172a',
+    muted: '#64748b',
+    primary: '#0958d7',
+    primaryHover: '#0747a6',
+    successText: '#166534',
+    successBg: '#dcfce7',
+    successBorder: '#86efac',
+    warningText: '#92400e',
+    warningBg: '#fef3c7',
+    warningBorder: '#fcd34d',
+    dangerText: '#991b1b',
+    dangerBg: '#fee2e2',
+    dangerBorder: '#fecaca'
+};
+
+const pillStyles = {
+    primary: {
+        color: '#ffffff',
+        backgroundColor: PAGE_TOKENS.primary,
+        borderColor: PAGE_TOKENS.primary
+    },
+    success: {
+        color: PAGE_TOKENS.successText,
+        backgroundColor: PAGE_TOKENS.successBg,
+        borderColor: PAGE_TOKENS.successBorder
+    },
+    warning: {
+        color: PAGE_TOKENS.warningText,
+        backgroundColor: PAGE_TOKENS.warningBg,
+        borderColor: PAGE_TOKENS.warningBorder
+    },
+    neutral: {
+        color: PAGE_TOKENS.muted,
+        backgroundColor: PAGE_TOKENS.surfaceSubtle,
+        borderColor: PAGE_TOKENS.border
+    }
+};
+
+const PAGE_CSS = `
+    .check-order-page .bg-white { background-color: ${PAGE_TOKENS.surface}; }
+    .check-order-page .bg-neutral-50,
+    .check-order-page .bg-neutral-100 { background-color: ${PAGE_TOKENS.surfaceSubtle}; }
+    .check-order-page .bg-neutral-200 { background-color: ${PAGE_TOKENS.border}; }
+    .check-order-page .bg-neutral-900 { background-color: ${PAGE_TOKENS.primary}; }
+    .check-order-page .border-neutral-100,
+    .check-order-page .border-neutral-200 { border-color: ${PAGE_TOKENS.border}; }
+    .check-order-page .border-neutral-300,
+    .check-order-page .border-neutral-400 { border-color: ${PAGE_TOKENS.borderStrong}; }
+    .check-order-page .border-neutral-900 { border-color: ${PAGE_TOKENS.primary}; }
+    .check-order-page .text-neutral-300,
+    .check-order-page .text-neutral-400,
+    .check-order-page .text-neutral-500,
+    .check-order-page .text-neutral-600,
+    .check-order-page .text-neutral-700 { color: ${PAGE_TOKENS.muted}; }
+    .check-order-page .text-neutral-800,
+    .check-order-page .text-neutral-900 { color: ${PAGE_TOKENS.text}; }
+    .check-order-page .hover\\:bg-neutral-50:hover,
+    .check-order-page .hover\\:bg-neutral-100:hover { background-color: #eef2ff; }
+    .check-order-page .hover\\:bg-neutral-800:hover { background-color: ${PAGE_TOKENS.primaryHover}; }
+    .check-order-page .hover\\:border-neutral-400:hover { border-color: ${PAGE_TOKENS.primary}; }
+    .check-order-page .hover\\:text-neutral-900:hover { color: ${PAGE_TOKENS.text}; }
+    .check-order-page .focus\\:border-neutral-900:focus { border-color: ${PAGE_TOKENS.primary}; }
+    .check-order-page .accent-neutral-900 { accent-color: ${PAGE_TOKENS.primary}; }
+    .check-order-page th { color: ${PAGE_TOKENS.muted}; letter-spacing: 0; }
+    .check-order-page td { color: ${PAGE_TOKENS.muted}; }
+    .check-order-page tbody tr:hover { background-color: #eff6ff; }
+    .check-order-page button,
+    .check-order-page select,
+    .check-order-page input { min-height: 32px; }
+`;
+
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
     const [stats, setStats] = useState({});
@@ -435,28 +512,41 @@ const CheckOder = () => {
 
     if (error) {
         return (
-            <div className="h-screen bg-white flex items-center justify-center p-4">
-                <div className="text-neutral-900 text-base font-medium">{error}</div>
+            <div className="h-screen flex items-center justify-center p-4" style={{ backgroundColor: PAGE_TOKENS.bg }}>
+                <div
+                    className="rounded-lg border px-5 py-4 text-sm font-semibold shadow-sm"
+                    style={{
+                        backgroundColor: PAGE_TOKENS.dangerBg,
+                        borderColor: PAGE_TOKENS.dangerBorder,
+                        color: PAGE_TOKENS.dangerText
+                    }}
+                >
+                    {error}
+                </div>
             </div>
         );
     }
 
     if (!selectedShop && !showShopModal) {
         return (
-            <div className="h-screen bg-white flex items-center justify-center p-4">
+            <div className="h-screen flex items-center justify-center p-4" style={{ backgroundColor: PAGE_TOKENS.bg }}>
                 <div className="flex flex-col items-center gap-3 text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-3xl font-bold">
+                    <div
+                        className="w-20 h-20 rounded-xl text-white flex items-center justify-center text-3xl font-bold"
+                        style={{ backgroundColor: PAGE_TOKENS.primary }}
+                    >
                         S
                     </div>
-                    <div className="text-xl font-bold text-neutral-900 mt-2">
+                    <div className="text-xl font-bold mt-2" style={{ color: PAGE_TOKENS.text }}>
                         Vui lòng chọn shop để xem tracking
                     </div>
-                    <div className="text-sm text-neutral-500 mb-2">
+                    <div className="text-sm mb-2" style={{ color: PAGE_TOKENS.muted }}>
                         Bạn cần chọn một shop để bắt đầu theo dõi trạng thái đơn hàng
                     </div>
                     <button
                         onClick={() => setShowShopModal(true)}
-                        className="px-6 py-3 rounded-xl bg-neutral-900 !text-white font-semibold hover:bg-neutral-800 hover:!text-white transition-colors"
+                        className="min-h-11 px-6 py-3 rounded-lg !text-white font-semibold transition-colors"
+                        style={{ backgroundColor: PAGE_TOKENS.primary }}
                     >
                         Chọn shop
                     </button>
@@ -466,13 +556,20 @@ const CheckOder = () => {
     }
 
     return (
-        <div className="h-screen overflow-hidden bg-neutral-50 p-3 box-border">
+        <div className="check-order-page h-screen overflow-hidden p-4 box-border" style={{ backgroundColor: PAGE_TOKENS.bg }}>
+            <style>{PAGE_CSS}</style>
             {/* Loading Overlay */}
             {loading && selectedShop && (
                 <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-[2000]">
-                    <div className="flex flex-col items-center gap-4 bg-white rounded-2xl px-8 py-7 shadow-xl border border-neutral-200">
-                        <div className="w-10 h-10 border-[3px] border-neutral-200 border-t-neutral-900 rounded-full animate-spin"></div>
-                        <div className="text-sm font-semibold text-neutral-900">
+                    <div
+                        className="flex flex-col items-center gap-4 rounded-xl px-8 py-7 shadow-xl border"
+                        style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+                    >
+                        <div
+                            className="w-10 h-10 border-[3px] rounded-full animate-spin"
+                            style={{ borderColor: PAGE_TOKENS.border, borderTopColor: PAGE_TOKENS.primary }}
+                        ></div>
+                        <div className="text-sm font-semibold" style={{ color: PAGE_TOKENS.text }}>
                             Đang tải dữ liệu đơn hàng...
                         </div>
                     </div>
@@ -482,12 +579,17 @@ const CheckOder = () => {
             {/* Shop Selection Modal */}
             {showShopModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
-                    <div className="bg-white rounded-2xl p-6 w-full max-w-xl max-h-[80vh] overflow-auto shadow-2xl border border-neutral-200">
+                    <div
+                        className="rounded-xl p-6 w-full max-w-xl max-h-[80vh] overflow-auto shadow-2xl border"
+                        style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+                    >
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-2xl font-bold text-neutral-900 m-0">Chọn Shop</h3>
                             <button
+                                aria-label="Close shop selection modal"
                                 onClick={() => setShowShopModal(false)}
-                                className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors flex items-center justify-center text-lg"
+                                className="w-10 h-10 rounded-lg transition-colors flex items-center justify-center text-lg hover:bg-slate-100"
+                                style={{ color: PAGE_TOKENS.muted }}
                             >
                                 ✕
                             </button>
@@ -507,20 +609,30 @@ const CheckOder = () => {
                                     return (
                                         <div
                                             key={shop._id}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-pressed={isSelected}
                                             onClick={() => setTempSelectedShop(shop)}
-                                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                                                isSelected
-                                                    ? 'border-neutral-900 bg-neutral-900 text-white'
-                                                    : 'border-neutral-200 bg-white hover:border-neutral-400'
-                                            }`}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    setTempSelectedShop(shop);
+                                                }
+                                            }}
+                                            className="border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-sm"
+                                            style={{
+                                                backgroundColor: isSelected ? PAGE_TOKENS.primary : PAGE_TOKENS.surface,
+                                                borderColor: isSelected ? PAGE_TOKENS.primary : PAGE_TOKENS.border,
+                                                color: isSelected ? '#ffffff' : PAGE_TOKENS.text
+                                            }}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div
-                                                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
-                                                        isSelected
-                                                            ? 'bg-white text-neutral-900'
-                                                            : 'bg-neutral-900 text-white'
-                                                    }`}
+                                                    className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm"
+                                                    style={{
+                                                        backgroundColor: isSelected ? PAGE_TOKENS.surface : PAGE_TOKENS.primary,
+                                                        color: isSelected ? PAGE_TOKENS.primary : '#ffffff'
+                                                    }}
                                                 >
                                                     {shop.name?.charAt(0).toUpperCase() || '?'}
                                                 </div>
@@ -529,30 +641,25 @@ const CheckOder = () => {
                                                         {shop.name}
                                                     </div>
                                                     <div
-                                                        className={`text-xs truncate ${
-                                                            isSelected
-                                                                ? 'text-neutral-300'
-                                                                : 'text-neutral-500'
-                                                        }`}
+                                                        className="text-xs truncate"
+                                                        style={{ color: isSelected ? '#dbeafe' : PAGE_TOKENS.muted }}
                                                     >
                                                         {shop.store} - {shop.merchant}
                                                     </div>
                                                 </div>
                                                 <span
-                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                    className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                                                    style={
                                                         isSelected
-                                                            ? 'bg-white/10 text-white'
+                                                            ? { color: '#ffffff', borderColor: 'rgba(255,255,255,0.28)', backgroundColor: 'rgba(255,255,255,0.12)' }
                                                             : shop.status === 'Active'
-                                                            ? 'bg-neutral-900 text-white'
-                                                            : 'bg-neutral-200 text-neutral-600'
-                                                    }`}
+                                                            ? pillStyles.success
+                                                            : pillStyles.neutral
+                                                    }
                                                 >
                                                     <span
-                                                        className={`w-1.5 h-1.5 rounded-full ${
-                                                            shop.status === 'Active'
-                                                                ? 'bg-green-400'
-                                                                : 'bg-neutral-400'
-                                                        }`}
+                                                        className="w-1.5 h-1.5 rounded-full"
+                                                        style={{ backgroundColor: shop.status === 'Active' ? '#22c55e' : PAGE_TOKENS.muted }}
                                                     ></span>
                                                     {shop.status}
                                                 </span>
@@ -567,7 +674,13 @@ const CheckOder = () => {
                             {selectedShop ? (
                                 <button
                                     onClick={() => setShowShopModal(false)}
-                                    className="px-6 py-3 rounded-xl border border-neutral-200 bg-white text-neutral-900 font-semibold hover:bg-neutral-100 transition-colors"
+                                    aria-label="Cancel shop selection"
+                                    className="min-h-11 px-6 py-3 rounded-lg border font-semibold transition-colors hover:bg-slate-50"
+                                    style={{
+                                        backgroundColor: PAGE_TOKENS.surface,
+                                        borderColor: PAGE_TOKENS.border,
+                                        color: PAGE_TOKENS.text
+                                    }}
                                 >
                                     Huỷ
                                 </button>
@@ -576,8 +689,10 @@ const CheckOder = () => {
                             )}
                             <button
                                 onClick={handleConfirmShop}
+                                aria-label="Confirm selected shop"
                                 disabled={!tempSelectedShop || loadingShops}
-                                className="px-6 py-3 rounded-xl bg-neutral-900 !text-white font-semibold hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="min-h-11 px-6 py-3 rounded-lg !text-white font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: PAGE_TOKENS.primary }}
                             >
                                 Xác nhận
                             </button>
@@ -588,13 +703,16 @@ const CheckOder = () => {
 
             <div className="h-full flex flex-col gap-2 overflow-hidden">
                 {/* Toolbar: title + stats + shop + limit + reload */}
-                <div className="flex items-center gap-3 bg-white border border-neutral-200 rounded-xl px-4 py-2">
-                    <div className="flex items-center gap-2 pr-3 border-r border-neutral-200">
+                <div
+                    className="flex items-center gap-3 rounded-lg border px-4 py-3 shadow-sm"
+                    style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+                >
+                    <div className="flex items-center gap-2 pr-3 border-r" style={{ borderColor: PAGE_TOKENS.border }}>
                         <div>
-                            <h2 className="m-0 text-sm font-bold text-neutral-900 leading-tight">
+                            <h2 className="m-0 text-sm font-bold leading-tight" style={{ color: PAGE_TOKENS.text }}>
                                 Kiểm tra đơn hàng
                             </h2>
-                            <p className="m-0 text-[11px] text-neutral-500 leading-tight">
+                            <p className="m-0 text-xs leading-tight" style={{ color: PAGE_TOKENS.muted }}>
                                 Tracking & hiệu suất
                             </p>
                         </div>
@@ -641,6 +759,7 @@ const CheckOder = () => {
                         </div>
 
                         <select
+                            aria-label="Select order limit"
                             value={limit}
                             onChange={(e) => setLimit(Number(e.target.value))}
                             className="bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1.5 text-xs text-neutral-900 font-semibold cursor-pointer outline-none"
@@ -654,6 +773,7 @@ const CheckOder = () => {
                         </select>
 
                         <button
+                            aria-label="Reload order status"
                             onClick={fetchData}
                             disabled={!selectedShop || loading}
                             className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -680,6 +800,7 @@ const CheckOder = () => {
                             />
                         </svg>
                         <input
+                            aria-label="Search orders by shop name, shop ID, or order ID"
                             type="text"
                             placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
                             value={searchTerm}
@@ -692,6 +813,7 @@ const CheckOder = () => {
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Tracking</span>
                             <select
+                                aria-label="Filter by tracking availability"
                                 value={filterTracking}
                                 onChange={(e) => setFilterTracking(e.target.value)}
                                 disabled={loading}
@@ -706,6 +828,7 @@ const CheckOder = () => {
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">AMZ</span>
                             <select
+                                aria-label="Filter by Amazon submit status"
                                 value={filterAmazon}
                                 onChange={(e) => setFilterAmazon(e.target.value)}
                                 disabled={loading}
@@ -720,6 +843,7 @@ const CheckOder = () => {
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
                             <input
+                                aria-label="Filter Amazon submit date from"
                                 type="date"
                                 value={filterAmzDateFrom}
                                 onChange={(e) => setFilterAmzDateFrom(e.target.value)}
@@ -728,6 +852,7 @@ const CheckOder = () => {
                             />
                             <span className="text-[10px] text-neutral-400">→</span>
                             <input
+                                aria-label="Filter Amazon submit date to"
                                 type="date"
                                 value={filterAmzDateTo}
                                 onChange={(e) => setFilterAmzDateTo(e.target.value)}
@@ -736,6 +861,7 @@ const CheckOder = () => {
                             />
                             {(filterAmzDateFrom || filterAmzDateTo) && (
                                 <button
+                                    aria-label="Clear Amazon submit date filter"
                                     onClick={() => {
                                         setFilterAmzDateFrom('');
                                         setFilterAmzDateTo('');
@@ -749,6 +875,7 @@ const CheckOder = () => {
                         </div>
 
                         <button
+                            aria-label="Export filtered orders to TXT"
                             onClick={handleExportTxt}
                             disabled={exporting || filteredOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-semibold text-xs hover:bg-neutral-100 hover:border-neutral-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -757,6 +884,7 @@ const CheckOder = () => {
                         </button>
 
                         <button
+                            aria-label="Export filtered orders to Excel"
                             onClick={handleExportExcel}
                             disabled={exportingExcel || filteredOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg border border-green-600 bg-green-600 !text-white font-semibold text-xs hover:bg-green-700 hover:border-green-700 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -765,6 +893,7 @@ const CheckOder = () => {
                         </button>
 
                         <button
+                            aria-label="Export fake tracking for selected orders"
                             onClick={handleExportFakeTxt}
                             disabled={exportingFake || selectedOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg border border-amber-500 bg-amber-500 !text-white font-semibold text-xs hover:bg-amber-600 hover:border-amber-600 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -774,6 +903,7 @@ const CheckOder = () => {
                         </button>
 
                         <button
+                            aria-label="Push selected orders to Amazon"
                             onClick={handlePushOrders}
                             disabled={submitting || selectedOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -791,6 +921,7 @@ const CheckOder = () => {
                                 <tr>
                                     <th className="sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-center px-2 py-2 border-b border-neutral-200 w-10">
                                         <input
+                                            aria-label="Select all eligible filtered orders"
                                             type="checkbox"
                                             checked={isAllFilteredSelected}
                                             onChange={handleSelectAllFiltered}
@@ -848,6 +979,7 @@ const CheckOder = () => {
                                                         <span className="text-neutral-300 font-bold">–</span>
                                                     ) : (
                                                         <input
+                                                            aria-label={`Select order ${order.orderId || ''}`}
                                                             type="checkbox"
                                                             checked={selected}
                                                             onChange={() => handleSelectOrder(order)}
