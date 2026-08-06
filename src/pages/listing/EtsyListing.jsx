@@ -23,12 +23,64 @@ import ModalDelete from '../../components/ModalDelete';
 
 const PAGE_SIZE = 10;
 
+const PAGE_TOKENS = {
+  background: '#f8fafc',
+  surface: '#ffffff',
+  surfaceMuted: '#f1f5f9',
+  border: '#e2e8f0',
+  borderStrong: '#cbd5e1',
+  text: '#0f172a',
+  mutedText: '#64748b',
+  primary: '#0958d7',
+  success: '#2f8f14',
+  warning: '#d46a08',
+  danger: '#cd1323',
+  info: '#08969b',
+};
+
 const ETSY_LISTING_FILTERS = [
   { key: 'all', title: 'All', filter: 'All', count: 0 },
   { key: 'hasSku', title: 'Has SKU', filter: 'hasSku', count: 0 },
   { key: 'inStock', title: 'In Stock', filter: 'in_stock', count: 0 },
   { key: 'outOfStock', title: 'Out of Stock', filter: 'out_of_stock', count: 0 },
 ];
+
+const PageActionButton = ({ icon, children, onClick }) => (
+  <button
+    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium transition-colors hover:bg-[#e2e8f0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0958d7] focus-visible:ring-offset-2"
+    style={{
+      backgroundColor: PAGE_TOKENS.surfaceMuted,
+      borderColor: PAGE_TOKENS.border,
+      color: PAGE_TOKENS.text,
+    }}
+    onClick={onClick}
+  >
+    {icon}
+    <span className="text-sm font-medium">{children}</span>
+  </button>
+);
+
+const MetricCard = ({ icon, label, value, accent = PAGE_TOKENS.primary }) => (
+  <div
+    className="flex min-h-[86px] items-center gap-3 rounded-lg border px-4 py-3"
+    style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+  >
+    <div
+      className="flex h-9 w-9 flex-none items-center justify-center rounded-md"
+      style={{ backgroundColor: `${accent}14`, color: accent }}
+    >
+      {icon}
+    </div>
+    <div className="min-w-0">
+      <span className="block text-sm font-medium" style={{ color: PAGE_TOKENS.mutedText }}>
+        {label}
+      </span>
+      <div className="mt-0.5 truncate text-2xl font-semibold tabular-nums" style={{ color: PAGE_TOKENS.text }}>
+        {value}
+      </div>
+    </div>
+  </div>
+);
 
 const EtsyListingActions = ({ record, fetchAllEtsyListings, filters }) => {
   const [fileList, setFileList] = useState([]);
@@ -117,15 +169,21 @@ const EtsyListingActions = ({ record, fetchAllEtsyListings, filters }) => {
         ) : (
           <Tooltip title="Upload">
             <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />} disabled={!listingId} />
+              <Button aria-label="Upload design file" icon={<UploadOutlined />} disabled={!listingId} />
             </Upload>
           </Tooltip>
         )}
         <Tooltip title="Download">
-          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!listingId || !hasPsdFile} />
+          <Button aria-label="Download design file" icon={<DownloadOutlined />} onClick={handleDownload} disabled={!listingId || !hasPsdFile} />
         </Tooltip>
         <Tooltip title="Delete">
-          <Button icon={<DeleteOutlined />} onClick={() => setOpenModalDelete(true)} disabled={!listingId || !hasPsdFile} danger />
+          <Button
+            aria-label="Delete design file"
+            icon={<DeleteOutlined />}
+            onClick={() => setOpenModalDelete(true)}
+            disabled={!listingId || !hasPsdFile}
+            danger
+          />
         </Tooltip>
       </Space>
 
@@ -211,7 +269,7 @@ const createEtsyListingColumns = ({ handleViewDetail, shopNameById, fetchAllEtsy
     dataIndex: 'price',
     key: 'price',
     align: 'center',
-    render: (data) => <span className="font-medium">{data || data === 0 ? `$${Number(data).toFixed(2)}` : '-'}</span>,
+    render: (data) => <span className="font-medium tabular-nums">{data || data === 0 ? `$${Number(data).toFixed(2)}` : '-'}</span>,
   },
   {
     title: <span style={{ color: dataColors.title }}>Actions</span>,
@@ -280,6 +338,40 @@ const EtsyListing = () => {
       };
     },
     [dataSource, totalCount]
+  );
+
+  const metricCards = useMemo(
+    () => [
+      {
+        key: 'totalListings',
+        label: 'Total Listings',
+        value: counts.totalListings,
+        accent: PAGE_TOKENS.primary,
+        icon: <IoGiftOutline className="h-4 w-4" />,
+      },
+      {
+        key: 'totalQuantity',
+        label: 'Total Quantity',
+        value: counts.totalQuantity,
+        accent: PAGE_TOKENS.success,
+        icon: <FaDatabase className="h-4 w-4" />,
+      },
+      {
+        key: 'avgPrice',
+        label: 'Avg Price',
+        value: `$${counts.avgPrice.toFixed(2)}`,
+        accent: PAGE_TOKENS.warning,
+        icon: <FaDollarSign className="h-4 w-4" />,
+      },
+      {
+        key: 'syncedListings',
+        label: 'Synced Listings',
+        value: counts.syncedListings,
+        accent: PAGE_TOKENS.info,
+        icon: <FaEtsy className="h-4 w-4" />,
+      },
+    ],
+    [counts]
   );
 
   const shopOptions = useMemo(
@@ -437,77 +529,31 @@ const EtsyListing = () => {
   }, [fetchAllShop]);
 
   return (
-    <div className="overflow-hidden">
-      <div className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 bg-white transition-all duration-300`}>
-        <div className="h-[60px] gap-4 bg-background p-4 md:px-8 shadow-sm sticky top-0 flex items-center justify-between">
-          <h1 className="text-2xl !mb-0" style={{ color: 'black' }}>
+    <div className="min-h-full overflow-hidden" style={{ backgroundColor: PAGE_TOKENS.background }}>
+      <div
+        className={`fixed top-0 ${collapsed ? 'left-64' : 'left-13.5'} right-0 z-50 transition-all duration-300`}
+        style={{ backgroundColor: PAGE_TOKENS.surface, borderBottom: `1px solid ${PAGE_TOKENS.border}` }}
+      >
+        <div className="sticky top-0 flex h-[60px] items-center justify-between gap-4 px-4 md:px-8">
+          <h1 className="!mb-0 text-2xl font-semibold" style={{ color: PAGE_TOKENS.text }}>
             Etsy Listing
           </h1>
           <div className="flex justify-center items-center gap-2">
-            <button
-              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => toast.info('Import Etsy Listing')}
-            >
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Import Etsy Listing
-              </span>
-              <div style={{ color: 'black' }}>
-                <LuImport size={15} />
-              </div>
-            </button>
-            <button
-              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
-              onClick={() => toast.info('Add Etsy Listing')}
-            >
-              <div style={{ color: 'black' }}>
-                <MdAdd size={15} />
-              </div>
-              <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Add Etsy Listing
-              </span>
-            </button>
+            <PageActionButton icon={<LuImport size={15} />} onClick={() => toast.info('Import Etsy Listing')}>
+              Import Etsy Listing
+            </PageActionButton>
+            <PageActionButton icon={<MdAdd size={15} />} onClick={() => toast.info('Add Etsy Listing')}>
+              Add Etsy Listing
+            </PageActionButton>
           </div>
         </div>
       </div>
 
-      <div className="mt-[60px] px-8 py-4 h-full">
-        <div className="flex items-center gap-4 w-full">
-          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
-            <div className="bg-gray-100 rounded-full p-2 flex items-center justify-center">
-              <IoGiftOutline className="w-4 h-4 text-gray-600" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 font-medium">Total Listings</span>
-              <div className="text-2xl font-bold text-gray-800">{counts.totalListings}</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
-            <div className="bg-green-100 rounded-full p-2 flex items-center justify-center">
-              <FaDatabase className="w-4 h-4 text-green-600" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 font-medium">Total Quantity</span>
-              <div className="text-2xl font-bold text-gray-800">{counts.totalQuantity}</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
-            <div className="bg-orange-100 rounded-full p-2 flex items-center justify-center">
-              <FaDollarSign className="w-4 h-4 text-orange-600" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 font-medium">Avg Price</span>
-              <div className="text-2xl font-bold text-gray-800">${counts.avgPrice.toFixed(2)}</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex-1">
-            <div className="bg-orange-100 rounded-full p-2 flex items-center justify-center">
-              <FaEtsy className="w-4 h-4 text-orange-600" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 font-medium">Synced Listings</span>
-              <div className="text-2xl font-bold text-gray-800">{counts.syncedListings}</div>
-            </div>
-          </div>
+      <div className="mt-[60px] h-full px-4 py-4 md:px-8">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {metricCards.map((item) => (
+            <MetricCard key={item.key} icon={item.icon} label={item.label} value={item.value} accent={item.accent} />
+          ))}
         </div>
 
         <div className="flex gap-3 items-center mt-4">
@@ -523,12 +569,16 @@ const EtsyListing = () => {
           ))}
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex w-[55%] gap-2">
+        <div
+          className="mt-4 flex flex-col gap-3 rounded-lg border p-3 xl:flex-row xl:items-center xl:justify-between"
+          style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+        >
+          <div className="flex w-full flex-col gap-2 sm:flex-row xl:max-w-[680px]">
             <Input
               onChange={handleSearch}
               placeholder="Search Etsy listing"
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full flex-1 sm:w-auto sm:max-w-72"
+              className="h-10 w-full flex-1 rounded-md text-sm sm:max-w-80"
+              aria-label="Search Etsy listing"
             />
             <Select
               allowClear
@@ -544,13 +594,18 @@ const EtsyListing = () => {
             />
             <div className="flex gap-2 items-center">
               <Tooltip title="Refresh">
-                <button className="py-2 px-3 rounded hover:bg-[#f1f5f9] cursor-pointer" onClick={handleRefresh}>
+                <button
+                  aria-label="Refresh Etsy listings"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-[#f1f5f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0958d7] focus-visible:ring-offset-2"
+                  style={{ color: PAGE_TOKENS.text }}
+                  onClick={handleRefresh}
+                >
                   <MdOutlineRefresh size={20} />
                 </button>
               </Tooltip>
             </div>
           </div>
-          <div>
+          <div className="flex justify-end">
             <Pagination
               total={totalCount}
               showTotal={(total) => `Total ${total} items`}
@@ -563,7 +618,7 @@ const EtsyListing = () => {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: PAGE_TOKENS.border, backgroundColor: PAGE_TOKENS.surface }}>
           <Table
             className="no-indent-table listing"
             columns={etsyListingColumns}
