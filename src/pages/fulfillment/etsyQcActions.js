@@ -45,7 +45,9 @@ const isBlockedOrder = (order) => BLOCKED_ORDER_STATUSES.has(String(order?.statu
 
 export const getRetryEtsySendDisabledReason = (order) => {
   if (isBlockedOrder(order)) return 'Order already shipped/fulfilled/cancelled';
-  if (String(order?.scale_overall_status || '').toLowerCase() !== 'failed') return 'Order is not Failed';
+  if (!['ready', 'failed'].includes(String(order?.scale_overall_status || '').toLowerCase())) {
+    return 'Status is not Ready/Failed';
+  }
   if (!allItemsComplete(order)) return 'Some items are not Complete';
   if (!getEtsyFailureInfo(order)?.provider) return 'Missing vendor/provider';
   return '';

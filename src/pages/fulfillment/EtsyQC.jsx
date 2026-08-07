@@ -749,20 +749,22 @@ const EtsyQC = () => {
             ),
             action: (
               <>
-                {item?.scale_overall_status === 'Failed' ? (
+                {indexItem === 0 && ['Ready', 'Failed'].includes(item?.scale_overall_status) ? (
                   <Flex vertical gap={6} align="center">
-                    <Tooltip
-                      title={
-                        failureInfo?.error
-                          ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
-                          : 'Backend has not returned the failed vendor response for this order.'
-                      }
-                    >
-                      <div className="max-w-[210px] text-xs text-left text-[#cd1323] leading-5">
-                        <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
-                        <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
-                      </div>
-                    </Tooltip>
+                    {item?.scale_overall_status === 'Failed' && (
+                      <Tooltip
+                        title={
+                          failureInfo?.error
+                            ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
+                            : 'Backend has not returned the failed vendor response for this order.'
+                        }
+                      >
+                        <div className="max-w-[210px] text-xs text-left text-[#cd1323] leading-5">
+                          <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
+                          <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
+                        </div>
+                      </Tooltip>
+                    )}
                     <Flex gap={6} wrap="wrap" justify="center">
                       <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
                         <span>
@@ -774,10 +776,16 @@ const EtsyQC = () => {
                             loading={actionLoadingKey === `${item.orderId}:retry`}
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleRetrySend(item, failureInfo);
+                              Modal.confirm({
+                                title: item?.scale_overall_status === 'Ready' ? 'Send Etsy order to vendor?' : 'Retry vendor send?',
+                                content: `Order ${item.orderId} will be sent to ${failureInfo?.provider || 'the resolved vendor'}.`,
+                                okText: item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry',
+                                cancelText: 'Cancel',
+                                onOk: () => handleRetrySend(item, failureInfo),
+                              });
                             }}
                           >
-                            Retry
+                            {item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry'}
                           </Button>
                         </span>
                       </Tooltip>
