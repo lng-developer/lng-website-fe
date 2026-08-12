@@ -4,12 +4,14 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
 import { formatDistanceToNow } from 'date-fns';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { LuImport, LuArrowDownNarrowWide } from 'react-icons/lu';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { TbHistory, TbReplace } from 'react-icons/tb';
-import { BiRefresh } from 'react-icons/bi';
+import { BiRefresh, BiSolidFileExport } from 'react-icons/bi';
 import ButtonFilter from '../../components/ButtonFilter';
 import SelectFilter from '../../components/SelectFilter';
 import StatusComponent from '../../components/StatusComponent';
@@ -45,6 +47,7 @@ import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 import { useAuth } from '../../context/AuthContext';
+import { ORDER_EXPORT_COLUMNS, buildOrderExportRows } from './orderExport';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 const NO_COST_STATUS_OPTIONS = dataFilterStatus
@@ -87,6 +90,7 @@ const Home = () => {
   const [vendors, setVendors] = useState([]);
   const [selectVendor, setSelectVendor] = useState(initialVendorId);
   const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => {
     const saved = localStorage.getItem(LAST_UPDATED_KEY);
     return saved ? new Date(saved) : null;
@@ -554,6 +558,63 @@ const Home = () => {
     fetchCountStatus();
   }, [fetchAllOrder, fetchCountStatus, filters]);
 
+  const handleExportExcel = useCallback(async () => {
+    if (isExporting) return;
+
+    setIsExporting(true);
+    const toastId = toast.loading('Exporting orders...');
+
+    try {
+      const exportLimit = totalCount > 0 ? totalCount : 10000;
+      const response = await getALlOrder({
+        ...filters,
+        page: 1,
+        perPage: exportLimit,
+      });
+
+      if (response.status !== 200) {
+        toast.error(response.data?.message || 'Export failed!', { id: toastId });
+        return;
+      }
+
+      const exportOrders = response.data?.data || [];
+      const exportRows = buildOrderExportRows(exportOrders);
+
+      if (!exportRows.length) {
+        toast.error('No orders found to export!', { id: toastId });
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Amazon Orders');
+      worksheet.columns = ORDER_EXPORT_COLUMNS;
+      exportRows.forEach((row) => worksheet.addRow(row));
+
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F3FF' },
+      };
+      worksheet.getColumn('address').alignment = { wrapText: true, vertical: 'top' };
+      worksheet.getColumn('costCenter').alignment = { wrapText: true, vertical: 'top' };
+      worksheet.getColumn('tracking').alignment = { wrapText: true, vertical: 'top' };
+      worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const filename = `Amazon_Orders_${filters.from || 'all'}_to_${filters.to || 'all'}.xlsx`;
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, filename);
+
+      toast.success(`Exported ${exportRows.length} items from ${exportOrders.length} orders`, { id: toastId });
+    } catch (error) {
+      console.error('Export orders error:', error);
+      toast.error(error?.response?.data?.message || 'Export Excel failed!', { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [filters, isExporting, totalCount]);
+
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
     try {
@@ -978,7 +1039,20 @@ const Home = () => {
               {lastUpdatedText}
             </span>
           </h1>
-          <div className="flex justify-center items-center gap-2">
+          <div className="flex justify-center items-center gap-2 flex-wrap">
+            <button
+              className="inline-flex gap-2 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10 space-x-1 px-4 border-[#e2e8f0] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              aria-label="Export orders to Excel"
+            >
+              <span className="text-sm font-medium" style={{ color: 'black' }}>
+                {isExporting ? 'Exporting...' : 'Export Excel'}
+              </span>
+              <div style={{ color: 'black' }}>
+                <BiSolidFileExport size={15} />
+              </div>
+            </button>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-md  text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer "
               onClick={handleImportTracking}
