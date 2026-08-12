@@ -80,6 +80,19 @@ const ProductCostCenter = () => {
     }
   };
 
+  const handleChangePrintingMethod = async (id, printing_method) => {
+    try {
+      const response = await updateVendorProductCostCenter(id, { printing_method });
+      if (response.status === 200) {
+        toast.success('Update printing method success!');
+        fetchAllProductCostCenter(filters);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Change printing method error!');
+    }
+  };
+
   const columns = [
     {
       title: <span style={{ color: dataColors.title }}>Vendor Size</span>,
@@ -134,6 +147,24 @@ const ProductCostCenter = () => {
         <div className="h-full">
           <span className="font-medium">{text}</span>
         </div>
+      ),
+      align: 'center',
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Printing</span>,
+      dataIndex: 'printing',
+      key: 'printing',
+      render: ({ _id, printing_method }) => (
+        <Select
+          value={printing_method || ''}
+          style={{ width: 104 }}
+          onChange={(value) => handleChangePrintingMethod(_id, value)}
+          options={[
+            { value: '', label: 'Default' },
+            { value: 'DTF', label: 'DTF' },
+            { value: 'DTG', label: 'DTG' },
+          ]}
+        />
       ),
       align: 'center',
     },
@@ -321,6 +352,10 @@ const ProductCostCenter = () => {
             standard_color: item?.standard_color,
             type: item?.status,
             sku: item?.sku,
+            printing: {
+              _id: item?._id,
+              printing_method: item?.printing_method || '',
+            },
             status: {
               status: item?.status,
               _id: item?._id,
