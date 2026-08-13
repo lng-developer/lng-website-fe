@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Flex, Input, Modal, Pagination, Table, Tooltip, Button } from 'antd';
+import { Alert, Flex, Input, Modal, Pagination, Select, Table, Tooltip, Button } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { dataColors } from '../../utils/dataColors';
 import SelectFilter from '../../components/SelectFilter';
@@ -15,6 +15,7 @@ import {
   getAllCountStatusQC,
   getAllQC,
   getALlShop,
+  getScaleOrderProviders,
   retryScaleOrder,
   sendFailedOrdersToFulfillment,
   pushSelectedOrdersToFulfillmentPlatform,
@@ -89,6 +90,13 @@ const QC = () => {
   const [pushingToFulfillmentPlatform, setPushingToFulfillmentPlatform] = useState(false);
   const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
   const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
+  const [providerSelector, setProviderSelector] = useState({
+    open: false,
+    orderId: '',
+    providers: [],
+    selectedProvider: '',
+    loading: false,
+  });
   const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
 
   const selectedOrdersForFulfillment = useMemo(
@@ -105,7 +113,7 @@ const QC = () => {
     setFilters((prev) => ({
       ...prev,
       ...newValues,
-      // Nếu newValues có page thì dùng page đó, nếu không thì giữ nguyên page hiện tại
+      // Keep current page unless new page is explicitly passed
       page: Object.prototype.hasOwnProperty.call(newValues, 'page') ? newValues.page : prev.page,
     }));
   }, []);
@@ -491,30 +499,109 @@ const QC = () => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
+  const closeProviderSelector = useCallback(() => {
+    setProviderSelector({
+      open: false,
+      orderId: '',
+      providers: [],
+      selectedProvider: '',
+      loading: false,
+    });
+  }, []);
+
   const handleRetry = useCallback(
     async (orderId, provider) => {
-      try {
-        const response = await retryScaleOrder(orderId, provider);
-        if (response.status === 200) {
-          toast.success('Retry request sent successfully!');
-          // Load lại dữ liệu sau khi retry thành công
+      if (provider) {
+        try {
+          const response = await retryScaleOrder(orderId, provider);
+          if (response.status === 200) {
+            toast.success('Retry request sent successfully!');
+            fetchAllQC(filters);
+          } else {
+            toast.error('Retry failed!');
+          }
+        } catch (error) {
+          console.error(error);
+          const message = error?.response?.data?.error || error?.response?.data?.message || 'Retry error!';
+          toast.error(message);
           fetchAllQC(filters);
-        } else {
-          toast.error('Retry failed!');
         }
+        return;
+      }
+
+      try {
+        const providerResp = await getScaleOrderProviders(orderId);
+        const {
+          providers = [],
+          auto_provider: autoProvider,
+          address_invalid: addressInvalid,
+          reasons = [],
+          message: providerMessage,
+        } = providerResp?.data || {};
+
+        if (addressInvalid) {
+          toast.error(providerMessage || 'Address invalid. Please validate address first.');
+          return;
+        }
+
+        const options = providers.map((item) => ({
+          value: item?.key,
+          label: item?.label || item?.key,
+        }));
+
+        if (options.length === 0) {
+          const reasonText = Array.isArray(reasons) && reasons.length > 0 ? reasons.join(', ') : 'No provider available for this order.';
+          toast.error(reasonText);
+          return;
+        }
+
+        const defaultProvider =
+          (autoProvider && options.find((option) => option.value === autoProvider)?.value) ||
+          options[0]?.value ||
+          '';
+
+        setProviderSelector({
+          open: true,
+          orderId,
+          providers: options,
+          selectedProvider: defaultProvider || options[0]?.value || '',
+          loading: false,
+        });
       } catch (error) {
         console.error(error);
         const message = error?.response?.data?.error || error?.response?.data?.message || 'Retry error!';
         toast.error(message);
-        fetchAllQC(filters);
       }
     },
-    [fetchAllQC, filters]
+    [fetchAllQC, filters, getScaleOrderProviders]
   );
 
+  const handleRetryWithProvider = useCallback(async () => {
+    const { orderId, selectedProvider } = providerSelector;
+    if (!orderId || !selectedProvider) return;
+
+    try {
+      setProviderSelector((prev) => ({ ...prev, loading: true }));
+      const response = await retryScaleOrder(orderId, selectedProvider);
+      if (response.status === 200) {
+        toast.success('Retry request sent successfully!');
+        closeProviderSelector();
+        fetchAllQC(filters);
+      } else {
+        toast.error('Retry failed!');
+      }
+    } catch (error) {
+      console.error(error);
+      const message = error?.response?.data?.error || error?.response?.data?.message || 'Retry error!';
+      toast.error(message);
+      fetchAllQC(filters);
+    } finally {
+      setProviderSelector((prev) => ({ ...prev, loading: false }));
+    }
+  }, [closeProviderSelector, fetchAllQC, filters, providerSelector.orderId, providerSelector.selectedProvider, providerSelector.loading]);
   /**
-   * NEW: Queue tất cả item Pending theo đúng thứ tự hiển thị list hiện tại.
-   * Mỗi entry là 1 "target" để modal nhảy qua item/order kế tiếp.
+   * NEW: Queue all Pending items in current list order.
+   * Each entry is a "target" for jumping to next item/order.
    */
   const qcQueue = useMemo(() => {
     const queue = [];
@@ -534,7 +621,7 @@ const QC = () => {
   }, [dataSource]);
 
   /**
-   * NEW: Sau Pass/Reject, parent tự chọn target kế tiếp trong queue và set lại modal content.
+   * NEW: After Pass/Reject, parent auto-selects next target in queue and resets modal content.
    */
   const goNextAfter = useCallback(
     (currentOrderId, currentOrderItemId) => {
@@ -610,18 +697,18 @@ const QC = () => {
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
       action_retry: ['Ready', 'Failed'].includes(item?.scale_overall_status) ? (
-        <Tooltip title="Retry LNG vendor send">
+        <Tooltip title="Retry Vendor">
           <div
             className="border-1 rounded-full cursor-pointer flex justify-center items-center text-sm"
             style={{ borderColor: dataColors.pending }}
             onClick={(e) => {
               e.stopPropagation();
-              handleRetry(item.orderId, 'lng');
+              handleRetry(item.orderId);
             }}
           >
             <BiRefresh size={16} color={dataColors.pending} />
             <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-              Retry LNG
+              Retry
             </span>
           </div>
         </Tooltip>
@@ -644,7 +731,7 @@ const QC = () => {
       ) : null,
       shipping_type: <StatusComponent title={item?.shipping_type} color={dataColors.asin} />,
       shopName: <StatusComponent title={item?.shopName} color={dataColors.pending} />,
-      qc_by: <StatusComponent title={item?.scale_by || 'Đặng Thành Trung CS'} color={dataColors.purple} />,
+      qc_by: <StatusComponent title={item?.scale_by || 'Dang Thanh Trung CS'} color={dataColors.purple} />,
       subItems: (item?.items || []).map((itemSub, indexItem) => ({
         key: `${index}-${indexItem}`,
         product_info: (
@@ -713,7 +800,7 @@ const QC = () => {
 
   // =============== EFFECTS ===============
   useEffect(() => {
-    // Đồng bộ currentPage và pageSize với filters
+    // Sync currentPage and pageSize with filters
     setCurrentPage(filters.page);
     if (filters.perPage !== pageSize) {
       setPageSize(filters.perPage);
@@ -921,6 +1008,33 @@ const QC = () => {
       </div>
 
       <Modal
+        title="Select Vendor Provider"
+        open={providerSelector.open}
+        onCancel={closeProviderSelector}
+        onOk={handleRetryWithProvider}
+        okText="Send"
+        cancelText="Cancel"
+        okButtonProps={{
+          disabled: !providerSelector.selectedProvider,
+          loading: providerSelector.loading,
+        }}
+        destroyOnClose
+      >
+        <Select
+          style={{ width: '100%' }}
+          value={providerSelector.selectedProvider || undefined}
+          options={providerSelector.providers}
+          placeholder="Select provider"
+          onChange={(value) =>
+            setProviderSelector((prev) => ({
+              ...prev,
+              selectedProvider: value,
+            }))
+          }
+        />
+      </Modal>
+
+      <Modal
         title="Push failed orders to Fulfillment Platform v2"
         open={openFulfillmentPushModal}
         onCancel={closePushFulfillmentModal}
@@ -979,3 +1093,4 @@ const QC = () => {
 };
 
 export default React.memo(QC);
+

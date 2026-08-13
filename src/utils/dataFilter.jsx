@@ -182,6 +182,11 @@ const dataFilterStatusQC = [
     status: 'QC Rejected',
   },
   {
+    key: 'Ready',
+    title: 'Ready',
+    status: 'Ready',
+  },
+  {
     key: 'Failed',
     title: 'Failed',
     status: 'Failed',

@@ -153,6 +153,10 @@ export const retryScaleOrder = (orderId, provider) => {
   return instance.post(`/scale/orders/${orderId}/scale/send`, provider ? { provider } : undefined);
 };
 
+export const getScaleOrderProviders = (orderId) => {
+  return instance.get(`/scale/orders/${orderId}/scale/providers`);
+};
+
 export const syncVendorTracking = (payload) => {
   return instance.post('/ext/vendor-sync/batch', payload);
 };
