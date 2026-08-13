@@ -49,12 +49,12 @@ assert.equal(
     vendor_submissions: {},
     items: [completeItem],
   }),
-  'Missing vendor/provider'
+  ''
 );
 assert.equal(canRetryEtsySend({ ...failedOrder, items: [{ scale_status: 'Complete', fulfillment_file: {} }] }), true);
 assert.equal(getRetryEtsySendDisabledReason({ ...failedOrder, status: 'Shipped' }), 'Order already shipped/fulfilled/cancelled');
 assert.equal(getRetryEtsySendDisabledReason({ ...failedOrder, items: [{ scale_status: 'Pending' }] }), 'Some items are not Complete');
-assert.equal(getRetryEtsySendDisabledReason({ ...failedOrder, vendor_submissions: {}, items: [completeItem] }), 'Missing vendor/provider');
+assert.equal(getRetryEtsySendDisabledReason({ ...failedOrder, vendor_submissions: {}, items: [completeItem] }), '');
 assert.equal(canReopenEtsyQc(failedOrder), true);
 assert.equal(canReopenEtsyQc({ ...failedOrder, items: [{ scale_status: 'Complete', fulfillment_file: {} }] }), false);
 assert.equal(canReopenEtsyQc({ ...failedOrder, status: 'Shipped' }), false);
@@ -69,7 +69,8 @@ assert.deepEqual(getEtsyFailureInfo(failedOrder), {
 
 const pageSource = readFileSync(new URL('./EtsyQC.jsx', import.meta.url), 'utf8');
 const apiInstanceSource = readFileSync(new URL('../../apis/index.js', import.meta.url), 'utf8');
-assert.match(pageSource, /Modal\.confirm\(/);
+assert.match(pageSource, /getEtsyScaleOrderProviders/);
+assert.match(pageSource, /openProviderSelector\(item\)/);
 assert.match(pageSource, /Send to Vendor/);
 assert.match(pageSource, /\['Ready', 'Failed'\]\.includes\(item\?\.scale_overall_status\)/);
 assert.match(pageSource, /indexItem === 0 && \['Ready', 'Failed'\]\.includes\(item\?\.scale_overall_status\)/);

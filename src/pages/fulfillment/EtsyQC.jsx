@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
+import { Alert, Button, Flex, Input, Modal, Pagination, Select, Table, Tooltip } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { debounce } from 'lodash';
 import ExcelJS from 'exceljs';
@@ -24,6 +24,7 @@ import {
   confirmEtsyScaleForItem,
   getAllEtsyQC,
   getAllEtsyQCStatistics,
+  getEtsyScaleOrderProviders,
   pushSelectedEtsyOrdersToFulfillmentPlatform,
   reopenEtsyQc,
   retrySendEtsyFulfillment,
@@ -165,6 +166,13 @@ const EtsyQC = () => {
   const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
   const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
   const [actionLoadingKey, setActionLoadingKey] = useState('');
+  const [providerSelector, setProviderSelector] = useState({
+    open: false,
+    order: null,
+    providers: [],
+    selectedProvider: '',
+    loading: false,
+  });
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: DEFAULT_PAGE_SIZE,
@@ -571,11 +579,64 @@ const EtsyQC = () => {
     }
   }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
 
+  const closeProviderSelector = useCallback(() => {
+    setProviderSelector({
+      open: false,
+      order: null,
+      providers: [],
+      selectedProvider: '',
+      loading: false,
+    });
+  }, []);
+
+  const openProviderSelector = useCallback(async (order) => {
+    const key = `${order.orderId}:providers`;
+    setActionLoadingKey(key);
+    try {
+      const response = await getEtsyScaleOrderProviders(order.orderId, { shopId: order.shopId });
+      const {
+        providers = [],
+        auto_provider: autoProvider,
+        address_invalid: addressInvalid,
+        reasons = [],
+        message,
+      } = response?.data || {};
+
+      if (addressInvalid) {
+        toast.error(message || 'Address invalid. Please validate address first.');
+        return;
+      }
+
+      const options = providers.map((item) => ({
+        value: item?.key,
+        label: item?.label || item?.key,
+      })).filter((item) => item.value);
+
+      if (options.length === 0) {
+        toast.error(Array.isArray(reasons) && reasons.length ? reasons.join(', ') : 'No provider available for this order.');
+        return;
+      }
+
+      setProviderSelector({
+        open: true,
+        order,
+        providers: options,
+        selectedProvider: options.find((item) => item.value === autoProvider)?.value || options[0]?.value || '',
+        loading: false,
+      });
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Get Etsy providers failed';
+      toast.error(status ? `Get providers failed (${status}): ${message}` : message);
+    } finally {
+      setActionLoadingKey('');
+    }
+  }, []);
+
   const handleRetrySend = useCallback(
-    async (order, failureInfo) => {
-      const provider = failureInfo?.provider;
+    async (order, provider) => {
       if (!provider) {
-        toast.error('Cannot retry: missing vendor provider from failure response.');
+        toast.error('Please select a vendor provider.');
         return;
       }
 
@@ -584,6 +645,7 @@ const EtsyQC = () => {
       try {
         const response = await retrySendEtsyFulfillment(order.orderId, { provider }, { shopId: order.shopId, provider });
         toast.success(response.data?.message || 'Retry send completed');
+        closeProviderSelector();
         fetchAllQC(filters);
         fetchCountStatus();
       } catch (error) {
@@ -594,8 +656,13 @@ const EtsyQC = () => {
         setActionLoadingKey('');
       }
     },
-    [fetchAllQC, fetchCountStatus, filters]
+    [closeProviderSelector, fetchAllQC, fetchCountStatus, filters]
   );
+
+  const handleSendWithProvider = useCallback(async () => {
+    const { order, selectedProvider } = providerSelector;
+    await handleRetrySend(order, selectedProvider);
+  }, [handleRetrySend, providerSelector]);
 
   const handleReopenQc = useCallback(
     async (order, failureInfo) => {
@@ -766,7 +833,7 @@ const EtsyQC = () => {
                       </Tooltip>
                     )}
                     <Flex gap={6} wrap="wrap" justify="center">
-                      <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
+                      <Tooltip title={retryDisabledReason || 'Select provider and send Etsy order to vendor.'}>
                         <span>
                           <Button
                             size="small"
@@ -776,13 +843,7 @@ const EtsyQC = () => {
                             loading={actionLoadingKey === `${item.orderId}:retry`}
                             onClick={(event) => {
                               event.stopPropagation();
-                              Modal.confirm({
-                                title: item?.scale_overall_status === 'Ready' ? 'Send Etsy order to vendor?' : 'Retry vendor send?',
-                                content: `Order ${item.orderId} will be sent to ${failureInfo?.provider || 'the resolved vendor'}.`,
-                                okText: item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry',
-                                cancelText: 'Cancel',
-                                onOk: () => handleRetrySend(item, failureInfo),
-                              });
+                              openProviderSelector(item);
                             }}
                           >
                             {item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry'}
@@ -1071,6 +1132,33 @@ const EtsyQC = () => {
           />
         </div>
       </div>
+
+      <Modal
+        title="Select Vendor Provider"
+        open={providerSelector.open}
+        onCancel={closeProviderSelector}
+        onOk={handleSendWithProvider}
+        okText="Send"
+        cancelText="Cancel"
+        okButtonProps={{
+          disabled: !providerSelector.selectedProvider,
+          loading: providerSelector.loading || actionLoadingKey === `${providerSelector.order?.orderId}:retry`,
+        }}
+        destroyOnClose
+      >
+        <Select
+          style={{ width: '100%' }}
+          value={providerSelector.selectedProvider || undefined}
+          options={providerSelector.providers}
+          placeholder="Select provider"
+          onChange={(value) =>
+            setProviderSelector((prev) => ({
+              ...prev,
+              selectedProvider: value,
+            }))
+          }
+        />
+      </Modal>
 
       <Modal
         title="Push Etsy orders to Fulfillment Platform v2"

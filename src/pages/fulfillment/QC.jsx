@@ -17,7 +17,6 @@ import {
   getALlShop,
   getScaleOrderProviders,
   retryScaleOrder,
-  sendFailedOrdersToFulfillment,
   pushSelectedOrdersToFulfillmentPlatform,
 } from '../../apis/order';
 import { toast } from 'sonner';
@@ -86,7 +85,6 @@ const QC = () => {
   });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [sendingToFulfillment, setSendingToFulfillment] = useState(false);
   const [pushingToFulfillmentPlatform, setPushingToFulfillmentPlatform] = useState(false);
   const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
   const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
@@ -98,6 +96,7 @@ const QC = () => {
     loading: false,
   });
   const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
+  const isPushableFilter = ['Ready', 'Failed'].includes(isActiveFilter?.status) || ['Ready', 'Failed'].includes(isActiveFilter?.title);
 
   const selectedOrdersForFulfillment = useMemo(
     () => dataSource.filter((order) => selectedRowKeys.includes(order.orderId)),
@@ -394,41 +393,9 @@ const QC = () => {
     }
   }, [selectedRowKeys, dataSource]);
 
-  const handleSendSelectedToFulfillment = useCallback(async () => {
-    if (selectedRowKeys.length === 0) {
-      toast.error('Please select failed orders to send');
-      return;
-    }
-
-    if (selectedOrdersForFulfillment.length === 0) {
-      toast.error('No matching orders found to send');
-      return;
-    }
-
-    const payload = { orderIds: selectedOrdersForFulfillment.map((order) => order.orderId) };
-    setSendingToFulfillment(true);
-
-    try {
-      const response = await sendFailedOrdersToFulfillment(payload);
-      if (response.status >= 200 && response.status < 300) {
-        toast.success(`Sent ${selectedOrdersForFulfillment.length} orders to fulfillment`);
-        setSelectedRowKeys([]);
-        fetchAllQC(filters);
-        fetchCountStatus();
-      } else {
-        toast.error(response.data?.message || 'Failed to send orders to fulfillment');
-      }
-    } catch (error) {
-      console.error('Send fulfillment error:', error);
-      toast.error(error?.response?.data?.message || 'Failed to send orders to fulfillment');
-    } finally {
-      setSendingToFulfillment(false);
-    }
-  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment, selectedRowKeys.length]);
-
   const openPushFulfillmentModal = useCallback(() => {
-    if (!isFailedFilter) {
-      toast.error('Please switch to Failed filter before pushing orders to Fulfillment Platform v2');
+    if (!isPushableFilter) {
+      toast.error('Please switch to Ready or Failed filter before pushing orders to Fulfillment Platform v2');
       return;
     }
 
@@ -444,7 +411,7 @@ const QC = () => {
 
     setFulfillmentPushResult(null);
     setOpenFulfillmentPushModal(true);
-  }, [isFailedFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
 
   const closePushFulfillmentModal = useCallback(() => {
     setOpenFulfillmentPushModal(false);
@@ -922,26 +889,11 @@ const QC = () => {
                 </Button>
               </Tooltip>
 
-              {isFailedFilter && (
-                <Tooltip title="Send selected orders to fulfillment">
-                  <Button
-                    type="primary"
-                    danger
-                    icon={<MdOutlineSend />}
-                    onClick={handleSendSelectedToFulfillment}
-                    loading={sendingToFulfillment}
-                    disabled={selectedRowKeys.length === 0 || sendingToFulfillment}
-                  >
-                    Send Fulfillment ({selectedRowKeys.length})
-                  </Button>
-                </Tooltip>
-              )}
-
               <Tooltip
                 title={
-                  isFailedFilter
-                    ? 'Push selected failed orders to Fulfillment Platform v2 and update Portal status'
-                    : 'Switch to Failed filter to push orders to Fulfillment Platform v2'
+                  isPushableFilter
+                    ? 'Push selected orders to Fulfillment Platform v2 and update Portal status'
+                    : 'Switch to Ready or Failed filter to push orders to Fulfillment Platform v2'
                 }
               >
                 <Button
@@ -949,7 +901,7 @@ const QC = () => {
                   icon={<MdOutlineSend />}
                   onClick={openPushFulfillmentModal}
                   loading={pushingToFulfillmentPlatform}
-                  disabled={!isFailedFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
+                  disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
                   Push Fulfillment LNG ({selectedRowKeys.length})
                 </Button>
@@ -1035,7 +987,7 @@ const QC = () => {
       </Modal>
 
       <Modal
-        title="Push failed orders to Fulfillment Platform v2"
+        title="Push orders to Fulfillment Platform v2"
         open={openFulfillmentPushModal}
         onCancel={closePushFulfillmentModal}
         onOk={handlePushSelectedToFulfillmentPlatform}
@@ -1051,7 +1003,7 @@ const QC = () => {
           <Alert
             type="warning"
             showIcon
-            message="Portal backend will push these failed orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
+            message="Portal backend will push these orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
           />
 
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
