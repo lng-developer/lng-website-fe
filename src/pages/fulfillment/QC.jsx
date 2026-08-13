@@ -37,6 +37,16 @@ import { DESIGN_EXPORT_FIELDS, getCustomizationExportValue, getDesignExportValue
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
 
+const getProviderError = (order, provider = 'lng') => {
+  const submission = order?.vendor_submissions?.[provider];
+  return (
+    submission?.last_error?.message ||
+    submission?.last_response?.message ||
+    submission?.last_response?.error ||
+    ''
+  );
+};
+
 const QC = () => {
   const { collapsed } = useOutletContext();
 
@@ -148,14 +158,14 @@ const QC = () => {
         { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
-        isFailedFilter && {
+        {
           title: <span style={{ color: dataColors.title }}>Retry</span>,
           dataIndex: 'action_retry',
           key: 'action_retry',
           align: 'center',
         },
       ].filter(Boolean),
-    [isFailedFilter]
+    []
   );
 
   const subColumns = useMemo(
@@ -482,9 +492,9 @@ const QC = () => {
   }, [debouncedSearch]);
 
   const handleRetry = useCallback(
-    async (orderId) => {
+    async (orderId, provider) => {
       try {
-        const response = await retryScaleOrder(orderId);
+        const response = await retryScaleOrder(orderId, provider);
         if (response.status === 200) {
           toast.success('Retry request sent successfully!');
           // Load lại dữ liệu sau khi retry thành công
@@ -494,7 +504,9 @@ const QC = () => {
         }
       } catch (error) {
         console.error(error);
-        toast.error(error?.response?.data?.message || 'Retry error!');
+        const message = error?.response?.data?.error || error?.response?.data?.message || 'Retry error!';
+        toast.error(message);
+        fetchAllQC(filters);
       }
     },
     [fetchAllQC, filters]
@@ -563,7 +575,14 @@ const QC = () => {
       ),
       status: <StatusComponent title={item?.status} color={handleColorStatus(item?.status)} />,
       scale_overall_status: (
-        <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
+        <Flex vertical align="center" gap={4}>
+          <StatusComponent title={item?.scale_overall_status} color={handleColorStatusScale(item?.scale_overall_status)} />
+          {getProviderError(item, 'lng') ? (
+            <Tooltip title={getProviderError(item, 'lng')}>
+              <span className="max-w-52 truncate text-xs text-red-500">LNG: {getProviderError(item, 'lng')}</span>
+            </Tooltip>
+          ) : null}
+        </Flex>
       ),
       createdAt: (
         <Flex vertical>
@@ -590,7 +609,23 @@ const QC = () => {
         </Flex>
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
-      action_retry: isFailedFilter ? (
+      action_retry: ['Ready', 'Failed'].includes(item?.scale_overall_status) ? (
+        <Tooltip title="Retry LNG vendor send">
+          <div
+            className="border-1 rounded-full cursor-pointer flex justify-center items-center text-sm"
+            style={{ borderColor: dataColors.pending }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRetry(item.orderId, 'lng');
+            }}
+          >
+            <BiRefresh size={16} color={dataColors.pending} />
+            <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
+              Retry LNG
+            </span>
+          </div>
+        </Tooltip>
+      ) : isFailedFilter ? (
         <Tooltip title="Retry Scale">
           <div
             className="border-1 rounded-full  cursor-pointer flex justify-center items-center text-sm"
@@ -600,9 +635,7 @@ const QC = () => {
               handleRetry(item.orderId);
             }}
           >
-            <div>
-              <BiRefresh size={16} color={dataColors.pending} />
-            </div>
+            <BiRefresh size={16} color={dataColors.pending} />
             <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
               Retry
             </span>

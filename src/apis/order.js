@@ -149,8 +149,8 @@ const ChangeTimeAutoOrder = (payload) => {
   return instance.post('/admin/schedule', payload);
 };
 
-export const retryScaleOrder = (orderId) => {
-  return instance.post(`/scale/orders/${orderId}/scale/send`);
+export const retryScaleOrder = (orderId, provider) => {
+  return instance.post(`/scale/orders/${orderId}/scale/send`, provider ? { provider } : undefined);
 };
 
 export const syncVendorTracking = (payload) => {
