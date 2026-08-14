@@ -72,9 +72,6 @@ const hasProductionFile = (item) => {
   return Object.values(typeof fulfillmentFile === 'object' ? fulfillmentFile : {}).some(Boolean);
 };
 
-const hasVendorMapping = (item) =>
-  Boolean(item?.cost_breakdown?.vendorProductId || item?.cost_center?.vendorProductId || item?.cost_center?.vendorProductDisplayName);
-
 const getBlockingCases = (order) =>
   (Array.isArray(order?.case) ? order.case : []).filter((caseDoc) => caseDoc?.blocksProduction === true);
 
@@ -87,10 +84,15 @@ const getProductionIssues = (order) => {
   const missingFile = items.filter((item) => !hasProductionFile(item));
   if (missingFile.length) issues.push(`${missingFile.length} item(s) missing fulfillment file`);
 
-  const missingVendor = items.filter((item) => !hasVendorMapping(item));
-  if (missingVendor.length) issues.push(`${missingVendor.length} item(s) missing vendor mapping`);
-
   return issues;
+};
+
+const getProductionWarnings = (order) => {
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const missingVendor = items.filter(
+    (item) => !item?.cost_breakdown?.vendorProductId && !item?.cost_center?.vendorProductId && !item?.cost_center?.vendorProductDisplayName
+  );
+  return missingVendor.length ? [`${missingVendor.length} item(s) will use LNG vendor override`] : [];
 };
 
 const getEtsyCustomItems = (item) => {
@@ -233,6 +235,14 @@ const EtsyQC = () => {
       selectedOrdersForFulfillment
         .map((order) => ({ orderId: order.orderId, issues: getProductionIssues(order) }))
         .filter((entry) => entry.issues.length > 0),
+    [selectedOrdersForFulfillment]
+  );
+
+  const selectedProductionWarnings = useMemo(
+    () =>
+      selectedOrdersForFulfillment
+        .map((order) => ({ orderId: order.orderId, warnings: getProductionWarnings(order) }))
+        .filter((entry) => entry.warnings.length > 0),
     [selectedOrdersForFulfillment]
   );
 
@@ -1273,6 +1283,23 @@ const EtsyQC = () => {
                   {selectedProductionIssues.slice(0, 8).map((entry) => (
                     <div key={entry.orderId}>
                       <span className="font-medium">{entry.orderId}</span>: {entry.issues.join('; ')}
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          )}
+
+          {selectedProductionWarnings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              message="Missing vendor mapping will be pushed with LNG override"
+              description={
+                <div className="space-y-1">
+                  {selectedProductionWarnings.slice(0, 8).map((entry) => (
+                    <div key={entry.orderId}>
+                      <span className="font-medium">{entry.orderId}</span>: {entry.warnings.join('; ')}
                     </div>
                   ))}
                 </div>
