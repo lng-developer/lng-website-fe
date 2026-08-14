@@ -69,6 +69,14 @@ const getAllCaseByOrder = () => {
   return instance.get('/case');
 };
 
+const createCase = (payload) => {
+  return instance.post('/case', payload);
+};
+
+const updateCaseById = (id, payload) => {
+  return instance.put(`/case/${id}`, payload);
+};
+
 const updateOpenCase = (payload) => {
   return instance.put('/order/open-case', payload);
 };
@@ -182,6 +190,8 @@ export {
   getAllCountStatus,
   updateShippingType,
   getAllCaseByOrder,
+  createCase,
+  updateCaseById,
   updateOpenCase,
   removeCase,
   updateImage,

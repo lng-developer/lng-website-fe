@@ -47,6 +47,57 @@ const getProviderError = (order, provider = 'lng') => {
   );
 };
 
+const getFailureInfo = (order) => {
+  const platform =
+    order?.fulfillment_platform_v2_submission?.last_response?.errors?.[0]?.message ||
+    order?.fulfillment_platform_v2_submission?.last_response?.error ||
+    order?.fulfillment_platform_v2_submission?.last_response?.message;
+  if (platform) return { provider: 'Production', error: platform };
+
+  const entries = Object.entries(order?.vendor_submissions || {});
+  for (const [provider, submission] of entries) {
+    const error =
+      submission?.last_error?.message ||
+      submission?.last_response?.error ||
+      submission?.last_response?.message;
+    if (error) return { provider, error };
+  }
+
+  return { provider: '', error: order?.vendor_failure || order?.failureReason || '' };
+};
+
+const toPlainObject = (value) => {
+  if (!value) return {};
+  if (value instanceof Map) return Object.fromEntries(value);
+  return typeof value === 'object' ? value : {};
+};
+
+const hasProductionFile = (item) => {
+  if (item?.svgFile) return true;
+  return Object.values(toPlainObject(item?.fulfillment_file || item?.fulfillmentFile)).some(Boolean);
+};
+
+const hasVendorMapping = (item) =>
+  Boolean(item?.cost_breakdown?.vendorProductId || item?.cost_center?.vendorProductId || item?.cost_center?.vendorProductDisplayName);
+
+const getBlockingCases = (order) =>
+  (Array.isArray(order?.case) ? order.case : []).filter((caseDoc) => caseDoc?.blocksProduction === true);
+
+const getProductionIssues = (order) => {
+  const issues = [];
+  const blockingCases = getBlockingCases(order);
+  if (blockingCases.length) issues.push(`Blocking case: ${blockingCases.map((caseDoc) => caseDoc.name).filter(Boolean).join(', ')}`);
+
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const missingFile = items.filter((item) => !hasProductionFile(item));
+  if (missingFile.length) issues.push(`${missingFile.length} item(s) missing fulfillment file`);
+
+  const missingVendor = items.filter((item) => !hasVendorMapping(item));
+  if (missingVendor.length) issues.push(`${missingVendor.length} item(s) missing vendor mapping`);
+
+  return issues;
+};
+
 const QC = () => {
   const { collapsed } = useOutletContext();
 
@@ -108,6 +159,14 @@ const QC = () => {
     [selectedOrdersForFulfillment]
   );
 
+  const selectedProductionIssues = useMemo(
+    () =>
+      selectedOrdersForFulfillment
+        .map((order) => ({ orderId: order.orderId, issues: getProductionIssues(order) }))
+        .filter((entry) => entry.issues.length > 0),
+    [selectedOrdersForFulfillment]
+  );
+
   const updateFilter = useCallback((newValues) => {
     setFilters((prev) => ({
       ...prev,
@@ -165,14 +224,20 @@ const QC = () => {
         { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
         { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
+        isFailedFilter && {
+          title: <span style={{ color: dataColors.title }}>Failed Reason</span>,
+          dataIndex: 'failure_reason',
+          key: 'failure_reason',
+          align: 'left',
+        },
         {
-          title: <span style={{ color: dataColors.title }}>Retry</span>,
+          title: <span style={{ color: dataColors.title }}>Direct Send</span>,
           dataIndex: 'action_retry',
           key: 'action_retry',
           align: 'center',
         },
       ].filter(Boolean),
-    []
+    [isFailedFilter]
   );
 
   const subColumns = useMemo(
@@ -409,9 +474,13 @@ const QC = () => {
       return;
     }
 
+    if (selectedProductionIssues.length > 0) {
+      toast.error('Some selected orders are not ready for production');
+    }
+
     setFulfillmentPushResult(null);
     setOpenFulfillmentPushModal(true);
-  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedProductionIssues.length, selectedRowKeys.length]);
 
   const closePushFulfillmentModal = useCallback(() => {
     setOpenFulfillmentPushModal(false);
@@ -421,6 +490,11 @@ const QC = () => {
   const handlePushSelectedToFulfillmentPlatform = useCallback(async () => {
     if (selectedOrdersForFulfillment.length === 0) {
       toast.error('No matching orders found to push');
+      return;
+    }
+
+    if (selectedProductionIssues.length > 0) {
+      toast.error('Resolve production issues before pushing');
       return;
     }
 
@@ -452,15 +526,24 @@ const QC = () => {
         fetchAllQC(filters);
         fetchCountStatus();
       } else {
-        toast.error(response.data?.message || 'Failed to push orders to Fulfillment Platform');
+        setFulfillmentPushResult({
+          message: response.data?.message || 'Failed to push orders to production',
+          orders: response.data?.orders || [],
+        });
+        toast.error(response.data?.message || 'Failed to push orders to production');
       }
     } catch (error) {
-      console.error('Push Fulfillment Platform test error:', error);
-      toast.error(error?.response?.data?.message || 'Failed to push orders to Fulfillment Platform');
+      console.error('Push Production error:', error);
+      const data = error?.response?.data || {};
+      setFulfillmentPushResult({
+        message: data.message || 'Failed to push orders to production',
+        orders: data.orders || [],
+      });
+      toast.error(data.message || 'Failed to push orders to production');
     } finally {
       setPushingToFulfillmentPlatform(false);
     }
-  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
+  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment, selectedProductionIssues.length]);
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
@@ -620,7 +703,9 @@ const QC = () => {
 
   // =============== TABLE DATA ===============
   const tableData = useMemo(() => {
-    return (dataSource || []).map((item, index) => ({
+    return (dataSource || []).map((item, index) => {
+      const failureInfo = getFailureInfo(item);
+      return ({
       key: item?.orderId,
       orderId: (
         <button className="cursor-pointer" onClick={() => handleCopy(item?.orderId)}>
@@ -663,8 +748,16 @@ const QC = () => {
         </Flex>
       ),
       scale_by: <StatusComponent title={item?.scaledBy?.full_name || 'No data'} color={dataColors.process} />,
+      failure_reason: (
+        <Tooltip title={failureInfo.error ? `${failureInfo.provider || 'Failure'}: ${failureInfo.error}` : 'No failure response available'}>
+          <div className="max-w-[260px] text-xs text-left text-[#cd1323] leading-5">
+            <div className="font-semibold truncate">{failureInfo.provider || 'Failure'}</div>
+            <div className="line-clamp-2">{failureInfo.error || 'No failure response available'}</div>
+          </div>
+        </Tooltip>
+      ),
       action_retry: ['Ready', 'Failed'].includes(item?.scale_overall_status) ? (
-        <Tooltip title="Retry Vendor">
+        <Tooltip title="Send Vendor Direct">
           <div
             className="border-1 rounded-full cursor-pointer flex justify-center items-center text-sm"
             style={{ borderColor: dataColors.pending }}
@@ -675,7 +768,7 @@ const QC = () => {
           >
             <BiRefresh size={16} color={dataColors.pending} />
             <span className="font-medium whitespace-nowrap ml-1" style={{ color: dataColors.pending }}>
-              Retry
+              Direct
             </span>
           </div>
         </Tooltip>
@@ -762,7 +855,8 @@ const QC = () => {
           </>
         ),
       })),
-    }));
+    });
+    });
   }, [dataSource, handleCopy, handleRetry, isFailedFilter]);
 
   // =============== EFFECTS ===============
@@ -892,8 +986,8 @@ const QC = () => {
               <Tooltip
                 title={
                   isPushableFilter
-                    ? 'Push selected orders to Fulfillment Platform v2 and update Portal status'
-                    : 'Switch to Ready or Failed filter to push orders to Fulfillment Platform v2'
+                    ? 'Push selected orders to Production Platform and update Portal status'
+                    : 'Switch to Ready or Failed filter to push orders to Production'
                 }
               >
                 <Button
@@ -903,7 +997,7 @@ const QC = () => {
                   loading={pushingToFulfillmentPlatform}
                   disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
-                  Push Fulfillment LNG ({selectedRowKeys.length})
+                  Push Production ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
           </div>
@@ -987,15 +1081,15 @@ const QC = () => {
       </Modal>
 
       <Modal
-        title="Push orders to Fulfillment Platform v2"
+        title="Push orders to Production"
         open={openFulfillmentPushModal}
         onCancel={closePushFulfillmentModal}
         onOk={handlePushSelectedToFulfillmentPlatform}
-        okText="Push orders"
+        okText="Push Production"
         cancelText="Close"
         confirmLoading={pushingToFulfillmentPlatform}
         okButtonProps={{
-          disabled: selectedOrdersForFulfillment.length === 0,
+          disabled: selectedOrdersForFulfillment.length === 0 || selectedProductionIssues.length > 0,
         }}
         destroyOnHidden
       >
@@ -1003,7 +1097,7 @@ const QC = () => {
           <Alert
             type="warning"
             showIcon
-            message="Portal backend will push these orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
+            message="Portal backend will push these orders to Production Platform and update Portal order status."
           />
 
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
@@ -1016,11 +1110,44 @@ const QC = () => {
             )}
           </div>
 
+          {selectedProductionIssues.length > 0 && (
+            <Alert
+              type="error"
+              showIcon
+              message="Resolve these production issues before pushing"
+              description={
+                <div className="space-y-1">
+                  {selectedProductionIssues.slice(0, 8).map((entry) => (
+                    <div key={entry.orderId}>
+                      <span className="font-medium">{entry.orderId}</span>: {entry.issues.join('; ')}
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          )}
+
           {fulfillmentPushResult && (
             <Alert
-              type={fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
+              type={fulfillmentPushResult.message || fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
               showIcon
-              message={`Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`}
+              message={
+                fulfillmentPushResult.message ||
+                `Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`
+              }
+              description={
+                Array.isArray(fulfillmentPushResult.orders) && fulfillmentPushResult.orders.length > 0 ? (
+                  <div className="space-y-1">
+                    {fulfillmentPushResult.orders.slice(0, 8).map((order) => (
+                      <div key={order.orderId}>
+                        <span className="font-medium">{order.orderId}</span>
+                        {Array.isArray(order.errors) && order.errors.length > 0 ? `: ${order.errors.map((err) => err.message || err.code).join('; ')}` : ''}
+                        {Array.isArray(order.cases) && order.cases.length > 0 ? `: ${order.cases.map((item) => item.name).join('; ')}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              }
             />
           )}
         </Flex>
