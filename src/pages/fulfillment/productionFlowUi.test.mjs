@@ -19,6 +19,7 @@ for (const fileName of ['QC.jsx', 'EtsyQC.jsx']) {
   assert.match(source, /Push Production/);
   assert.match(source, /Production Platform/);
   assert.match(source, /Direct/);
+  assert.match(source, /const isFailedFilter = /);
   assert.match(source, /fulfillmentPushResult\.orders/);
   assert.match(source, /Failed Reason/);
   assert.match(source, /failure_reason/);

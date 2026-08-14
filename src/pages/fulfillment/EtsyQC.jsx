@@ -219,6 +219,7 @@ const EtsyQC = () => {
     hasScaleFile: '',
   });
   const isPushableFilter = isActiveFilter?.status === 'Ready' || isActiveFilter?.status === 'Failed';
+  const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
 
   const selectedOrdersForFulfillment = useMemo(
     () => dataSource.filter((order) => selectedRowKeys.includes(order.orderId)),
