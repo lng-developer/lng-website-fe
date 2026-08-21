@@ -21,6 +21,8 @@ const getAllEtsyOrders = (params = {}) => {
     addressUnchecked: params.addressUnchecked || undefined,
     openCase: params.openCase || undefined,
     noPsd: params.noPsd || undefined,
+    includeLogs: true,
+    logLimit: 5,
   };
 
   return instance.get('/etsy', { params: query });
