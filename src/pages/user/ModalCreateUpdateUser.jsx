@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select } from 'antd';
+import { Modal, Form, Input, Select, DatePicker } from 'antd';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
 const ModalCreateUpdateUser = ({ open, onCancel, onOk, loading, initialData, allRoles = [] }) => {
   const [form] = Form.useForm();
   const isUpdateMode = !!initialData;
+  const selectedRoleId = Form.useWatch('role_id', form);
+  const isSeller = allRoles.some((role) => role._id === selectedRoleId && role.name === 'Seller');
 
   useEffect(() => {
     if (open && isUpdateMode) {
@@ -14,7 +17,8 @@ const ModalCreateUpdateUser = ({ open, onCancel, onOk, loading, initialData, all
         full_name: initialData.full_name,
         email: initialData.email,
         employee_id: initialData.employee_id,
-        role_id: initialData.role_id?._id, 
+        role_id: initialData.role_id?._id,
+        end_seller: initialData.end_seller ? dayjs(initialData.end_seller) : null,
       });
     } else if (open && !isUpdateMode) {
       // Chế độ "Create User"
@@ -23,6 +27,7 @@ const ModalCreateUpdateUser = ({ open, onCancel, onOk, loading, initialData, all
         email: '',
         employee_id: '',
         role_id: null,
+        end_seller: null,
       });
     } else if (!open) {
       form.resetFields();
@@ -32,7 +37,10 @@ const ModalCreateUpdateUser = ({ open, onCancel, onOk, loading, initialData, all
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      onOk(values); 
+      onOk({
+        ...values,
+        end_seller: values.end_seller?.hour(12).toISOString() || null,
+      });
     } catch (info) {
       console.log('Validate Failed:', info);
     }
@@ -94,6 +102,16 @@ const ModalCreateUpdateUser = ({ open, onCancel, onOk, loading, initialData, all
             }
           />
         </Form.Item>
+
+        {isUpdateMode && isSeller && (
+          <Form.Item
+            name="end_seller"
+            label={<span className='font-medium mt-2'>Seller inactive date</span>}
+            extra="No opCost is charged from this date. Clear it to reactivate the seller."
+          >
+            <DatePicker className="w-full" format="YYYY-MM-DD" />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );
