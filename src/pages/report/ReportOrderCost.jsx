@@ -2,7 +2,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import DateRangePicker from '../../components/DateRangePicker';
 import { FaBox, FaDollarSign, FaUser, FaRedo, FaPercentage } from 'react-icons/fa';
 import SelectFilter from '../../components/SelectFilter';
-import { Image, Input, Pagination, Table, Tooltip } from 'antd';
+import { Image, Input, Modal, Pagination, Table, Tooltip } from 'antd';
 import { dataColors } from '../../utils/dataColors';
 import StatusComponent from '../../components/StatusComponent';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
@@ -17,8 +17,11 @@ import { exportReportCost, getOrderCostStatistics } from '../../apis/report';
 import NoImage from '../../assets/NoImage.jpg';
 import { MdOutlineRefresh } from 'react-icons/md';
 import { BiSolidFileExport } from 'react-icons/bi';
+import { AiOutlineInfoCircle } from 'react-icons/ai';
 
 const PAGE_SIZE = 10;
+const AMAZON_FEE_RATE = 0.15;
+const PROFIT_FORMULA_TEXT = 'Profit = Revenue - Cost - Fee (15%) - Discount - Refund. Revenue = item price + shipping price. Tax is shown separately and is not subtracted.';
 
 // helper an toàn số
 const num = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -35,6 +38,8 @@ const ReportOrderCost = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [shops, setShops] = useState([]);
   const [selectShop, setSelectShop] = useState('');
+  const [profitDetail, setProfitDetail] = useState(null);
+  const [showProfitFormula, setShowProfitFormula] = useState(false);
   const [counts, setCounts] = useState({}); // stats từ API
   const [filters, setFilters] = useState({
     page: currentPage,
@@ -84,7 +89,7 @@ const ReportOrderCost = () => {
         icon: <FaDollarSign className="text-white" />,
         iconBg: 'bg-rose-500',
       },
-      { key: 'profit', label: 'Profit', value: num(s.profit), prefix: '$', icon: <FaUser className="text-white" />, iconBg: 'bg-blue-500' },
+      { key: 'profit', label: 'Profit', value: num(s.profit), prefix: '$', icon: <FaUser className="text-white" />, iconBg: 'bg-blue-500', tooltip: PROFIT_FORMULA_TEXT },
       {
         key: 'lng',
         label: 'LNG Cost',
@@ -131,7 +136,14 @@ const ReportOrderCost = () => {
     <div className="group flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-3">
         <IconWrap bg={item.iconBg}>{item.icon}</IconWrap>
-        <div className="text-slate-600 text-[13px] leading-4 font-medium">{item.label}</div>
+        <div className="flex items-center gap-1 text-slate-600 text-[13px] leading-4 font-medium">
+          {item.label}
+          {item.tooltip && (
+            <Tooltip title={item.tooltip}>
+              <AiOutlineInfoCircle className="text-slate-400" />
+            </Tooltip>
+          )}
+        </div>
       </div>
       <div className="text-right tabular-nums font-semibold text-slate-800">
         {typeof item.value === 'number' ? (
@@ -226,7 +238,16 @@ const ReportOrderCost = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Profit</span>,
+      title: (
+        <button
+          type="button"
+          className="inline-flex items-center justify-center gap-1"
+          style={{ color: dataColors.title, cursor: 'pointer' }}
+          onClick={() => setShowProfitFormula(true)}
+        >
+          Profit <AiOutlineInfoCircle className="text-slate-400" />
+        </button>
+      ),
       dataIndex: 'profit',
       key: 'profit',
       align: 'center',
@@ -238,14 +259,27 @@ const ReportOrderCost = () => {
   const renderOrderInTable = (data = []) => {
     const results = data.map((item, index) => {
       const aft = item?.amazon_finance_total || {};
-      const revenueVal = num(aft.revenue ?? item?.revenue);
-      const feeVal = num(aft.fee ?? item?.fee);
+      const hasRevenueParts = aft.item_price != null || aft.shipping_price != null;
+      const revenueVal = hasRevenueParts ? num(aft.item_price) + num(aft.shipping_price) : num(aft.revenue ?? item?.revenue);
+      const feeVal = hasRevenueParts ? num(revenueVal * AMAZON_FEE_RATE) : num(aft.fee ?? item?.fee);
       const baseVal = num(item?.base_cost);
       const refundVal = num(aft.refund);
       const itemTax = num(aft.item_tax);
       const shippingTax = num(aft.shipping_tax);
       const promoVal = num(aft.item_promotion_discount); // Diff
-      const profit1Val = num(revenueVal - (baseVal + feeVal + shippingTax + itemTax + promoVal + refundVal));
+      const profit1Val = num(aft.profit1 || revenueVal - (baseVal + feeVal + Math.abs(promoVal) + refundVal));
+      const profitBreakdown = {
+        orderId: item?.orderId,
+        revenue: revenueVal,
+        itemPrice: num(aft.item_price),
+        shippingPrice: num(aft.shipping_price),
+        fee: feeVal,
+        baseCost: baseVal,
+        discount: Math.abs(promoVal),
+        refund: refundVal,
+        tax: itemTax + shippingTax,
+        profit: profit1Val,
+      };
 
       return {
         key: item?.orderId,
@@ -274,9 +308,15 @@ const ReportOrderCost = () => {
         fee: <span className="font-medium">{fmtMoney(feeVal)}</span>,
         refund: <span className="font-medium">{refundVal === 0 ? 0 : fmtMoney(refundVal)}</span>,
         profit: (
-          <span className="font-medium" style={{ color: profit1Val < 0 ? dataColors.cancelled : dataColors.success }}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 font-medium cursor-pointer"
+            style={{ color: profit1Val < 0 ? dataColors.cancelled : dataColors.success }}
+            onClick={() => setProfitDetail(profitBreakdown)}
+          >
             {profit1Val < 0 ? `-$${Math.abs(profit1Val).toFixed(2)}` : fmtMoney(profit1Val)}
-          </span>
+            <AiOutlineInfoCircle className="text-slate-400" />
+          </button>
         ),
         base_cost: <span className="font-medium">{fmtMoney(baseVal)}</span>,
         diff: <span className="font-medium">{fmtMoney(promoVal)}</span>,
@@ -613,6 +653,65 @@ const ReportOrderCost = () => {
           />
         </div>
       </div>
+      <Modal
+        title={`Profit formula${profitDetail?.orderId ? ` - ${profitDetail.orderId}` : ''}`}
+        open={!!profitDetail}
+        onCancel={() => setProfitDetail(null)}
+        footer={null}
+        width={520}
+      >
+        {profitDetail && (
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md bg-slate-50 p-3">
+              <div className="font-semibold text-slate-800">Revenue = Item Price + Shipping Price</div>
+              <div className="mt-1 text-slate-600">
+                {fmtMoney(profitDetail.itemPrice)} + {fmtMoney(profitDetail.shippingPrice)} = <b>{fmtMoney(profitDetail.revenue)}</b>
+              </div>
+            </div>
+            <div className="rounded-md bg-slate-50 p-3">
+              <div className="font-semibold text-slate-800">Profit = Revenue - Cost - Fee (15%) - Discount - Refund</div>
+              <div className="mt-1 text-slate-600">
+                {fmtMoney(profitDetail.revenue)} - {fmtMoney(profitDetail.baseCost)} - {fmtMoney(profitDetail.fee)} - {fmtMoney(profitDetail.discount)} - {fmtMoney(profitDetail.refund)}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-md border border-slate-200 p-3">
+                <div className="text-slate-500">Tax shown separately</div>
+                <div className="font-semibold">{fmtMoney(profitDetail.tax)}</div>
+              </div>
+              <div className="rounded-md border border-slate-200 p-3">
+                <div className="text-slate-500">Profit</div>
+                <div className="font-semibold" style={{ color: profitDetail.profit < 0 ? dataColors.cancelled : dataColors.success }}>
+                  {profitDetail.profit < 0 ? `-$${Math.abs(profitDetail.profit).toFixed(2)}` : fmtMoney(profitDetail.profit)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal
+        title="Profit formula"
+        open={showProfitFormula}
+        onCancel={() => setShowProfitFormula(false)}
+        footer={null}
+        width={520}
+      >
+        <div className="space-y-3 text-sm">
+          <div className="rounded-md bg-slate-50 p-3">
+            <div className="font-semibold text-slate-800">Revenue</div>
+            <div className="mt-1 text-slate-600">Revenue = Item Price + Shipping Price</div>
+          </div>
+          <div className="rounded-md bg-slate-50 p-3">
+            <div className="font-semibold text-slate-800">Fee</div>
+            <div className="mt-1 text-slate-600">Fee = Revenue * 15%</div>
+          </div>
+          <div className="rounded-md bg-slate-50 p-3">
+            <div className="font-semibold text-slate-800">Profit</div>
+            <div className="mt-1 text-slate-600">Profit = Revenue - Cost - Fee - Discount - Refund</div>
+          </div>
+          <div className="rounded-md border border-slate-200 p-3 text-slate-600">Tax is displayed separately and is not subtracted from profit.</div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -413,7 +413,9 @@ export default function QcCanvasModal({
       setDecisionByItem((prev) => ({ ...prev, [currentItemId]: 'approved' }));
     } catch (e) {
       console.log(e);
-      toast.error('Error');
+      const responseMessage =
+        e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Approve failed';
+      toast.error(responseMessage);
     } finally {
       fetchAllQC?.(filters);
       fetchCountStatus?.();

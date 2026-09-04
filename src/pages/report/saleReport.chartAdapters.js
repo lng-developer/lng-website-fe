@@ -10,24 +10,24 @@ export function buildProfitArrays(r, len) {
   const ads = Array.isArray(r?.ads) ? r.ads : initArr(len, 0);
   const opCost = Array.isArray(r?.opCost) ? r.opCost : initArr(len, 0);
   const refund = Array.isArray(r?.refund) ? r.refund : initArr(len, 0);
+  const discount = Array.isArray(r?.itemPromotionDiscount) ? r.itemPromotionDiscount : initArr(len, 0);
 
   const profit1 =
     Array.isArray(r?.profit1) && r.profit1.length === len
       ? r.profit1
-      : revenue.map((rv, i) => numberSafe(rv) - numberSafe(baseCost[i]) - numberSafe(fee[i]));
-
-  const profit2 =
-    Array.isArray(r?.profit2) && r.profit2.length === len
-      ? r.profit2
       : revenue.map(
           (rv, i) =>
             numberSafe(rv) -
             numberSafe(baseCost[i]) -
             numberSafe(fee[i]) -
-            numberSafe(ads[i]) -
-            numberSafe(opCost[i]) -
-            numberSafe(refund[i])
+            numberSafe(refund[i]) -
+            Math.abs(numberSafe(discount[i]))
         );
+
+  const profit2 =
+    Array.isArray(r?.profit2) && r.profit2.length === len
+      ? r.profit2
+      : profit1.map((p1, i) => numberSafe(p1) - numberSafe(ads[i]) - numberSafe(opCost[i]));
 
   const roi = ads.map((ad, i) => {
     const a = numberSafe(ad);

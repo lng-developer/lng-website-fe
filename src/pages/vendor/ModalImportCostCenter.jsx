@@ -71,7 +71,7 @@ const ModalImportCostCenter = ({ isModalOpen, setIsModalOpen, fetchAllProductCos
           </Link>
         </div>
         <div className="my-3">
-          <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".txt,.json,.csv" maxCount={1}>
+          <Dragger beforeUpload={beforeUpload} fileList={fileList} onRemove={() => setFileList([])} accept=".xlsx" maxCount={1}>
             <p className="ant-upload-drag-icon">
               <CloudUploadOutlined />
             </p>
@@ -84,7 +84,7 @@ const ModalImportCostCenter = ({ isModalOpen, setIsModalOpen, fetchAllProductCos
           </div>
         )}
         <div style={{ color: dataColors.process }}>
-          <span>Please check template and sample to fill correct information. Especially, shipping information!!!</span>
+          <span>Please check template and sample to fill correct information. Printing method accepts DTF, DTG, or blank.</span>
         </div>
       </div>
       {loading && <Spin tip="Đang xử lý..." size="large" style={{ color: 'white' }} fullscreen={true} />}

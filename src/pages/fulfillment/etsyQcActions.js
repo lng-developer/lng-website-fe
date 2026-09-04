@@ -49,7 +49,6 @@ export const getRetryEtsySendDisabledReason = (order) => {
     return 'Status is not Ready/Failed';
   }
   if (!allItemsComplete(order)) return 'Some items are not Complete';
-  if (!getEtsyFailureInfo(order)?.provider) return 'Missing vendor/provider';
   return '';
 };
 

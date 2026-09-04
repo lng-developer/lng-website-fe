@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { dataColors } from '../../../utils/dataColors';
 import { RiLinkM } from 'react-icons/ri';
 import { Tooltip } from 'antd';
+import { getSubItemSellerLabel } from './subItemSellerLabel';
 
 const SubItemSku = ({ sku, asin, seller, sellerName, mapped_sku, listing }) => {
   // Hỗ trợ cả 2 cách: sellerName (string) hoặc seller (object với full_name)
-  const displaySellerName = sellerName || seller?.full_name || 'No data';
+  const displaySellerName = sellerName || getSubItemSellerLabel(seller);
   return (
     <div className="text-left">
       {sku && (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Flex, Input, Modal, Pagination, Table, Tooltip } from 'antd';
+import { Alert, Button, Flex, Input, Modal, Pagination, Select, Table, Tooltip } from 'antd';
 import { useOutletContext } from 'react-router-dom';
 import { debounce } from 'lodash';
 import ExcelJS from 'exceljs';
@@ -24,6 +24,7 @@ import {
   confirmEtsyScaleForItem,
   getAllEtsyQC,
   getAllEtsyQCStatistics,
+  getEtsyScaleOrderProviders,
   pushSelectedEtsyOrdersToFulfillmentPlatform,
   reopenEtsyQc,
   retrySendEtsyFulfillment,
@@ -64,6 +65,35 @@ const etsyQcFilterTabs = [
 ];
 
 const getEtsyItemId = (item) => item?.transactionId || item?.orderItemId;
+
+const hasProductionFile = (item) => {
+  if (item?.svgFile) return true;
+  const fulfillmentFile = item?.fulfillment_file || item?.fulfillmentFile || {};
+  return Object.values(typeof fulfillmentFile === 'object' ? fulfillmentFile : {}).some(Boolean);
+};
+
+const getBlockingCases = (order) =>
+  (Array.isArray(order?.case) ? order.case : []).filter((caseDoc) => caseDoc?.blocksProduction === true);
+
+const getProductionIssues = (order) => {
+  const issues = [];
+  const blockingCases = getBlockingCases(order);
+  if (blockingCases.length) issues.push(`Blocking case: ${blockingCases.map((caseDoc) => caseDoc.name).filter(Boolean).join(', ')}`);
+
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const missingFile = items.filter((item) => !hasProductionFile(item));
+  if (missingFile.length) issues.push(`${missingFile.length} item(s) missing fulfillment file`);
+
+  return issues;
+};
+
+const getProductionWarnings = (order) => {
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const missingVendor = items.filter(
+    (item) => !item?.cost_breakdown?.vendorProductId && !item?.cost_center?.vendorProductId && !item?.cost_center?.vendorProductDisplayName
+  );
+  return missingVendor.length ? [`${missingVendor.length} item(s) will use LNG vendor override`] : [];
+};
 
 const getEtsyCustomItems = (item) => {
   if (Array.isArray(item?.version3Data)) return item.version3Data;
@@ -165,6 +195,13 @@ const EtsyQC = () => {
   const [openFulfillmentPushModal, setOpenFulfillmentPushModal] = useState(false);
   const [fulfillmentPushResult, setFulfillmentPushResult] = useState(null);
   const [actionLoadingKey, setActionLoadingKey] = useState('');
+  const [providerSelector, setProviderSelector] = useState({
+    open: false,
+    order: null,
+    providers: [],
+    selectedProvider: '',
+    loading: false,
+  });
   const [filters, setFilters] = useState({
     page: currentPage,
     perPage: DEFAULT_PAGE_SIZE,
@@ -182,6 +219,7 @@ const EtsyQC = () => {
     hasScaleFile: '',
   });
   const isPushableFilter = isActiveFilter?.status === 'Ready' || isActiveFilter?.status === 'Failed';
+  const isFailedFilter = isActiveFilter?.status === 'Failed' || isActiveFilter?.title === 'Failed';
 
   const selectedOrdersForFulfillment = useMemo(
     () => dataSource.filter((order) => selectedRowKeys.includes(order.orderId)),
@@ -190,6 +228,22 @@ const EtsyQC = () => {
 
   const selectedFulfillmentItemCount = useMemo(
     () => selectedOrdersForFulfillment.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items.length : 0), 0),
+    [selectedOrdersForFulfillment]
+  );
+
+  const selectedProductionIssues = useMemo(
+    () =>
+      selectedOrdersForFulfillment
+        .map((order) => ({ orderId: order.orderId, issues: getProductionIssues(order) }))
+        .filter((entry) => entry.issues.length > 0),
+    [selectedOrdersForFulfillment]
+  );
+
+  const selectedProductionWarnings = useMemo(
+    () =>
+      selectedOrdersForFulfillment
+        .map((order) => ({ orderId: order.orderId, warnings: getProductionWarnings(order) }))
+        .filter((entry) => entry.warnings.length > 0),
     [selectedOrdersForFulfillment]
   );
 
@@ -267,8 +321,14 @@ const EtsyQC = () => {
       { title: <span style={{ color: dataColors.title }}>Shop</span>, dataIndex: 'shopName', key: 'shopName', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>Scale By</span>, dataIndex: 'scale_by', key: 'scale_by', align: 'center' },
       { title: <span style={{ color: dataColors.title }}>QC By</span>, dataIndex: 'qc_by', key: 'qc_by', align: 'center' },
-    ],
-    []
+      isFailedFilter && {
+        title: <span style={{ color: dataColors.title }}>Failed Reason</span>,
+        dataIndex: 'failure_reason',
+        key: 'failure_reason',
+        align: 'left',
+      },
+    ].filter(Boolean),
+    [isFailedFilter]
   );
 
   const subColumns = useMemo(
@@ -517,9 +577,13 @@ const EtsyQC = () => {
       return;
     }
 
+    if (selectedProductionIssues.length > 0) {
+      toast.error('Some selected Etsy orders are not ready for production');
+    }
+
     setFulfillmentPushResult(null);
     setOpenFulfillmentPushModal(true);
-  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedRowKeys.length]);
+  }, [isPushableFilter, selectedOrdersForFulfillment.length, selectedProductionIssues.length, selectedRowKeys.length]);
 
   const closePushFulfillmentModal = useCallback(() => {
     setOpenFulfillmentPushModal(false);
@@ -529,6 +593,11 @@ const EtsyQC = () => {
   const handlePushSelectedToFulfillmentPlatform = useCallback(async () => {
     if (selectedOrdersForFulfillment.length === 0) {
       toast.error('No matching Etsy orders found to push');
+      return;
+    }
+
+    if (selectedProductionIssues.length > 0) {
+      toast.error('Resolve Etsy production issues before pushing');
       return;
     }
 
@@ -561,21 +630,83 @@ const EtsyQC = () => {
         fetchAllQC(filters);
         fetchCountStatus();
       } else {
-        toast.error(response.data?.message || 'Failed to push Etsy orders to Fulfillment Platform');
+        setFulfillmentPushResult({
+          message: response.data?.message || 'Failed to push Etsy orders to production',
+          orders: response.data?.orders || [],
+        });
+        toast.error(response.data?.message || 'Failed to push Etsy orders to production');
       }
     } catch (error) {
-      console.error('Push Etsy Fulfillment Platform test error:', error);
-      toast.error(error?.response?.data?.message || 'Failed to push Etsy orders to Fulfillment Platform');
+      console.error('Push Etsy Production error:', error);
+      const data = error?.response?.data || {};
+      setFulfillmentPushResult({
+        message: data.message || 'Failed to push Etsy orders to production',
+        orders: data.orders || [],
+      });
+      toast.error(data.message || 'Failed to push Etsy orders to production');
     } finally {
       setPushingToFulfillmentPlatform(false);
     }
-  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment]);
+  }, [fetchAllQC, fetchCountStatus, filters, selectedOrdersForFulfillment, selectedProductionIssues.length]);
+
+  const closeProviderSelector = useCallback(() => {
+    setProviderSelector({
+      open: false,
+      order: null,
+      providers: [],
+      selectedProvider: '',
+      loading: false,
+    });
+  }, []);
+
+  const openProviderSelector = useCallback(async (order) => {
+    const key = `${order.orderId}:providers`;
+    setActionLoadingKey(key);
+    try {
+      const response = await getEtsyScaleOrderProviders(order.orderId, { shopId: order.shopId });
+      const {
+        providers = [],
+        auto_provider: autoProvider,
+        address_invalid: addressInvalid,
+        reasons = [],
+        message,
+      } = response?.data || {};
+
+      if (addressInvalid) {
+        toast.error(message || 'Address invalid. Please validate address first.');
+        return;
+      }
+
+      const options = providers.map((item) => ({
+        value: item?.key,
+        label: item?.label || item?.key,
+      })).filter((item) => item.value);
+
+      if (options.length === 0) {
+        toast.error(Array.isArray(reasons) && reasons.length ? reasons.join(', ') : 'No provider available for this order.');
+        return;
+      }
+
+      setProviderSelector({
+        open: true,
+        order,
+        providers: options,
+        selectedProvider: options.find((item) => item.value === autoProvider)?.value || options[0]?.value || '',
+        loading: false,
+      });
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Get Etsy providers failed';
+      toast.error(status ? `Get providers failed (${status}): ${message}` : message);
+    } finally {
+      setActionLoadingKey('');
+    }
+  }, []);
 
   const handleRetrySend = useCallback(
-    async (order, failureInfo) => {
-      const provider = failureInfo?.provider;
+    async (order, provider) => {
       if (!provider) {
-        toast.error('Cannot retry: missing vendor provider from failure response.');
+        toast.error('Please select a vendor provider.');
         return;
       }
 
@@ -584,6 +715,7 @@ const EtsyQC = () => {
       try {
         const response = await retrySendEtsyFulfillment(order.orderId, { provider }, { shopId: order.shopId, provider });
         toast.success(response.data?.message || 'Retry send completed');
+        closeProviderSelector();
         fetchAllQC(filters);
         fetchCountStatus();
       } catch (error) {
@@ -594,8 +726,13 @@ const EtsyQC = () => {
         setActionLoadingKey('');
       }
     },
-    [fetchAllQC, fetchCountStatus, filters]
+    [closeProviderSelector, fetchAllQC, fetchCountStatus, filters]
   );
+
+  const handleSendWithProvider = useCallback(async () => {
+    const { order, selectedProvider } = providerSelector;
+    await handleRetrySend(order, selectedProvider);
+  }, [handleRetrySend, providerSelector]);
 
   const handleReopenQc = useCallback(
     async (order, failureInfo) => {
@@ -705,6 +842,20 @@ const EtsyQC = () => {
         shipping_type: <StatusComponent title={item?.shipping_type || 'No data'} color={dataColors.asin} />,
         shopName: <StatusComponent title={item?.shopName || 'No data'} color={dataColors.pending} />,
         qc_by: <StatusComponent title={item?.cs_assignee?.full_name || item?.qcBy?.full_name || 'No data'} color={dataColors.purple} />,
+        failure_reason: (
+          <Tooltip
+            title={
+              failureInfo?.error
+                ? `${failureInfo.provider || 'Vendor'}: ${failureInfo.error}`
+                : 'Backend has not returned the failed vendor response for this order.'
+            }
+          >
+            <div className="max-w-[260px] text-xs text-left text-[#cd1323] leading-5">
+              <div className="font-semibold truncate">Failed{failureInfo?.provider ? `: ${failureInfo.provider}` : ''}</div>
+              <div className="line-clamp-2">{failureInfo?.error || 'No failure response available'}</div>
+            </div>
+          </Tooltip>
+        ),
         subItems: (item?.items || []).map((itemSub, indexItem) => {
           const itemId = getEtsyItemId(itemSub);
           const customItems = getEtsyCustomItems(itemSub);
@@ -766,7 +917,7 @@ const EtsyQC = () => {
                       </Tooltip>
                     )}
                     <Flex gap={6} wrap="wrap" justify="center">
-                      <Tooltip title={retryDisabledReason || 'Retry vendor send. Use this for token/API/network errors.'}>
+                      <Tooltip title={retryDisabledReason || 'Select provider and send Etsy order directly to vendor.'}>
                         <span>
                           <Button
                             size="small"
@@ -776,16 +927,10 @@ const EtsyQC = () => {
                             loading={actionLoadingKey === `${item.orderId}:retry`}
                             onClick={(event) => {
                               event.stopPropagation();
-                              Modal.confirm({
-                                title: item?.scale_overall_status === 'Ready' ? 'Send Etsy order to vendor?' : 'Retry vendor send?',
-                                content: `Order ${item.orderId} will be sent to ${failureInfo?.provider || 'the resolved vendor'}.`,
-                                okText: item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry',
-                                cancelText: 'Cancel',
-                                onOk: () => handleRetrySend(item, failureInfo),
-                              });
+                              openProviderSelector(item);
                             }}
                           >
-                            {item?.scale_overall_status === 'Ready' ? 'Send to Vendor' : 'Retry'}
+                            {item?.scale_overall_status === 'Ready' ? 'Vendor Direct' : 'Retry Direct'}
                           </Button>
                         </span>
                       </Tooltip>
@@ -964,8 +1109,8 @@ const EtsyQC = () => {
               <Tooltip
                 title={
                   isPushableFilter
-                    ? 'Push selected Etsy orders to Fulfillment Platform v2 and update Portal status'
-                    : 'Switch to Ready or Failed filter to push Etsy orders to Fulfillment Platform v2'
+                    ? 'Push selected Etsy orders to Production Platform and update Portal status'
+                    : 'Switch to Ready or Failed filter to push Etsy orders to Production'
                 }
               >
                 <Button
@@ -975,7 +1120,7 @@ const EtsyQC = () => {
                   loading={pushingToFulfillmentPlatform}
                   disabled={!isPushableFilter || selectedRowKeys.length === 0 || pushingToFulfillmentPlatform}
                 >
-                  Push Fulfillment LNG ({selectedRowKeys.length})
+                  Push Production ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
             </div>
@@ -1073,15 +1218,42 @@ const EtsyQC = () => {
       </div>
 
       <Modal
-        title="Push Etsy orders to Fulfillment Platform v2"
+        title="Select Vendor Provider"
+        open={providerSelector.open}
+        onCancel={closeProviderSelector}
+        onOk={handleSendWithProvider}
+        okText="Send"
+        cancelText="Cancel"
+        okButtonProps={{
+          disabled: !providerSelector.selectedProvider,
+          loading: providerSelector.loading || actionLoadingKey === `${providerSelector.order?.orderId}:retry`,
+        }}
+        destroyOnClose
+      >
+        <Select
+          style={{ width: '100%' }}
+          value={providerSelector.selectedProvider || undefined}
+          options={providerSelector.providers}
+          placeholder="Select provider"
+          onChange={(value) =>
+            setProviderSelector((prev) => ({
+              ...prev,
+              selectedProvider: value,
+            }))
+          }
+        />
+      </Modal>
+
+      <Modal
+        title="Push Etsy orders to Production"
         open={openFulfillmentPushModal}
         onCancel={closePushFulfillmentModal}
         onOk={handlePushSelectedToFulfillmentPlatform}
-        okText="Push orders"
+        okText="Push Production"
         cancelText="Close"
         confirmLoading={pushingToFulfillmentPlatform}
         okButtonProps={{
-          disabled: selectedOrdersForFulfillment.length === 0,
+          disabled: selectedOrdersForFulfillment.length === 0 || selectedProductionIssues.length > 0,
         }}
         destroyOnHidden
       >
@@ -1089,7 +1261,7 @@ const EtsyQC = () => {
           <Alert
             type="warning"
             showIcon
-            message="Portal backend will push these Etsy orders to Fulfillment Platform v2 and update Portal order status like the existing fulfillment flow."
+            message="Portal backend will push these Etsy orders to Production Platform and update Portal order status."
           />
 
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
@@ -1102,11 +1274,61 @@ const EtsyQC = () => {
             )}
           </div>
 
+          {selectedProductionIssues.length > 0 && (
+            <Alert
+              type="error"
+              showIcon
+              message="Resolve these Etsy production issues before pushing"
+              description={
+                <div className="space-y-1">
+                  {selectedProductionIssues.slice(0, 8).map((entry) => (
+                    <div key={entry.orderId}>
+                      <span className="font-medium">{entry.orderId}</span>: {entry.issues.join('; ')}
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          )}
+
+          {selectedProductionWarnings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              message="Missing vendor mapping will be pushed with LNG override"
+              description={
+                <div className="space-y-1">
+                  {selectedProductionWarnings.slice(0, 8).map((entry) => (
+                    <div key={entry.orderId}>
+                      <span className="font-medium">{entry.orderId}</span>: {entry.warnings.join('; ')}
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          )}
+
           {fulfillmentPushResult && (
             <Alert
-              type={fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
+              type={fulfillmentPushResult.message || fulfillmentPushResult.errorsCount > 0 ? 'warning' : 'success'}
               showIcon
-              message={`Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`}
+              message={
+                fulfillmentPushResult.message ||
+                `Received: ${fulfillmentPushResult.received}, inserted: ${fulfillmentPushResult.inserted}, updated: ${fulfillmentPushResult.updated}, skipped: ${fulfillmentPushResult.skipped}, errors: ${fulfillmentPushResult.errorsCount}`
+              }
+              description={
+                Array.isArray(fulfillmentPushResult.orders) && fulfillmentPushResult.orders.length > 0 ? (
+                  <div className="space-y-1">
+                    {fulfillmentPushResult.orders.slice(0, 8).map((order) => (
+                      <div key={order.orderId}>
+                        <span className="font-medium">{order.orderId}</span>
+                        {Array.isArray(order.errors) && order.errors.length > 0 ? `: ${order.errors.map((err) => err.message || err.code).join('; ')}` : ''}
+                        {Array.isArray(order.cases) && order.cases.length > 0 ? `: ${order.cases.map((item) => item.name).join('; ')}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              }
             />
           )}
         </Flex>

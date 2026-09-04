@@ -5,6 +5,7 @@ import { MdDeleteOutline, MdOutlineRemoveRedEye, MdAdd } from 'react-icons/md';
 import { Table, Card, Input, Space, Typography, Spin, Row, Col, Button, Tag, Tooltip } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, UserSwitchOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
+import dayjs from 'dayjs';
 
 import { getAllUsers, createUser, updateUser, getAllRoles } from '../../apis/user';
 import { getAllAccount, createAccount, resetTempPassword } from '../../apis/account';
@@ -180,6 +181,17 @@ const User = () => {
       align: 'center',
       width: 150,
       render: (account) => (account ? <Tag color="success">Linked</Tag> : <Tag>No Account</Tag>),
+    },
+    {
+      title: <span style={{ color: dataColors.title }}>Seller Status</span>,
+      key: 'seller_status',
+      align: 'center',
+      width: 180,
+      render: (_, record) => {
+        if (record.role_id?.name !== 'Seller') return '-';
+        if (!record.end_seller) return <Tag color="success">Active</Tag>;
+        return <Tag color="default">Inactive from {dayjs(record.end_seller).format('DD/MM/YYYY')}</Tag>;
+      },
     },
     {
       title: <span style={{ color: dataColors.title }}>Actions</span>,

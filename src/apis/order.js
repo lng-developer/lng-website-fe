@@ -69,6 +69,14 @@ const getAllCaseByOrder = () => {
   return instance.get('/case');
 };
 
+const createCase = (payload) => {
+  return instance.post('/case', payload);
+};
+
+const updateCaseById = (id, payload) => {
+  return instance.put(`/case/${id}`, payload);
+};
+
 const updateOpenCase = (payload) => {
   return instance.put('/order/open-case', payload);
 };
@@ -149,8 +157,12 @@ const ChangeTimeAutoOrder = (payload) => {
   return instance.post('/admin/schedule', payload);
 };
 
-export const retryScaleOrder = (orderId) => {
-  return instance.post(`/scale/orders/${orderId}/scale/send`);
+export const retryScaleOrder = (orderId, provider) => {
+  return instance.post(`/scale/orders/${orderId}/scale/send`, provider ? { provider } : undefined);
+};
+
+export const getScaleOrderProviders = (orderId) => {
+  return instance.get(`/scale/orders/${orderId}/scale/providers`);
 };
 
 export const syncVendorTracking = (payload) => {
@@ -159,10 +171,6 @@ export const syncVendorTracking = (payload) => {
 
 export const resetOrdersBulk = (payload) => {
   return instance.put('/scale/orders/reset/bulk', payload);
-};
-
-export const sendFailedOrdersToFulfillment = (payload) => {
-  return instance.post('/fulfillment/qc/send-to-fulfillment', payload);
 };
 
 export const pushSelectedOrdersToFulfillmentPlatform = (payload) => {
@@ -182,6 +190,8 @@ export {
   getAllCountStatus,
   updateShippingType,
   getAllCaseByOrder,
+  createCase,
+  updateCaseById,
   updateOpenCase,
   removeCase,
   updateImage,
