@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 
+const ORDER_EXPORT_PAGE_SIZE = 200;
+
 const ORDER_EXPORT_COLUMNS = [
   { header: 'Order ID', key: 'orderId', width: 18 },
   { header: 'Order Date', key: 'orderDate', width: 16 },
@@ -87,4 +89,35 @@ const buildOrderExportRows = (orders = []) =>
     }));
   });
 
-export { ORDER_EXPORT_COLUMNS, buildOrderExportRows };
+const fetchAllOrderPages = async (fetchPage, filters = {}, pageSize = ORDER_EXPORT_PAGE_SIZE) => {
+  const orders = [];
+  let page = 1;
+  let totalCount = null;
+
+  while (totalCount === null || orders.length < totalCount) {
+    const response = await fetchPage({ ...filters, page, perPage: pageSize });
+
+    if (response?.status !== 200) {
+      const error = new Error(response?.data?.message || 'Export failed!');
+      error.response = response;
+      throw error;
+    }
+
+    const pageOrders = Array.isArray(response?.data?.data) ? response.data.data : [];
+    const responseTotal = Number(response?.data?.totalCount ?? response?.data?.total);
+    totalCount = Number.isFinite(responseTotal) && responseTotal >= 0 ? responseTotal : orders.length + pageOrders.length;
+    orders.push(...pageOrders);
+
+    if (orders.length >= totalCount) return orders.slice(0, totalCount);
+
+    if (!pageOrders.length) {
+      throw new Error(`Export incomplete: received ${orders.length} of ${totalCount} orders.`);
+    }
+
+    page += 1;
+  }
+
+  return orders;
+};
+
+export { ORDER_EXPORT_COLUMNS, buildOrderExportRows, fetchAllOrderPages };

@@ -47,7 +47,7 @@ import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 import { useAuth } from '../../context/AuthContext';
-import { ORDER_EXPORT_COLUMNS, buildOrderExportRows } from './orderExport';
+import { ORDER_EXPORT_COLUMNS, buildOrderExportRows, fetchAllOrderPages } from './orderExport';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 const NO_COST_STATUS_OPTIONS = dataFilterStatus
@@ -565,19 +565,7 @@ const Home = () => {
     const toastId = toast.loading('Exporting orders...');
 
     try {
-      const exportLimit = totalCount > 0 ? totalCount : 10000;
-      const response = await getALlOrder({
-        ...filters,
-        page: 1,
-        perPage: exportLimit,
-      });
-
-      if (response.status !== 200) {
-        toast.error(response.data?.message || 'Export failed!', { id: toastId });
-        return;
-      }
-
-      const exportOrders = response.data?.data || [];
+      const exportOrders = await fetchAllOrderPages(getALlOrder, filters);
       const exportRows = buildOrderExportRows(exportOrders);
 
       if (!exportRows.length) {
@@ -613,7 +601,7 @@ const Home = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [filters, isExporting, totalCount]);
+  }, [filters, isExporting]);
 
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {

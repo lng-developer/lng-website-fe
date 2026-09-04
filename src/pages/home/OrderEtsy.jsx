@@ -38,6 +38,7 @@ import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 import { buildReplaceItemRows } from './orderEtsyReplaceItems';
 import { ETSY_ORDER_EXPORT_COLUMNS, buildEtsyOrderExportRows } from './orderEtsyExport';
+import { fetchAllOrderPages } from './orderExport';
 import {
   getAllEtsyOrders,
   getEtsyStatistic,
@@ -594,19 +595,7 @@ const OrderEtsy = () => {
     const toastId = toast.loading('Exporting Etsy orders...');
 
     try {
-      const exportLimit = totalCount > 0 ? totalCount : 10000;
-      const response = await getAllEtsyOrders({
-        ...filters,
-        page: 1,
-        perPage: exportLimit,
-      });
-
-      if (response.status !== 200) {
-        toast.error(response.data?.message || 'Export failed!', { id: toastId });
-        return;
-      }
-
-      const exportOrders = response.data?.data || [];
+      const exportOrders = await fetchAllOrderPages(getAllEtsyOrders, filters);
       const exportRows = buildEtsyOrderExportRows(exportOrders);
 
       if (!exportRows.length) {
@@ -642,7 +631,7 @@ const OrderEtsy = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [filters, isExporting, totalCount]);
+  }, [filters, isExporting]);
 
   // fetch shop/vendor
   const fetchAllShop = useCallback(async () => {
