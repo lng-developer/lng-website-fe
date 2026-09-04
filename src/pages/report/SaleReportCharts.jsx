@@ -8,7 +8,7 @@ import {
   buildLineSeries,
   buildRoiLineSeries,
   buildRoaLineSeries,
-  buildCostStackByDay,
+  // buildCostStackByDay,
   buildSellerTotals,
   pickTickValues,
   numberSafe,
@@ -50,24 +50,24 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
     [days, dailyAgg]
   );
 
-  const gridYValuesChart1 = useMemo(() => {
-    let gridStep = 500;
-    const ys = trendSeries.flatMap((s) => s.data.map((p) => Number(p.y) || 0));
-    const min = Math.min(...ys);
-    const max = Math.max(...ys);
+  // const gridYValuesChart1 = useMemo(() => {
+  //   let gridStep = 500;
+  //   const ys = trendSeries.flatMap((s) => s.data.map((p) => Number(p.y) || 0));
+  //   const min = Math.min(...ys);
+  //   const max = Math.max(...ys);
 
-    const start = Math.floor(min / gridStep) * gridStep;
-    const end = Math.ceil(max / gridStep) * gridStep;
+  //   const start = Math.floor(min / gridStep) * gridStep;
+  //   const end = Math.ceil(max / gridStep) * gridStep;
 
-    const arr = [];
-    for (let v = start; v <= end; v += gridStep) arr.push(v);
-    return arr;
-  }, [trendSeries]);
+  //   const arr = [];
+  //   for (let v = start; v <= end; v += gridStep) arr.push(v);
+  //   return arr;
+  // }, [trendSeries]);
   const roiSeries = useMemo(() => buildRoiLineSeries({ days, dailyAgg }), [days, dailyAgg]);
 
   const roaSeries = useMemo(() => buildRoaLineSeries({ days, dailyAgg }), [days, dailyAgg]);
 
-  const costStack = useMemo(() => buildCostStackByDay({ days, dailyAgg }), [days, dailyAgg]);
+  // const costStack = useMemo(() => buildCostStackByDay({ days, dailyAgg }), [days, dailyAgg]);
 
   const sellerTotals = useMemo(() => buildSellerTotals(normalized), [normalized]);
 
@@ -111,10 +111,10 @@ export default function SaleReportCharts({ days, normalized, sellerFilter, loadi
 
   const maxAbsValue = (data) => Math.max(0, ...(data || []).map((d) => numberSafe(d.value)));
 
-  const formatValue = (val, format) => {
-    if (format === 'percent') return val == null ? 'N/A' : `${Number(val).toFixed(2)}%`;
-    return money(val);
-  };
+  // const formatValue = (val, format) => {
+  //   if (format === 'percent') return val == null ? 'N/A' : `${Number(val).toFixed(2)}%`;
+  //   return money(val);
+  // };
 
   const hasDays = Array.isArray(days) && days.length > 0;
   const hasData = normalized && Object.keys(normalized).length > 0;
