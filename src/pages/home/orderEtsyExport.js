@@ -1,5 +1,8 @@
+import { format } from 'date-fns';
+
 const ETSY_ORDER_EXPORT_COLUMNS = [
   { header: 'Order ID', key: 'orderId', width: 18 },
+  { header: 'Order Date', key: 'orderDate', width: 16 },
   { header: 'Status', key: 'status', width: 14 },
   { header: 'Shop', key: 'shop', width: 22 },
   { header: 'Seller', key: 'seller', width: 22 },
@@ -63,6 +66,7 @@ const buildEtsyOrderExportRows = (orders = []) =>
 
     return items.map((item) => ({
       orderId: order?.orderId || '',
+      orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
       status: order?.status || order?.orderStatus || '',
       shop: order?.shopName || '',
       seller: order?.seller?.full_name || order?.sellerName || '',

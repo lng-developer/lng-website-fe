@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { buildEtsyOrderExportRows } from './orderEtsyExport.js';
+import { ETSY_ORDER_EXPORT_COLUMNS, buildEtsyOrderExportRows } from './orderEtsyExport.js';
 
 const rows = buildEtsyOrderExportRows([
   {
     orderId: 'ETSY-1001',
+    purchase_date: '2026-09-04T08:30:00.000Z',
     status: 'New',
     shopName: 'Shop A',
     seller: { full_name: 'Seller One' },
@@ -49,6 +50,7 @@ const rows = buildEtsyOrderExportRows([
 assert.equal(rows.length, 2);
 assert.deepEqual(rows[0], {
   orderId: 'ETSY-1001',
+  orderDate: 'Sep 4, 2026',
   status: 'New',
   shop: 'Shop A',
   seller: 'Seller One',
@@ -68,5 +70,13 @@ assert.deepEqual(rows[0], {
 assert.equal(rows[1].transactionId, 'ITEM-2');
 assert.equal(rows[1].costCenter, '');
 assert.equal(rows[1].tracking, '');
+
+assert.deepEqual(
+  ETSY_ORDER_EXPORT_COLUMNS.slice(0, 2).map(({ header, key }) => ({ header, key })),
+  [
+    { header: 'Order ID', key: 'orderId' },
+    { header: 'Order Date', key: 'orderDate' },
+  ]
+);
 
 console.log('orderEtsyExport tests passed');
