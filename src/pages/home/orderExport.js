@@ -1,5 +1,8 @@
+import { format } from 'date-fns';
+
 const ORDER_EXPORT_COLUMNS = [
   { header: 'Order ID', key: 'orderId', width: 18 },
+  { header: 'Order Date', key: 'orderDate', width: 16 },
   { header: 'Status', key: 'status', width: 14 },
   { header: 'Shop', key: 'shop', width: 22 },
   { header: 'Seller', key: 'seller', width: 24 },
@@ -66,6 +69,7 @@ const buildOrderExportRows = (orders = []) =>
 
     return items.map((item) => ({
       orderId: order?.orderId || '',
+      orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
       status: order?.status || '',
       shop: order?.shopName || '',
       seller: getSellerName(order?.seller),

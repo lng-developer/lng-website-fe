@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { buildOrderExportRows } from './orderExport.js';
+import { ORDER_EXPORT_COLUMNS, buildOrderExportRows } from './orderExport.js';
 
 const rows = buildOrderExportRows([
   {
     orderId: 'AMZ-1001',
     status: 'Fulfilled',
+    purchase_date: '2026-09-04T08:30:00.000Z',
     shopName: 'Amazon Shop',
     seller: 'seller@example.com',
     customer_infor: {
@@ -42,6 +43,7 @@ const rows = buildOrderExportRows([
 assert.equal(rows.length, 1);
 assert.deepEqual(rows[0], {
   orderId: 'AMZ-1001',
+  orderDate: 'Sep 4, 2026',
   status: 'Fulfilled',
   shop: 'Amazon Shop',
   seller: 'seller@example.com',
@@ -57,5 +59,13 @@ assert.deepEqual(rows[0], {
   tracking: 'UPS 1Z999 / Ready',
   baseCost: 9.75,
 });
+
+assert.deepEqual(
+  ORDER_EXPORT_COLUMNS.slice(0, 2).map(({ header, key }) => ({ header, key })),
+  [
+    { header: 'Order ID', key: 'orderId' },
+    { header: 'Order Date', key: 'orderDate' },
+  ]
+);
 
 console.log('orderExport tests passed');
