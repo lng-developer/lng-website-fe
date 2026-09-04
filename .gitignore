@@ -14,6 +14,7 @@ dist-ssr
 
 # Local Codex/agent skills and generated helper files
 .agents/
+.worktrees/
 
 # Editor directories and files
 .vscode/*
