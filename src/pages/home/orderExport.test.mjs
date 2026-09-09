@@ -68,7 +68,6 @@ assert.deepEqual(rows[0], {
   costCenter: 'Premium Hoodie / Size: XL / Color: Navy',
   tracking: 'UPS 1Z999 / Ready',
   baseCost: 9.75,
-  buyerCustomization: 'Choose Size: XL\nChoose Metarial: Wood\nChoose Color: Navy\nText Color: White\nSelect Product Type & Color: T-Shirt / Black\nCustom Name: Alex',
 });
 
 assert.deepEqual(
@@ -81,7 +80,7 @@ assert.deepEqual(
 
 assert.deepEqual(
   ORDER_EXPORT_COLUMNS.slice(-1).map(({ header, key }) => ({ header, key })),
-  [{ header: 'Buyer Customization', key: 'buyerCustomization' }]
+  [{ header: 'Base Cost', key: 'baseCost' }]
 );
 
 assert.equal(typeof buildBuyerCustomizationDetailRows, 'function');

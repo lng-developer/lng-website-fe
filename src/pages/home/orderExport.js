@@ -19,7 +19,6 @@ const ORDER_EXPORT_COLUMNS = [
   { header: 'Cost Center', key: 'costCenter', width: 45 },
   { header: 'Tracking', key: 'tracking', width: 45 },
   { header: 'Base Cost', key: 'baseCost', width: 12 },
-  { header: 'Buyer Customization', key: 'buyerCustomization', width: 45 },
 ];
 
 const BUYER_CUSTOMIZATION_DETAIL_COLUMNS = [
@@ -83,21 +82,12 @@ const getBuyerCustomizationEntries = (version3Data) =>
     .filter(({ label, value }) => label && String(value).trim())
     .map(({ label, value }) => ({ label, value: String(value).trim(), text: `${label}: ${String(value).trim()}` }));
 
-const getBuyerCustomization = (entries, matcher) =>
-  entries
-    .filter(({ label }) => !matcher || matcher.test(label))
-    .map(({ text }) => text)
-    .join('\n');
-
 const buildOrderExportRows = (orders = []) =>
   (Array.isArray(orders) ? orders : []).flatMap((order) => {
     const customer = order?.customer_infor || {};
     const items = Array.isArray(order?.items) ? order.items : [];
 
-    return items.map((item) => {
-      const buyerCustomization = getBuyerCustomizationEntries(item?.version3Data);
-
-      return {
+    return items.map((item) => ({
         orderId: order?.orderId || '',
         orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
         status: order?.status || '',
@@ -114,9 +104,7 @@ const buildOrderExportRows = (orders = []) =>
         costCenter: getCostCenter(item?.cost_center),
         tracking: getTracking(item?.tracking_info),
         baseCost: order?.base_cost ?? '',
-        buyerCustomization: getBuyerCustomization(buyerCustomization),
-      };
-    });
+      }));
   });
 
 const buildBuyerCustomizationDetailRows = (orders = []) =>

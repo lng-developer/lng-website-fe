@@ -588,7 +588,6 @@ const Home = () => {
       worksheet.getColumn('address').alignment = { wrapText: true, vertical: 'top' };
       worksheet.getColumn('costCenter').alignment = { wrapText: true, vertical: 'top' };
       worksheet.getColumn('tracking').alignment = { wrapText: true, vertical: 'top' };
-      worksheet.getColumn('buyerCustomization').alignment = { wrapText: true, vertical: 'top' };
       worksheet.views = [{ state: 'frozen', ySplit: 1 }];
 
       const buyerFieldsWorksheet = workbook.addWorksheet('Buyer Fields');
