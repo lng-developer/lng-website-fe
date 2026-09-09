@@ -47,7 +47,7 @@ import SelectSeller from '../../components/SelectSeller';
 import dayjs from 'dayjs';
 import OrderLogPopover from '../../components/OrderLogPopover';
 import { useAuth } from '../../context/AuthContext';
-import { ORDER_EXPORT_COLUMNS, buildOrderExportRows, fetchAllOrderPages } from './orderExport';
+import { BUYER_CUSTOMIZATION_DETAIL_COLUMNS, ORDER_EXPORT_COLUMNS, buildBuyerCustomizationDetailRows, buildOrderExportRows, fetchAllOrderPages, getBuyerFieldOrderMergeRanges } from './orderExport';
 const LAST_UPDATED_KEY = 'orders_last_updated_at';
 const PAGE_SIZE = 10;
 const NO_COST_STATUS_OPTIONS = dataFilterStatus
@@ -567,6 +567,7 @@ const Home = () => {
     try {
       const exportOrders = await fetchAllOrderPages(getALlOrder, filters);
       const exportRows = buildOrderExportRows(exportOrders);
+      const buyerFieldRows = buildBuyerCustomizationDetailRows(exportOrders);
 
       if (!exportRows.length) {
         toast.error('No orders found to export!', { id: toastId });
@@ -587,7 +588,26 @@ const Home = () => {
       worksheet.getColumn('address').alignment = { wrapText: true, vertical: 'top' };
       worksheet.getColumn('costCenter').alignment = { wrapText: true, vertical: 'top' };
       worksheet.getColumn('tracking').alignment = { wrapText: true, vertical: 'top' };
+      worksheet.getColumn('buyerCustomization').alignment = { wrapText: true, vertical: 'top' };
       worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      const buyerFieldsWorksheet = workbook.addWorksheet('Buyer Fields');
+      buyerFieldsWorksheet.columns = BUYER_CUSTOMIZATION_DETAIL_COLUMNS;
+      buyerFieldRows.forEach((row) => buyerFieldsWorksheet.addRow(row));
+      buyerFieldsWorksheet.getRow(1).font = { bold: true };
+      buyerFieldsWorksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F3FF' },
+      };
+      getBuyerFieldOrderMergeRanges(buyerFieldRows).forEach(({ startRow, endRow }) => {
+        buyerFieldsWorksheet.mergeCells(`A${startRow}:A${endRow}`);
+      });
+      buyerFieldsWorksheet.getColumn('orderId').alignment = { vertical: 'top' };
+      buyerFieldsWorksheet.getColumn('field').alignment = { wrapText: true, vertical: 'top' };
+      buyerFieldsWorksheet.getColumn('value').alignment = { wrapText: true, vertical: 'top' };
+      buyerFieldsWorksheet.autoFilter = { from: 'A1', to: 'F1' };
+      buyerFieldsWorksheet.views = [{ state: 'frozen', ySplit: 1 }];
 
       const buffer = await workbook.xlsx.writeBuffer();
       const filename = `Amazon_Orders_${filters.from || 'all'}_to_${filters.to || 'all'}.xlsx`;

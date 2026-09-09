@@ -19,6 +19,16 @@ const ORDER_EXPORT_COLUMNS = [
   { header: 'Cost Center', key: 'costCenter', width: 45 },
   { header: 'Tracking', key: 'tracking', width: 45 },
   { header: 'Base Cost', key: 'baseCost', width: 12 },
+  { header: 'Buyer Customization', key: 'buyerCustomization', width: 45 },
+];
+
+const BUYER_CUSTOMIZATION_DETAIL_COLUMNS = [
+  { header: 'Order ID', key: 'orderId', width: 18 },
+  { header: 'Order Date', key: 'orderDate', width: 16 },
+  { header: 'SKU', key: 'sku', width: 28 },
+  { header: 'Order Item ID', key: 'orderItemId', width: 22 },
+  { header: 'Field', key: 'field', width: 36 },
+  { header: 'Value', key: 'value', width: 45 },
 ];
 
 const compactJoin = (values, separator = ', ') =>
@@ -64,30 +74,80 @@ const getTracking = (trackingInfo = {}) => {
   return compactJoin([carrierAndNumber, trackingInfo?.note], ' / ');
 };
 
+const getBuyerCustomizationEntries = (version3Data) =>
+  (Array.isArray(version3Data) ? version3Data : [])
+    .map((entry) => ({
+      label: String(entry?.label || entry?.name || '').trim(),
+      value: entry?.value ?? entry?.optionValue ?? entry?.text ?? entry?.numberValue ?? '',
+    }))
+    .filter(({ label, value }) => label && String(value).trim())
+    .map(({ label, value }) => ({ label, value: String(value).trim(), text: `${label}: ${String(value).trim()}` }));
+
+const getBuyerCustomization = (entries, matcher) =>
+  entries
+    .filter(({ label }) => !matcher || matcher.test(label))
+    .map(({ text }) => text)
+    .join('\n');
+
 const buildOrderExportRows = (orders = []) =>
   (Array.isArray(orders) ? orders : []).flatMap((order) => {
     const customer = order?.customer_infor || {};
     const items = Array.isArray(order?.items) ? order.items : [];
 
-    return items.map((item) => ({
-      orderId: order?.orderId || '',
-      orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
-      status: order?.status || '',
-      shop: order?.shopName || '',
-      seller: getSellerName(order?.seller),
-      customer: customer?.name || '',
-      address: getAddress(customer),
-      shippingType: order?.shipping_type || order?.shippingType || '',
-      sku: item?.sku || '',
-      mappedSku: item?.mapped_sku || '',
-      listing: item?.listing || item?.listingId || '',
-      orderItemId: item?.orderItemId || '',
-      quantity: item?.quantity ?? '',
-      costCenter: getCostCenter(item?.cost_center),
-      tracking: getTracking(item?.tracking_info),
-      baseCost: order?.base_cost ?? '',
-    }));
+    return items.map((item) => {
+      const buyerCustomization = getBuyerCustomizationEntries(item?.version3Data);
+
+      return {
+        orderId: order?.orderId || '',
+        orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
+        status: order?.status || '',
+        shop: order?.shopName || '',
+        seller: getSellerName(order?.seller),
+        customer: customer?.name || '',
+        address: getAddress(customer),
+        shippingType: order?.shipping_type || order?.shippingType || '',
+        sku: item?.sku || '',
+        mappedSku: item?.mapped_sku || '',
+        listing: item?.listing || item?.listingId || '',
+        orderItemId: item?.orderItemId || '',
+        quantity: item?.quantity ?? '',
+        costCenter: getCostCenter(item?.cost_center),
+        tracking: getTracking(item?.tracking_info),
+        baseCost: order?.base_cost ?? '',
+        buyerCustomization: getBuyerCustomization(buyerCustomization),
+      };
+    });
   });
+
+const buildBuyerCustomizationDetailRows = (orders = []) =>
+  (Array.isArray(orders) ? orders : []).flatMap((order) =>
+    (Array.isArray(order?.items) ? order.items : []).flatMap((item) =>
+      getBuyerCustomizationEntries(item?.version3Data).map(({ label, value }) => ({
+        orderId: order?.orderId || '',
+        orderDate: order?.purchase_date ? format(new Date(order.purchase_date), 'MMM d, yyyy') : '',
+        sku: item?.sku || '',
+        orderItemId: item?.orderItemId || '',
+        field: label,
+        value,
+      }))
+    )
+  );
+
+const getBuyerFieldOrderMergeRanges = (rows = []) => {
+  const ranges = [];
+  let startRow = 2;
+
+  for (let index = 1; index <= rows.length; index += 1) {
+    if (index === rows.length || rows[index]?.orderId !== rows[index - 1]?.orderId) {
+      const endRow = index + 1;
+      const orderId = String(rows[index - 1]?.orderId || '').trim();
+      if (orderId && endRow > startRow) ranges.push({ startRow, endRow });
+      startRow = endRow + 1;
+    }
+  }
+
+  return ranges;
+};
 
 const fetchAllOrderPages = async (fetchPage, filters = {}, pageSize = ORDER_EXPORT_PAGE_SIZE) => {
   const orders = [];
@@ -120,4 +180,4 @@ const fetchAllOrderPages = async (fetchPage, filters = {}, pageSize = ORDER_EXPO
   return orders;
 };
 
-export { ORDER_EXPORT_COLUMNS, buildOrderExportRows, fetchAllOrderPages };
+export { BUYER_CUSTOMIZATION_DETAIL_COLUMNS, ORDER_EXPORT_COLUMNS, buildBuyerCustomizationDetailRows, buildOrderExportRows, fetchAllOrderPages, getBuyerFieldOrderMergeRanges };
