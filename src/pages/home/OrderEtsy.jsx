@@ -403,6 +403,17 @@ const OrderEtsy = () => {
     [fetchAllOrder, fetchEtsyStatistic, filters, getEtsyItemId, mappingData]
   );
 
+  const handleManualVendorRequiredChange = useCallback(async (orderId, manualVendorRequired) => {
+    try {
+      await manualMappingEtsy({ orderId, manualVendorRequired });
+      toast.success(manualVendorRequired ? 'Auto-match vendor disabled' : 'Auto-match vendor enabled');
+      fetchAllOrder(filters);
+      fetchEtsyStatistic();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to update vendor matching mode');
+    }
+  }, [fetchAllOrder, fetchEtsyStatistic, filters]);
+
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
@@ -925,6 +936,8 @@ const OrderEtsy = () => {
                 orderItems={item?.items || []}
                 isOrderApplied={appliedOrders.has(item?.orderId)}
                 isOrderEditing={editingOrders.has(item?.orderId)}
+                manualVendorRequired={item?.manual_vendor_required === true}
+                onManualVendorRequiredChange={handleManualVendorRequiredChange}
               />
             ),
             tracking_note: (
@@ -960,6 +973,7 @@ const OrderEtsy = () => {
     handleColorChange,
     handleVariantDataChange,
     handleApplyMappingForOrder,
+    handleManualVendorRequiredChange,
     handleEtsyTrackingUpdated,
     handleQuantityUpdated,
     appliedOrders,

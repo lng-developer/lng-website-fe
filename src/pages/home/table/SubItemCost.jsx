@@ -1,4 +1,4 @@
-﻿import { Select, Tooltip, Button } from 'antd';
+﻿import { Select, Tooltip, Button, Switch } from 'antd';
 import { LuChevronsUpDown } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { CopyOutlined } from '@ant-design/icons';
@@ -18,7 +18,9 @@ const SubItemCost = ({
   onApplyMapping = null,
   orderItems = [],
   isOrderApplied = false,
-  isOrderEditing = false
+  isOrderEditing = false,
+  manualVendorRequired = false,
+  onManualVendorRequiredChange = null,
 }) => {
   const [vendorProducts, setVendorProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -316,6 +318,12 @@ const SubItemCost = ({
           >
             Apply
           </Button>
+        </div>
+      )}
+      {isLastItem && onManualVendorRequiredChange && (
+        <div className="mt-3 flex items-center gap-2">
+          <Switch size="small" checked={manualVendorRequired} onChange={(checked) => onManualVendorRequiredChange(orderId, checked)} />
+          <span className="text-sm">Require manual vendor</span>
         </div>
       )}
     </div>

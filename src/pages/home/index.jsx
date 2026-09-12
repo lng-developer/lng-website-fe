@@ -428,6 +428,16 @@ const Home = () => {
     [mappingData, fetchAllOrder, filters]
   );
 
+  const handleManualVendorRequiredChange = useCallback(async (orderId, manualVendorRequired) => {
+    try {
+      await manualMapping({ orderId, manualVendorRequired });
+      toast.success(manualVendorRequired ? 'Auto-match vendor disabled' : 'Auto-match vendor enabled');
+      fetchAllOrder(filters);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to update vendor matching mode');
+    }
+  }, [fetchAllOrder, filters]);
+
   const debouncedSearch = useMemo(
     () =>
       debounce((keyword) => {
@@ -880,6 +890,8 @@ const Home = () => {
             orderItems={item?.items || []}
             isOrderApplied={appliedOrders.has(item?.orderId)}
             isOrderEditing={editingOrders.has(item?.orderId)}
+            manualVendorRequired={item?.manual_vendor_required === true}
+            onManualVendorRequiredChange={handleManualVendorRequiredChange}
           />
         ),
         tracking_note: (
@@ -912,6 +924,7 @@ const Home = () => {
     handleColorChange,
     handleVariantDataChange,
     handleApplyMappingForOrder,
+    handleManualVendorRequiredChange,
     user?.role,
   ]);
 
