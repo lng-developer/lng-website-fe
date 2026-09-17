@@ -29,12 +29,12 @@ function ChartCard({ title, children }) {
   );
 }
 
-export default function EtsySaleReportCharts({ days, normalized, sellerFilter, loading }) {
+export default function EtsySaleReportCharts({ days, normalized, loading }) {
   const tickValues = useMemo(() => pickTickValues(days, 10), [days]);
 
   const dailyAgg = useMemo(
-    () => buildEtsyDailyAggregate({ normalized, days, sellerFilter }),
-    [normalized, days, sellerFilter]
+    () => buildEtsyDailyAggregate({ normalized, days }),
+    [normalized, days]
   );
 
   // Line chart: Revenue / Profit 2 / Offsite Ads theo ngày
@@ -52,17 +52,15 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
     [days, dailyAgg]
   );
 
-  // Line chart: Chi phí Etsy theo ngày (Listing + Transaction + Payment)
+  // Line chart: chi phí đang có trong Etsy report.
   const etsyFeeSeries = useMemo(
     () =>
       buildLineSeries({
         days,
         dailyAgg,
         metrics: [
-          { id: 'Listing Fee',     key: 'listingFee'     },
-          { id: 'Transaction Fee', key: 'transactionFee' },
-          { id: 'Payment Fee',     key: 'paymentFee'     },
-          { id: 'Tax',             key: 'tax'            },
+          { id: 'Fee (21%)', key: 'fee' },
+          { id: 'Tax', key: 'tax' },
         ],
       }),
     [days, dailyAgg]
@@ -74,9 +72,7 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
     return safeDays.map((d, i) => ({
       date:           d,
       'Base Cost':    +(dailyAgg?.baseCost?.[i]       || 0).toFixed(2),
-      'Listing Fee':  +(dailyAgg?.listingFee?.[i]     || 0).toFixed(2),
-      'Trans. Fee':   +(dailyAgg?.transactionFee?.[i] || 0).toFixed(2),
-      'Payment Fee':  +(dailyAgg?.paymentFee?.[i]     || 0).toFixed(2),
+      'Fee (21%)':    +(dailyAgg?.fee?.[i]            || 0).toFixed(2),
       'Offsite Ads':  +(dailyAgg?.offsiteAds?.[i]     || 0).toFixed(2),
       'Tax':          +(dailyAgg?.tax?.[i]             || 0).toFixed(2),
     }));
@@ -129,21 +125,17 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
       Profit:           '#10b981',
       'Offsite Ads':    '#f97316',
       Orders:           '#a855f7',
-      'Listing Fee':    '#06b6d4',
-      'Transaction Fee':'#8b5cf6',
-      'Payment Fee':    '#ec4899',
+      'Fee (21%)':      '#06b6d4',
       Tax:              '#f59e0b',
     };
     return map[id] || '#64748b';
   };
 
-  const costStackKeys   = ['Base Cost', 'Listing Fee', 'Trans. Fee', 'Payment Fee', 'Offsite Ads', 'Tax'];
+  const costStackKeys   = ['Base Cost', 'Fee (21%)', 'Offsite Ads', 'Tax'];
   const costStackColors = ({ id }) => {
     const map = {
       'Base Cost':   '#3b82f6',
-      'Listing Fee': '#06b6d4',
-      'Trans. Fee':  '#8b5cf6',
-      'Payment Fee': '#ec4899',
+      'Fee (21%)':   '#06b6d4',
       'Offsite Ads': '#f97316',
       'Tax':         '#f59e0b',
     };
@@ -173,7 +165,7 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
     <div className="grid grid-cols-12 gap-3">
       {/* ── Shop Comparison (bar) ── */}
       <div className="col-span-12">
-        <ChartCard title="Shop Comparison">
+        <ChartCard title="Seller Comparison">
           <div style={{ height: 400 }}>
             <Tabs
               defaultActiveKey="profit"
@@ -285,7 +277,7 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
 
       {/* ── Daily Cost Breakdown (stacked bar) ── */}
       <div className="col-span-12">
-        <ChartCard title="Daily Cost Breakdown (Base Cost + Etsy Fees)">
+        <ChartCard title="Daily Cost Breakdown">
           <div style={{ height: 360 }}>
             <ResponsiveBar
               data={costStack}
@@ -336,7 +328,7 @@ export default function EtsySaleReportCharts({ days, normalized, sellerFilter, l
 
       {/* ── Etsy Fee Breakdown (line) ── */}
       <div className="col-span-12">
-        <ChartCard title="Etsy Fee Trend (Listing / Transaction / Payment / Tax)">
+        <ChartCard title="Etsy Fee and Tax Trend">
           <div style={{ height: 300 }}>
             <ResponsiveLine
               data={etsyFeeSeries}

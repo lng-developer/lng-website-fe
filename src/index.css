@@ -298,3 +298,19 @@
 .ant-timeline-item .ant-timeline-item-tail {
   border-inline-start: 2px solid #000 !important;
 }
+/* Keep the day columns reachable while the report body is vertically scrolled. */
+.etsy-sale-report-table .ant-table-body,
+.sale-report-table .ant-table-body {
+  overflow-x: scroll !important;
+}
+
+.etsy-sale-report-table .ant-table-body::-webkit-scrollbar,
+.sale-report-table .ant-table-body::-webkit-scrollbar {
+  height: 14px;
+}
+
+.etsy-sale-report-table .ant-table-body::-webkit-scrollbar-thumb,
+.sale-report-table .ant-table-body::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 999px;
+}

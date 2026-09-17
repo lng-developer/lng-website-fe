@@ -48,8 +48,8 @@ const exportAds = (params) => {
   return instance.get('/report/ads/export', { params, responseType: 'blob' });
 };
 
-const reportForSaler = (from, to) => {
-  return instance.get(`/report/etsy-matrix?from=${from}&to=${to}`);
+const reportForSaler = (params) => {
+  return instance.get('/report/etsy-matrix', { params });
 };
 
 

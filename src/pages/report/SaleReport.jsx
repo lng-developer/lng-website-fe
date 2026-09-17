@@ -786,7 +786,7 @@ const SaleReport = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240;
+      const headerHeight = 340;
       const availableHeight = window.innerHeight - headerHeight - 20;
       setTableHeight(availableHeight);
     };
@@ -962,6 +962,7 @@ const SaleReport = () => {
         <div className="mt-4">
           {viewMode === 'table' ? (
             <Table
+              className="sale-report-table"
               columns={columns}
               dataSource={dataSource}
               rowKey="key"
@@ -969,7 +970,7 @@ const SaleReport = () => {
               pagination={false}
               scroll={{ x: 'max-content', y: tableHeight }}
               loading={loading}
-              sticky={{ offsetHeader: 0 }}
+              sticky={{ offsetHeader: 0, offsetScroll: 0 }}
               tableLayout="auto"
             />
           ) : (

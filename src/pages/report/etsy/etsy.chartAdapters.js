@@ -1,5 +1,5 @@
 // etsy.chartAdapters.js  –  Etsy-specific chart data adapters
-// Etsy fields: listingFee, transactionFee, paymentFee, offsiteAds, tax, opCost, refund, discount
+// Etsy report fields returned by the API.
 
 export const numberSafe = (v) => (Number.isFinite(+v) ? +v : 0);
 export const sum = (arr = []) => (Array.isArray(arr) ? arr.reduce((a, b) => a + numberSafe(b), 0) : 0);
@@ -7,17 +7,13 @@ const initArr = (len, fill = 0) => Array.from({ length: len }, () => fill);
 
 /**
  * Tính profit1, profit2, roi từ dữ liệu một seller Etsy.
- * profit1 = revenue - baseCost - listingFee - transactionFee - paymentFee
- * profit2 = profit1 - offsiteAds - tax - opCost - refund
+ * Prefer the profit values calculated by the API.
  */
 export function buildEtsyProfitArrays(r, len) {
   const revenue        = Array.isArray(r?.revenue)        ? r.revenue        : initArr(len, 0);
   const baseCost       = Array.isArray(r?.baseCost)       ? r.baseCost       : initArr(len, 0);
-  const listingFee     = Array.isArray(r?.listingFee)     ? r.listingFee     : initArr(len, 0);
-  const transactionFee = Array.isArray(r?.transactionFee) ? r.transactionFee : initArr(len, 0);
-  const paymentFee     = Array.isArray(r?.paymentFee)     ? r.paymentFee     : initArr(len, 0);
+  const fee            = Array.isArray(r?.fee)            ? r.fee            : initArr(len, 0);
   const offsiteAds     = Array.isArray(r?.offsiteAds)     ? r.offsiteAds     : initArr(len, 0);
-  const tax            = Array.isArray(r?.tax)            ? r.tax            : initArr(len, 0);
   const opCost         = Array.isArray(r?.opCost)         ? r.opCost         : initArr(len, 0);
   const refund         = Array.isArray(r?.refund)         ? r.refund         : initArr(len, 0);
 
@@ -27,9 +23,8 @@ export function buildEtsyProfitArrays(r, len) {
       : revenue.map((rv, i) =>
           numberSafe(rv) -
           numberSafe(baseCost[i]) -
-          numberSafe(listingFee[i]) -
-          numberSafe(transactionFee[i]) -
-          numberSafe(paymentFee[i])
+          numberSafe(fee[i]) -
+          numberSafe(offsiteAds[i])
         );
 
   const profit2 =
@@ -37,8 +32,6 @@ export function buildEtsyProfitArrays(r, len) {
       ? r.profit2
       : profit1.map((p1, i) =>
           numberSafe(p1) -
-          numberSafe(offsiteAds[i]) -
-          numberSafe(tax[i]) -
           numberSafe(opCost[i]) -
           numberSafe(refund[i])
         );
@@ -68,9 +61,7 @@ export function buildEtsyDailyAggregate({ normalized, days, sellerFilter }) {
     items:          initArr(len, 0),
     revenue:        initArr(len, 0),
     baseCost:       initArr(len, 0),
-    listingFee:     initArr(len, 0),
-    transactionFee: initArr(len, 0),
-    paymentFee:     initArr(len, 0),
+    fee:            initArr(len, 0),
     offsiteAds:     initArr(len, 0),
     tax:            initArr(len, 0),
     opCost:         initArr(len, 0),
@@ -88,9 +79,7 @@ export function buildEtsyDailyAggregate({ normalized, days, sellerFilter }) {
     const items          = Array.isArray(r?.items)          ? r.items          : initArr(len, 0);
     const revenue        = Array.isArray(r?.revenue)        ? r.revenue        : initArr(len, 0);
     const baseCost       = Array.isArray(r?.baseCost)       ? r.baseCost       : initArr(len, 0);
-    const listingFee     = Array.isArray(r?.listingFee)     ? r.listingFee     : initArr(len, 0);
-    const transactionFee = Array.isArray(r?.transactionFee) ? r.transactionFee : initArr(len, 0);
-    const paymentFee     = Array.isArray(r?.paymentFee)     ? r.paymentFee     : initArr(len, 0);
+    const fee            = Array.isArray(r?.fee)            ? r.fee            : initArr(len, 0);
     const offsiteAds     = Array.isArray(r?.offsiteAds)     ? r.offsiteAds     : initArr(len, 0);
     const tax            = Array.isArray(r?.tax)            ? r.tax            : initArr(len, 0);
     const opCost         = Array.isArray(r?.opCost)         ? r.opCost         : initArr(len, 0);
@@ -103,9 +92,7 @@ export function buildEtsyDailyAggregate({ normalized, days, sellerFilter }) {
       agg.items[i]          += numberSafe(items[i]);
       agg.revenue[i]        += numberSafe(revenue[i]);
       agg.baseCost[i]       += numberSafe(baseCost[i]);
-      agg.listingFee[i]     += numberSafe(listingFee[i]);
-      agg.transactionFee[i] += numberSafe(transactionFee[i]);
-      agg.paymentFee[i]     += numberSafe(paymentFee[i]);
+      agg.fee[i]            += numberSafe(fee[i]);
       agg.offsiteAds[i]     += numberSafe(offsiteAds[i]);
       agg.tax[i]            += numberSafe(tax[i]);
       agg.opCost[i]         += numberSafe(opCost[i]);

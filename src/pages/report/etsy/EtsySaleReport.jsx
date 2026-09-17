@@ -79,78 +79,6 @@ const buildAggregateReport = (normalizedObj = {}, dayLen = 0) => {
 
 
 
-// ============================================================
-// MOCK DATA  –  sẽ được thay bằng API khi sẵn sàng
-// ============================================================
-const generateMockDays = (from, to) => {
-  const days = [];
-  const start = new Date(from);
-  const end = new Date(to);
-  const diffDays = Math.min(Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1, 14);
-  for (let i = 0; i < diffDays; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    days.push(d.toISOString().slice(0, 10));
-  }
-  return days;
-};
-
-const rand = (min, max) => +(Math.random() * (max - min) + min).toFixed(2);
-
-const generateMockSellerData = (days) => {
-  const len = days.length;
-  const arr = (min, max) => Array.from({ length: len }, () => rand(min, max));
-
-  const items = arr(3, 20).map(Math.round);
-  const revenue = arr(120, 600);
-  const baseCost = revenue.map((r) => +(r * rand(0.25, 0.40)).toFixed(2));
-  const listingFee = arr(0.4, 1.2);
-  const transactionFee = revenue.map((r) => +(r * 0.065).toFixed(2));
-  const paymentFee = revenue.map((r) => +(r * 0.03).toFixed(2));
-  const offsiteAds = revenue.map((r) => +(r * rand(0.01, 0.05)).toFixed(2));
-  const tax = revenue.map((r) => +(r * 0.10).toFixed(2));
-  const opCost = arr(5, 25);
-  const refund = arr(0, 30);
-  const discount = arr(0, 15);
-
-  const profit1 = revenue.map((v, i) =>
-    +(v - baseCost[i] - listingFee[i] - transactionFee[i] - paymentFee[i]).toFixed(2)
-  );
-  const profit2 = profit1.map((p, i) =>
-    +(p - offsiteAds[i] - tax[i] - opCost[i] - refund[i]).toFixed(2)
-  );
-
-  return {
-    items, revenue, baseCost, listingFee, transactionFee, paymentFee,
-    offsiteAds, tax, opCost, refund, discount, profit1, profit2,
-    totals: {
-      items: sum(items),
-      revenue: +sum(revenue).toFixed(2),
-      baseCost: +sum(baseCost).toFixed(2),
-      listingFee: +sum(listingFee).toFixed(2),
-      transactionFee: +sum(transactionFee).toFixed(2),
-      paymentFee: +sum(paymentFee).toFixed(2),
-      offsiteAds: +sum(offsiteAds).toFixed(2),
-      tax: +sum(tax).toFixed(2),
-      opCost: +sum(opCost).toFixed(2),
-      refund: +sum(refund).toFixed(2),
-      discount: +sum(discount).toFixed(2),
-      profit1: +sum(profit1).toFixed(2),
-      profit2: +sum(profit2).toFixed(2),
-    },
-  };
-};
-
-const buildMockReport = (from, to) => {
-  const days = generateMockDays(from || defaultFrom, to || defaultTo);
-  const reportBySeller = {};
-  ['Etsy Shop A', 'Etsy Shop B', 'Etsy Shop C'].forEach((s) => {
-    reportBySeller[s] = generateMockSellerData(days);
-  });
-  return { days, reportBySeller };
-};
-// ============================================================
-
 const EtsySaleReport = () => {
   const { collapsed } = useOutletContext();
   const { user } = useAuth();
@@ -188,7 +116,12 @@ const EtsySaleReport = () => {
     try {
       const fromISO = new Date(params?.from || defaultFrom).toISOString();
       const toISO = new Date(params?.to || defaultTo).toISOString();
-      const res = await reportForSaler(fromISO, toISO);
+      const res = await reportForSaler({
+        from: fromISO,
+        to: toISO,
+        seller: params?.seller || undefined,
+        team: params?.team || undefined,
+      });
       
       if (res.status === 200 && res.data) {
         const apiData = res.data;
@@ -209,7 +142,10 @@ const EtsySaleReport = () => {
             discount: sellerData.itemPromotionDiscount || [],
             profit1: sellerData.profit1 || [],
             profit2: sellerData.profit2 || [],
-            totals: sellerData.totals || {},
+            totals: {
+              ...(sellerData.totals || {}),
+              offsiteAds: sellerData.totals?.ads || 0,
+            },
           };
         });
         
@@ -227,6 +163,7 @@ const EtsySaleReport = () => {
   };
 
   const dayKeys = days.map((d) => d.replace(/-/g, '_'));
+  const tableScrollX = 410 + dayKeys.length * 120;
 
   const normalized = useMemo(() => {
     const len = dayKeys.length;
@@ -295,10 +232,10 @@ const EtsySaleReport = () => {
         { type: 'Total Order Items', values: r.items, money: false, totalVal: totals.items },
         { type: 'Revenue', values: r.revenue, money: true, totalVal: totals.revenue },
         { type: 'Base Cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
-      //   { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
-      //   { type: 'Tax', values: r.tax, money: true, totalVal: totals.tax },
-     //    { type: 'Shipping Tax', values: r.shippingTax || [], money: true, totalVal: totals.shippingTax },
-      //   { type: 'Discount', values: r.discount || [], money: true, totalVal: totals.discount },
+        { type: 'Fee (21%)', values: r.fee, money: true, totalVal: totals.fee },
+        { type: 'Tax', values: r.tax, money: true, totalVal: totals.tax },
+        { type: 'Shipping', values: r.shippingTax || [], money: true, totalVal: totals.shippingTax },
+        { type: 'Discount', values: r.discount || [], money: true, totalVal: totals.discount },
         { type: 'Ads', values: r.offsiteAds, money: true, totalVal: totals.offsiteAds },
         { type: 'Profit 1', values: profit1, money: true, totalVal: totals.profit1, signAware: true },
         { type: 'Operation Cost', values: r.opCost, money: true, totalVal: totals.opCost },
@@ -346,7 +283,7 @@ const EtsySaleReport = () => {
 
   const columns = [
     {
-      title: <span className="font-medium" style={{ color: dataColors.title }}>Shop</span>,
+      title: <span className="font-medium" style={{ color: dataColors.title }}>Seller</span>,
       dataIndex: 'seller',
       align: 'center',
       fixed: 'left',
@@ -451,7 +388,7 @@ const EtsySaleReport = () => {
     try {
       const entries = Object.entries(normalizedView);
       const sumArr = (a = []) => a.reduce((x, y) => x + (Number.isFinite(+y) ? +y : 0), 0);
-      const getTotal = (k) => entries.reduce((acc, [, r]) => acc + numberSafe(r.totals?.[k]), 0);
+      const getTotal = (k) => entries.reduce((acc, [, r]) => acc + numberSafe(r.totals?.[k] ?? sumArr(r[k])), 0);
 
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Etsy Sale Report', {
@@ -528,9 +465,9 @@ const EtsySaleReport = () => {
       let rIdx = startRow + 1;
       entries.forEach(([seller, r], sIdx) => {
         const profit1 = Array.isArray(r.profit1) && r.profit1.length ? r.profit1 :
-          r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.listingFee[i]) - numberSafe(r.transactionFee[i]) - numberSafe(r.paymentFee[i])).toFixed(2));
+          r.revenue.map((v, i) => +(numberSafe(v) - numberSafe(r.baseCost[i]) - numberSafe(r.fee[i]) - numberSafe(r.offsiteAds[i])).toFixed(2));
         const profit2 = Array.isArray(r.profit2) && r.profit2.length ? r.profit2 :
-          profit1.map((p, i) => +(numberSafe(p) - numberSafe(r.offsiteAds[i]) - numberSafe(r.tax[i]) - numberSafe(r.opCost[i]) - numberSafe(r.refund[i])).toFixed(2));
+          profit1.map((p, i) => +(numberSafe(p) - numberSafe(r.opCost[i]) - numberSafe(r.refund[i])).toFixed(2));
 
         const group = [
           { label: 'Total Order Items', values: r.items, total: r.totals?.items, money: false },
@@ -622,7 +559,7 @@ const EtsySaleReport = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240;
+      const headerHeight = 340;
       const availableHeight = window.innerHeight - headerHeight - 20;
       setTableHeight(availableHeight);
     };
@@ -680,7 +617,7 @@ const EtsySaleReport = () => {
           <div className="flex gap-2 items-center">
             {reportScope === 'seller' && (
               <SelectSeller
-                title="Report By Shop"
+                title="Seller"
                 ListData={sellers}
                 value={selectSeller}
                 onChange={(val) => { setSelectSeller(val); updateFilter({ seller: val }); }}
@@ -717,7 +654,7 @@ const EtsySaleReport = () => {
             shape="round"
             value={reportScope}
             options={[
-              { label: 'Report By Shop', value: 'seller' },
+              { label: 'Report By Seller', value: 'seller' },
               { label: 'Total Report', value: 'total' },
             ]}
             onChange={handleChangeScope}
@@ -728,21 +665,21 @@ const EtsySaleReport = () => {
         <div className="mt-4">
           {viewMode === 'table' ? (
             <Table
+              className="etsy-sale-report-table"
               columns={columns}
               dataSource={dataSource}
               rowKey="key"
               bordered
               pagination={false}
-              scroll={{ x: 'max-content', y: tableHeight }}
+              scroll={{ x: tableScrollX, y: tableHeight }}
               loading={loading}
-              sticky={{ offsetHeader: 0 }}
+              sticky={{ offsetHeader: 0, offsetScroll: 0 }}
               tableLayout="auto"
             />
           ) : (
             <EtsySaleReportCharts
               days={days}
               normalized={normalizedView}
-              sellerFilter={reportScope === 'total' ? '' : filters.seller}
               loading={loading}
             />
           )}
