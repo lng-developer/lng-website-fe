@@ -221,15 +221,15 @@ const VendorProduct = () => {
             Vendor Products
           </h1>
           <div className="flex justify-center items-center gap-2">
-            {/* <button
+            <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setIsShowModalImport(true)}
             >
               <span className="text-sm font-medium" style={{ color: 'black' }}>
-                Import Vendor Product
+                Import Products & Variants
               </span>
               <LuImport size={15} color="black" />
-            </button> */}
+            </button>
             <button
               className="inline-flex gap-1 items-center justify-center rounded-md text-sm font-medium border border-input bg-[#f1f5f9] h-10  space-x-1 px-4 border-[#e2e8f0] cursor-pointer"
               onClick={() => setIsShowModalAdd(true)}

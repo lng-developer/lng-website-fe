@@ -1,7 +1,7 @@
-import { Flex, Modal, Select, Spin, Upload } from 'antd';
+import { Button, Flex, Modal, Select, Spin, Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { dataColors } from '../../utils/dataColors';
 import { importVendorProduct } from '../../apis/vendor';
 import { toast } from 'sonner';
@@ -51,9 +51,26 @@ const ModalImportVendor = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCen
     return false;
   };
 
+  const downloadTemplate = () => {
+    const headers = [
+      'product_id', 'product_name', 'image', 'product_type_design', 'product_status',
+      'sku', 'vendor_size', 'vendor_color', 'standard_size', 'standard_color', 'variant_status',
+      'base_cost', 'domestic_economy', 'domestic_additional', 'international_economy', 'international_additional',
+      'priority_economy', 'priority_additional', 'embroidery_cost', 'two_sided_print_cost',
+      'two_position_print_cost', 'printing_method',
+    ];
+    const worksheet = XLSX.utils.json_to_sheet([
+      { product_id: 'G5000', product_name: 'Gildan 5000', image: 'https://example.com/g5000.jpg', product_type_design: 'T-shirt', product_status: 'Active', sku: 'G5000-BLK-S', vendor_size: 'S', vendor_color: 'Black', standard_size: 'S', standard_color: 'Black', variant_status: 'Active', base_cost: 5.5, domestic_economy: 4, domestic_additional: 1, international_economy: 8, international_additional: 2, printing_method: 'DTG' },
+      { product_id: 'G5000', product_name: 'Gildan 5000', image: 'https://example.com/g5000.jpg', product_type_design: 'T-shirt', product_status: 'Active', sku: 'G5000-BLK-M', vendor_size: 'M', vendor_color: 'Black', standard_size: 'M', standard_color: 'Black', variant_status: 'Active', base_cost: 5.5, domestic_economy: 4, domestic_additional: 1, international_economy: 8, international_additional: 2, printing_method: 'DTG' },
+    ], { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products & Variants');
+    XLSX.writeFile(workbook, 'vendor-products-variants-template.xlsx');
+  };
+
   return (
     <Modal
-      title="Import Vendor Product"
+      title="Import Products & Variants"
       okText="Import"
       closable={{ 'aria-label': 'Custom Close Button' }}
       open={isModalOpen}
@@ -76,17 +93,15 @@ const ModalImportVendor = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCen
           />
         </div>
         <div>
-          <span className="font-medium">Upload an xlsx file. Template download at </span>{' '}
-          <Link target="_blank" to={'https://docs.google.com/spreadsheets/d/13uTYBMxuQ59dwOKoIZoVdKk6mR2OhYdKclFSWxPg7Ok/edit?gid=0#gid=0'}>
-            here
-          </Link>
+          <span className="font-medium">Each row is one variant. Required product columns: product_id, product_name.</span>
         </div>
+        <Button onClick={downloadTemplate}>Download template</Button>
         <div>
           <Dragger
             beforeUpload={beforeUpload}
             fileList={fileList}
             onRemove={() => setFileList([])}
-            accept=".txt,.json,.csv"
+            accept=".xlsx,.xls"
             maxCount={1}
             style={{ padding: 16 }}
           >
@@ -102,7 +117,7 @@ const ModalImportVendor = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCen
           </div>
         )}
         <div style={{ color: dataColors.process }}>
-          <span>Please check template and sample to fill correct information.</span>
+          <span>Variant columns are optional. When supplied, sku, vendor_size and vendor_color are required. Supported pricing columns: base_cost, domestic_economy, domestic_additional, international_economy, international_additional.</span>
         </div>
       </Flex>
       {loading && <Spin tip="Đang xử lý..." size="large" style={{ color: 'white' }} fullscreen={true} />}
