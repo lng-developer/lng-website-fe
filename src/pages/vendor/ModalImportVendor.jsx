@@ -117,7 +117,7 @@ const ModalImportVendor = ({ isModalOpen, setIsModalOpen, fetchAllProductCostCen
           </div>
         )}
         <div style={{ color: dataColors.process }}>
-          <span>Variant columns are optional. When supplied, sku, vendor_size and vendor_color are required. Supported pricing columns: base_cost, domestic_economy, domestic_additional, international_economy, international_additional.</span>
+          <span>Variant columns are optional. When supplied, only sku is required; leave size/color blank for one-size products. Supported pricing columns: base_cost, domestic_economy, domestic_additional, international_economy, international_additional.</span>
         </div>
       </Flex>
       {loading && <Spin tip="Đang xử lý..." size="large" style={{ color: 'white' }} fullscreen={true} />}
