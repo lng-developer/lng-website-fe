@@ -211,6 +211,14 @@ const SubItemCost = ({
       // If we have existing size and color, set them
       if (data.sizeValue) setSelectedSize(data.sizeValue);
       if (data.colorValue) setSelectedColor(data.colorValue);
+    } else {
+      setSelectedProduct(null);
+      setVendorProducts([]);
+      setSizes([]);
+      setColors([]);
+      setSelectedSize(null);
+      setSelectedColor(null);
+      setVariantData(null);
     }
   }, [data]);
 
