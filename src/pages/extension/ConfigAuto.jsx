@@ -65,10 +65,26 @@ const formatFullTime = (dateStr) => {
 const taskStatusLabel = (status) => ({
     sent: 'Đã gửi extension',
     received: 'Extension đã nhận',
-    completed: 'Hoàn tất',
-    failed: 'Lỗi',
+    completed: '✓ Thành công',
+    failed: '✕ Thất bại',
     'no-client': 'Chưa có extension'
 }[status] || 'Chưa chạy');
+
+const taskStatusTone = (status) => ({
+    completed: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' },
+    failed: { backgroundColor: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' },
+    received: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' },
+    sent: { backgroundColor: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }
+}[status] || { backgroundColor: PAGE_TOKENS.surfaceMuted, borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.mutedText });
+
+const taskTypeLabel = (type) => TYPE_META[type]?.label || ({ IMPORT_ORDERS: 'Import Order', IMPORT_ADS_SPEND: 'Import Ads' }[type] || type || '-');
+
+const formatDuration = (from, to) => {
+    const ms = new Date(to).getTime() - new Date(from).getTime();
+    if (!from || !to || Number.isNaN(ms) || ms < 0) return '-';
+    if (ms < 60000) return `${Math.round(ms / 1000)} giây`;
+    return `${Math.floor(ms / 60000)} phút ${Math.round((ms % 60000) / 1000)} giây`;
+};
 
 const StatusBadge = ({ active }) => (
     <span
@@ -239,6 +255,19 @@ const ConfigAuto = () => {
             setTaskDetailLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        if (!selectedTaskId || !['sent', 'received'].includes(taskDetail?.status)) return undefined;
+        const timer = setInterval(async () => {
+            try {
+                const response = await getExtensionTask(selectedTaskId);
+                setTaskDetail(response.data?.data || null);
+            } catch {
+                // Keep the last known task state; manual refresh remains available.
+            }
+        }, 2000);
+        return () => clearInterval(timer);
+    }, [selectedTaskId, taskDetail?.status]);
 
     const groupedShops = Object.values(groupedByShop);
     const totalActive = shopTypeStats[activeShopType]?.active || 0;
@@ -542,16 +571,37 @@ const ConfigAuto = () => {
                                 <h2 id="task-log-title" className="m-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Vòng đời task</h2>
                                 <p className="mt-1 break-all text-xs" style={{ color: PAGE_TOKENS.mutedText }}>{selectedTaskId}</p>
                             </div>
-                            <button type="button" onClick={() => setSelectedTaskId(null)} className="rounded-md border px-2 py-1 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Đóng</button>
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => openTaskLog(selectedTaskId)} className="rounded-md border px-2 py-1 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Làm mới</button>
+                                <button type="button" onClick={() => setSelectedTaskId(null)} className="rounded-md border px-2 py-1 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Đóng</button>
+                            </div>
                         </div>
                         {taskDetailLoading ? (
                             <p className="text-sm" style={{ color: PAGE_TOKENS.mutedText }}>Đang tải...</p>
                         ) : taskDetail ? (
-                            <div className="space-y-3 text-sm" style={{ color: PAGE_TOKENS.text }}>
-                                <p className="m-0"><strong>BE gửi task:</strong> {formatFullTime(taskDetail.sentAt)}</p>
-                                <p className="m-0"><strong>Extension nhận:</strong> {formatFullTime(taskDetail.ackedAt)}</p>
-                                <p className="m-0"><strong>Kết quả:</strong> {taskStatusLabel(taskDetail.status)} {taskDetail.completedAt ? `· ${formatFullTime(taskDetail.completedAt)}` : ''}</p>
-                                {taskDetail.lastError && <p className="m-0 rounded-md bg-red-50 p-3 text-xs text-red-700">{taskDetail.lastError}</p>}
+                            <div className="space-y-4 text-sm" style={{ color: PAGE_TOKENS.text }}>
+                                <div className="flex items-center justify-between gap-3 rounded-lg border p-3" style={{ borderColor: taskStatusTone(taskDetail.status).borderColor, backgroundColor: taskStatusTone(taskDetail.status).backgroundColor }}>
+                                    <div>
+                                        <p className="m-0 text-xs font-semibold" style={{ color: PAGE_TOKENS.mutedText }}>TRẠNG THÁI HIỆN TẠI</p>
+                                        <p className="mt-1 font-semibold" style={{ color: taskStatusTone(taskDetail.status).color }}>{taskStatusLabel(taskDetail.status)}</p>
+                                        {['sent', 'received'].includes(taskDetail.status) && <p className="mt-1 text-xs" style={{ color: PAGE_TOKENS.mutedText }}>Đang tự cập nhật mỗi 2 giây</p>}
+                                    </div>
+                                    <span className="rounded-full border px-2 py-1 text-xs font-semibold" style={{ ...taskStatusTone(taskDetail.status) }}>{taskTypeLabel(taskDetail.type)}</span>
+                                </div>
+                                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Shop ID</dt><dd className="mt-1 break-all font-medium">{taskDetail.shopId || '-'}</dd></div>
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Machine ID</dt><dd className="mt-1 break-all font-medium">{taskDetail.machineId || '-'}</dd></div>
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Tạo task</dt><dd className="mt-1 font-medium">{formatFullTime(taskDetail.createdAt)}</dd></div>
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Cập nhật gần nhất</dt><dd className="mt-1 font-medium">{formatFullTime(taskDetail.updatedAt)}</dd></div>
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Số lần gửi lại</dt><dd className="mt-1 font-medium">{taskDetail.resendCount || 0}{taskDetail.lastResentAt ? ` · ${formatFullTime(taskDetail.lastResentAt)}` : ''}</dd></div>
+                                    <div><dt style={{ color: PAGE_TOKENS.mutedText }}>Thời gian chạy</dt><dd className="mt-1 font-medium">{formatDuration(taskDetail.sentAt, taskDetail.completedAt)}</dd></div>
+                                </dl>
+                                <ol className="m-0 space-y-3 border-l-2 pl-4 text-xs" style={{ borderColor: PAGE_TOKENS.border }}>
+                                    <li><strong>BE gửi task</strong><span className="block mt-0.5" style={{ color: PAGE_TOKENS.mutedText }}>{formatFullTime(taskDetail.sentAt)}</span></li>
+                                    <li><strong>Extension nhận</strong><span className="block mt-0.5" style={{ color: PAGE_TOKENS.mutedText }}>{formatFullTime(taskDetail.ackedAt)}</span></li>
+                                    <li><strong>Kết quả</strong><span className="block mt-0.5" style={{ color: PAGE_TOKENS.mutedText }}>{taskDetail.completedAt ? `${taskStatusLabel(taskDetail.status)} · ${formatFullTime(taskDetail.completedAt)}` : 'Đang chờ extension phản hồi'}</span></li>
+                                </ol>
+                                {taskDetail.lastError && <p className="m-0 rounded-md bg-red-50 p-3 text-xs text-red-700"><strong>Lỗi extension:</strong> {taskDetail.lastError}</p>}
                             </div>
                         ) : <p className="text-sm" style={{ color: PAGE_TOKENS.mutedText }}>Chưa có dữ liệu task.</p>}
                     </div>
