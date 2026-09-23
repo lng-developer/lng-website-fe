@@ -16,6 +16,10 @@ const pullAll = (payload) => {
   return instance.post('/ext/pull-all', payload);
 };
 
+const testConnection = (machineId) => {
+  return instance.post(`/ext/test-connection/${encodeURIComponent(machineId)}`);
+};
+
 const createFileConfirmShip = (payload) => {
   return instance.post('/shipping-batches', payload, {
     headers: {
@@ -55,6 +59,7 @@ export {
   getLogs,
   requestExtension,
   pullAll,
+  testConnection,
   createFileConfirmShip,
   getShippingBatch,
   updateTrackingFake,

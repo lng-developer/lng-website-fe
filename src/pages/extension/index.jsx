@@ -3,7 +3,8 @@ import { ThunderboltOutlined, SearchOutlined } from '@ant-design/icons';
 import { useOutletContext } from 'react-router-dom';
 import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Spin, Input } from 'antd';
-import { getAllClient, pullAll, requestExtension } from '../../apis/socketio';
+import { getAllClient, pullAll, requestExtension, testConnection } from '../../apis/socketio';
+import { getExtensionTask } from '../../apis/extensionLogs';
 import { toast } from 'sonner';
 
 const PAGE_TOKENS = {
@@ -56,6 +57,26 @@ const ExtensionManager = () => {
   const [loadingOrder, setLoadingOrder] = useState({});
   const [loadingAds, setLoadingAds] = useState({});
   const [loadingAll, setLoadingAll] = useState(false);
+  const [testingConnection, setTestingConnection] = useState({});
+
+  const handleTestConnection = async (client) => {
+    setTestingConnection(prev => ({ ...prev, [client.machineId]: true }));
+    try {
+      const response = await testConnection(client.machineId);
+      const taskId = response.data?.taskId;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const task = taskId ? (await getExtensionTask(taskId)).data?.data : null;
+      if (task?.status === 'completed') {
+        toast.success(`${client.label || client.shopName}: extension đã nhận và hoàn tất task test`);
+      } else {
+        toast.message(`${client.label || client.shopName}: task test đã gửi, trạng thái ${task?.status || 'đang chờ'}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể gửi task kiểm tra');
+    } finally {
+      setTestingConnection(prev => ({ ...prev, [client.machineId]: false }));
+    }
+  };
 
   const handleImportOrder = async (client) => {
     setLoadingOrder(prev => ({ ...prev, [client.clientId]: true }));
@@ -266,6 +287,7 @@ const ExtensionManager = () => {
                   filteredClients.map((client) => {
                     const isOrderLoading = !!loadingOrder[client.clientId];
                     const isAdsLoading = !!loadingAds[client.clientId];
+                    const isTestingConnection = !!testingConnection[client.machineId];
                     const canRequest = client.status === 'online' && !!client.machineId;
                     const statusMeta = getStatusMeta(client.status);
 
@@ -294,6 +316,17 @@ const ExtensionManager = () => {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
+                            <button
+                              onClick={() => handleTestConnection(client)}
+                              disabled={isTestingConnection || !canRequest}
+                              className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-3 text-xs font-semibold transition-colors hover:bg-[#f1f5f9] disabled:cursor-not-allowed disabled:opacity-50"
+                              style={{ borderColor: PAGE_TOKENS.primary, color: PAGE_TOKENS.primary }}
+                              title={canRequest ? 'Gửi task giả để kiểm tra BE và extension' : 'Chỉ test được khi extension online'}
+                              aria-label={`Test connection for ${client.label || client.shopName}`}
+                            >
+                              {isTestingConnection ? <Spin size="small" /> : <ThunderboltOutlined />}
+                              <span>Test</span>
+                            </button>
                             <button
                               onClick={() => handleImportOrder(client)}
                               disabled={isOrderLoading || !canRequest}
