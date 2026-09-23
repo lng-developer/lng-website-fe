@@ -19,3 +19,7 @@ export const createConfigAuto = (data) => {
 export const deleteConfigAuto = (id) => {
   return instance.delete(`/auto-config/${id}`);
 };
+
+export const runConfigAutoNow = (id) => {
+  return instance.post(`/auto-config/${id}/run`);
+};

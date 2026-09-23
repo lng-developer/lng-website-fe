@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { createConfigAuto, deleteConfigAuto, getConfigAutos, updateConfigAuto } from '../../apis/configAuto';
+import { createConfigAuto, deleteConfigAuto, getConfigAutos, runConfigAutoNow, updateConfigAuto } from '../../apis/configAuto';
 import { getAllShop } from '../../apis/shop';
 import { getExtensionTask } from '../../apis/extensionLogs';
 import { toast } from 'sonner';
@@ -29,6 +29,15 @@ const TYPE_META = {
 const SHOP_TYPES = ['Amazon', 'Etsy'];
 const SCHEDULABLE_TYPES = ['IMPORT_ORDER', 'IMPORT_ADS'];
 const DEFAULT_SCHEDULE_HOURS = '5, 10, 15, 20';
+const STABLE_ADS_RULES = [
+    { hour: 10, minute: 30, daysOfWeek: [0, 1, 2, 3, 4, 5, 6], startDaysAgo: 1, endDaysAgo: 1 },
+    { hour: 18, minute: 30, daysOfWeek: [0, 1, 2, 3, 4, 5, 6], startDaysAgo: 1, endDaysAgo: 1 },
+    { hour: 10, minute: 30, daysOfWeek: [6], startDaysAgo: 7, endDaysAgo: 2 }
+];
+const cloneStableAdsRules = () => STABLE_ADS_RULES.map((rule) => ({ ...rule, daysOfWeek: [...rule.daysOfWeek] }));
+const adsScheduleLabel = (rules = []) => rules.length
+    ? '10:30 D-1 · 18:30 D-1 · Thứ bảy 10:30 D-7 → D-2'
+    : 'Lịch giờ cũ';
 
 const parseScheduleHours = (value) => {
     const hours = String(value || '')
@@ -112,10 +121,11 @@ const ConfigAuto = () => {
     const [activeShopType, setActiveShopType] = useState('Amazon');
     const [showCreate, setShowCreate] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [createForm, setCreateForm] = useState({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, status: false });
+    const [createForm, setCreateForm] = useState({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, adsStartDaysAgo: 1, adsEndDaysAgo: 1, adsScheduleRules: cloneStableAdsRules(), status: false });
     const [editingConfig, setEditingConfig] = useState(null);
-    const [editForm, setEditForm] = useState({ scheduleHours: '', status: false });
+    const [editForm, setEditForm] = useState({ scheduleHours: '', adsStartDaysAgo: 1, adsEndDaysAgo: 1, status: false });
     const [savingEdit, setSavingEdit] = useState(false);
+    const [runningConfigId, setRunningConfigId] = useState(null);
     const [selectedTaskId, setSelectedTaskId] = useState(null);
     const [taskDetail, setTaskDetail] = useState(null);
     const [taskDetailLoading, setTaskDetailLoading] = useState(false);
@@ -178,7 +188,10 @@ const ConfigAuto = () => {
         const shop = shops.find((item) => String(item._id) === createForm.shopId);
         if (!shop) return toast.error('Vui lòng chọn shop đang hoạt động');
         const scheduleHours = parseScheduleHours(createForm.scheduleHours);
-        if (!scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        if (createForm.type !== 'IMPORT_ADS' && !scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        if (createForm.type === 'IMPORT_ADS' && (Number(createForm.adsStartDaysAgo) < Number(createForm.adsEndDaysAgo))) {
+            return toast.error('Ngày bắt đầu phải là ngày cũ hơn hoặc bằng ngày kết thúc');
+        }
         if (configs.some((cfg) => String(cfg.shopId) === createForm.shopId && cfg.type === createForm.type)) {
             return toast.error('Shop này đã có cấu hình cho tác vụ đã chọn');
         }
@@ -190,12 +203,14 @@ const ConfigAuto = () => {
                 shopName: shop.name || shop.store,
                 shopType: shop.merchant || 'Amazon',
                 type: createForm.type,
-                scheduleHours,
+                scheduleHours: createForm.type === 'IMPORT_ADS' ? [] : scheduleHours,
+                time: 60,
+                ...(createForm.type === 'IMPORT_ADS' ? { adsStartDaysAgo: 1, adsEndDaysAgo: 1, adsScheduleRules: createForm.adsScheduleRules } : {}),
                 status: createForm.status
             });
             toast.success(createForm.status ? 'Đã tạo và bật cấu hình' : 'Đã tạo cấu hình ở trạng thái tắt');
             setShowCreate(false);
-            setCreateForm({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, status: false });
+            setCreateForm({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, adsStartDaysAgo: 1, adsEndDaysAgo: 1, adsScheduleRules: cloneStableAdsRules(), status: false });
             fetchData();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Không thể tạo cấu hình');
@@ -206,17 +221,21 @@ const ConfigAuto = () => {
 
     const openEdit = useCallback((cfg) => {
         setEditingConfig(cfg);
-        setEditForm({ scheduleHours: (cfg.scheduleHours || []).join(', '), status: cfg.status });
+        setEditForm({ scheduleHours: (cfg.scheduleHours || []).join(', '), adsStartDaysAgo: cfg.adsStartDaysAgo ?? 1, adsEndDaysAgo: cfg.adsEndDaysAgo ?? 1, adsScheduleRules: cfg.adsScheduleRules?.length ? cfg.adsScheduleRules : cloneStableAdsRules(), status: cfg.status });
     }, []);
 
     const handleEdit = useCallback(async (event) => {
         event.preventDefault();
         const scheduleHours = parseScheduleHours(editForm.scheduleHours);
-        if (!scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        if (editingConfig.type !== 'IMPORT_ADS' && !scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        if (editingConfig.type === 'IMPORT_ADS' && Number(editForm.adsStartDaysAgo) < Number(editForm.adsEndDaysAgo)) {
+            return toast.error('Ngày bắt đầu phải là ngày cũ hơn hoặc bằng ngày kết thúc');
+        }
         setSavingEdit(true);
         try {
-            const response = await updateConfigAuto(editingConfig._id, { scheduleHours, status: editForm.status });
-            const updated = response.data?.data || { ...editingConfig, scheduleHours, status: editForm.status };
+            const payload = { scheduleHours: editingConfig.type === 'IMPORT_ADS' ? [] : scheduleHours, status: editForm.status, ...(editingConfig.type === 'IMPORT_ADS' ? { adsStartDaysAgo: 1, adsEndDaysAgo: 1, adsScheduleRules: editForm.adsScheduleRules } : {}) };
+            const response = await updateConfigAuto(editingConfig._id, payload);
+            const updated = response.data?.data || { ...editingConfig, ...payload };
             setConfigs((prev) => prev.map((item) => (item._id === editingConfig._id ? updated : item)));
             setEditingConfig(null);
             toast.success('Đã cập nhật cấu hình');
@@ -255,6 +274,29 @@ const ConfigAuto = () => {
             setTaskDetailLoading(false);
         }
     }, []);
+
+    const handleRunNow = useCallback(async (cfg) => {
+        const taskName = TYPE_META[cfg.type]?.label || cfg.type;
+        if (!window.confirm(`Gửi ${taskName} tới extension của ${cfg.shopName} ngay bây giờ?`)) return;
+        setRunningConfigId(cfg._id);
+        try {
+            const response = await runConfigAutoNow(cfg._id);
+            const task = response.data?.data;
+            setConfigs((prev) => prev.map((item) => (item._id === cfg._id ? {
+                ...item,
+                lastTaskId: task?.taskId,
+                lastTaskStatus: 'sent',
+                lastTaskError: '',
+                lastDispatchedAt: new Date().toISOString()
+            } : item)));
+            toast.success(`Đã gửi ${taskName} tới extension`);
+            if (task?.taskId) openTaskLog(task.taskId);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể gửi task tới extension');
+        } finally {
+            setRunningConfigId(null);
+        }
+    }, [openTaskLog]);
 
     useEffect(() => {
         if (!selectedTaskId || !['sent', 'received'].includes(taskDetail?.status)) return undefined;
@@ -456,6 +498,10 @@ const ConfigAuto = () => {
                                                             </span>
                                                             <span style={{ color: PAGE_TOKENS.borderStrong }}>·</span>
                                                             <span>{taskStatusLabel(cfg.lastTaskStatus)}</span>
+                                                            {cfg.type === 'IMPORT_ADS' && <>
+                                                                <span style={{ color: PAGE_TOKENS.borderStrong }}>·</span>
+                                                                <span>{adsScheduleLabel(cfg.adsScheduleRules)}</span>
+                                                            </>}
                                                             {cfg.lastDispatchedAt && <>
                                                                 <span style={{ color: PAGE_TOKENS.borderStrong }}>·</span>
                                                                 <span>Gửi {formatRelativeTime(cfg.lastDispatchedAt)}</span>
@@ -463,6 +509,16 @@ const ConfigAuto = () => {
                                                         </div>
                                                     </div>
 
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRunNow(cfg)}
+                                                        disabled={isUpdating || runningConfigId === cfg._id}
+                                                        className="rounded-md border px-2 py-1 text-xs font-semibold transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        style={{ borderColor: '#86efac', color: '#166534' }}
+                                                        aria-label={`Chạy ngay ${meta.label}`}
+                                                    >
+                                                        {runningConfigId === cfg._id ? 'Đang gửi...' : 'Chạy ngay'}
+                                                    </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => openEdit(cfg)}
@@ -525,17 +581,18 @@ const ConfigAuto = () => {
                                     {SCHEDULABLE_TYPES.map((type) => <option key={type} value={type}>{TYPE_META[type].label}</option>)}
                                 </select>
                             </label>
-                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                            {createForm.type !== 'IMPORT_ADS' && <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
                                 Giờ chạy (giờ Việt Nam, cách nhau bằng dấu phẩy)
                                 <input required value={createForm.scheduleHours} onChange={(event) => setCreateForm((current) => ({ ...current, scheduleHours: event.target.value }))} placeholder="5, 10, 15, 20" className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }} />
-                            </label>
+                            </label>}
+                            {createForm.type === 'IMPORT_ADS' && <p className="m-0 rounded-md border p-3 text-xs" style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}>Lịch Ads ổn định: 10:30 D-1 · 18:30 D-1 · Thứ bảy 10:30 D-7 → D-2.</p>}
                             <label className="flex items-center gap-2 text-sm" style={{ color: PAGE_TOKENS.text }}>
                                 <input type="checkbox" checked={createForm.status} onChange={(event) => setCreateForm((current) => ({ ...current, status: event.target.checked }))} /> Bật ngay sau khi tạo
                             </label>
                         </div>
                         <div className="mt-6 flex justify-end gap-2">
                             <button type="button" disabled={creating} onClick={() => setShowCreate(false)} className="rounded-md border px-3 py-2 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Hủy</button>
-                            <button type="submit" disabled={creating || !createForm.shopId || !parseScheduleHours(createForm.scheduleHours).length} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{creating ? 'Đang tạo...' : 'Tạo cấu hình'}</button>
+                            <button type="submit" disabled={creating || !createForm.shopId || (createForm.type !== 'IMPORT_ADS' && !parseScheduleHours(createForm.scheduleHours).length)} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{creating ? 'Đang tạo...' : 'Tạo cấu hình'}</button>
                         </div>
                     </form>
                 </div>
@@ -548,17 +605,18 @@ const ConfigAuto = () => {
                             <p className="mt-1 text-xs" style={{ color: PAGE_TOKENS.mutedText }}>{editingConfig.shopName} · {TYPE_META[editingConfig.type]?.label || editingConfig.type}</p>
                         </div>
                         <div className="space-y-4">
-                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                            {editingConfig.type !== 'IMPORT_ADS' && <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
                                 Giờ chạy (giờ Việt Nam, cách nhau bằng dấu phẩy)
                                 <input autoFocus required value={editForm.scheduleHours} onChange={(event) => setEditForm((current) => ({ ...current, scheduleHours: event.target.value }))} placeholder="5, 10, 15, 20" className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }} />
-                            </label>
+                            </label>}
+                            {editingConfig.type === 'IMPORT_ADS' && <p className="m-0 rounded-md border p-3 text-xs" style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}>Lịch Ads ổn định: {adsScheduleLabel(editForm.adsScheduleRules)}. Lưu để áp dụng preset này.</p>}
                             <label className="flex items-center gap-2 text-sm" style={{ color: PAGE_TOKENS.text }}>
                                 <input type="checkbox" checked={editForm.status} onChange={(event) => setEditForm((current) => ({ ...current, status: event.target.checked }))} /> Bật cấu hình
                             </label>
                         </div>
                         <div className="mt-6 flex justify-end gap-2">
                             <button type="button" disabled={savingEdit} onClick={() => setEditingConfig(null)} className="rounded-md border px-3 py-2 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Hủy</button>
-                            <button type="submit" disabled={savingEdit || !parseScheduleHours(editForm.scheduleHours).length} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                            <button type="submit" disabled={savingEdit || (editingConfig.type !== 'IMPORT_ADS' && !parseScheduleHours(editForm.scheduleHours).length)} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
                         </div>
                     </form>
                 </div>
