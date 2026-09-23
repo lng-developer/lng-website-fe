@@ -20,6 +20,6 @@ export const deleteConfigAuto = (id) => {
   return instance.delete(`/auto-config/${id}`);
 };
 
-export const runConfigAutoNow = (id) => {
-  return instance.post(`/auto-config/${id}/run`);
+export const runConfigAutoNow = (id, payload = {}) => {
+  return instance.post(`/auto-config/${id}/run`, payload);
 };
