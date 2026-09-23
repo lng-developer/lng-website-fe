@@ -1,10 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getAllShop } from '../../../apis/shop';
-import { checkOrdersStatus, createShippingBatchFromOrders } from '../../../apis/shippingBatch';
+import {
+    approveTrackingReview,
+    checkOrdersStatus,
+    createShippingBatchFromOrders,
+    sendShippingBatchUpload
+} from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
 
-const getCarrierInfo = (tracking) => {
+const getCarrierInfo = (tracking, carrier = '') => {
+    const carrierName = carrier.toLowerCase();
+    if (carrierName.includes('4px')) {
+        return { carrierCode: '4PX', shipMethod: '4PX-Global Express' };
+    }
+    if (carrierName.includes('yanwen')) {
+        return { carrierCode: 'Yanwen', shipMethod: 'Yanwen Air Economy Mail General' };
+    }
+    if (carrierName.includes('yun')) {
+        return { carrierCode: 'Yun Express', shipMethod: 'YunExpress Global Direct line (standard )-Tracked' };
+    }
+    if (carrierName.includes('usps')) {
+        return { carrierCode: 'USPS', shipMethod: 'USPS First Class' };
+    }
     const t = (tracking || '').toUpperCase();
     if (t.startsWith('4PX')) {
         return { carrierCode: '4PX', shipMethod: '4PX-Global Express' };
@@ -22,6 +40,14 @@ const getCarrierInfo = (tracking) => {
 };
 
 const formatShipDate = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+
+const getAmazonUsDate = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
+};
 
 const generateFakeTracking = () => {
     const prefix = '9234';
@@ -132,6 +158,10 @@ const CheckOder = () => {
     const [exporting, setExporting] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
     const [exportingFake, setExportingFake] = useState(false);
+    const [reviewBatches, setReviewBatches] = useState([]);
+    const [reviewShipDate, setReviewShipDate] = useState(getAmazonUsDate);
+    const [confirmedSingleShipment, setConfirmedSingleShipment] = useState(false);
+    const [confirmedNoTransparency, setConfirmedNoTransparency] = useState(false);
 
     useEffect(() => {
         getShop();
@@ -240,6 +270,13 @@ const CheckOder = () => {
             return matchesTracking && matchesAmazon && matchesAmzDate && matchesSearch;
         });
     }, [orders, filterTracking, filterAmazon, filterAmzDateFrom, filterAmzDateTo, searchTerm]);
+
+    const reviewRows = useMemo(() => reviewBatches.flatMap((batch) =>
+        (batch.orders || []).map((order) => ({
+            ...order,
+            itemsCount: orders.find((current) => current.orderId === order.orderId && current.shopId === batch.shopId)?.itemsCount || 0
+        }))
+    ), [reviewBatches, orders]);
 
     const getOrderKey = (order) =>
         `${order.orderId || 'no-order-id'}__${order.shopId || 'no-shop-id'}`;
@@ -471,40 +508,51 @@ const CheckOder = () => {
 
         try {
             setSubmitting(true);
-            await createShippingBatchFromOrders({
+            const res = await createShippingBatchFromOrders({
                 machineId: selectedShop._id,
                 orders: selectedOrders,
                 label: 'Manual Upload',
-                autoUpload: true
+                autoUpload: false
             });
-
-            alert(`Đẩy đơn thành công: ${selectedOrders.length} đơn`);
-
-            setOrders((prevOrders) =>
-                prevOrders.map((order) => {
-                    const isSubmitted = selectedOrders.some(
-                        (selected) =>
-                            selected.orderId === order.orderId && selected.shopId === order.shopId
-                    );
-                    return isSubmitted ? { ...order, submittedToAmazon: true } : order;
-                })
-            );
-
-            setStats((prevStats) => ({
-                ...prevStats,
-                totalSubmitted: (prevStats.totalSubmitted || 0) + selectedOrders.length,
-                totalNotSubmitted: (prevStats.totalNotSubmitted || 0) - selectedOrders.length
-            }));
-
-            setSelectedOrders([]);
-
-            const shouldReload = window.confirm(
-                'Đẩy đơn thành công! Bạn có muốn tải lại dữ liệu để cập nhật trạng thái mới nhất không?'
-            );
-            if (shouldReload) fetchData();
+            const batches = (res.data?.batches || []).filter((batch) => batch.success && batch.totalReal > 0 && batch.totalFake === 0);
+            if (!batches.length) {
+                alert('Không có batch nào đủ tracking thật để review.');
+                return;
+            }
+            setReviewBatches(batches);
+            setConfirmedSingleShipment(false);
+            setConfirmedNoTransparency(false);
         } catch (err) {
             console.error('Push orders error:', err);
             alert(err.response?.data?.message || err.message || 'Có lỗi khi đẩy đơn');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleApproveAndSend = async () => {
+        if (!confirmedSingleShipment || !confirmedNoTransparency) return;
+        try {
+            setSubmitting(true);
+            for (const batch of reviewBatches) {
+                await approveTrackingReview(batch.batchId, {
+                    shipDate: reviewShipDate,
+                    confirmedSingleShipment,
+                    confirmedNoTransparency
+                });
+                await sendShippingBatchUpload({
+                    batchId: batch.batchId,
+                    machineId: selectedShop._id,
+                    shopId: batch.shopId
+                });
+            }
+            alert(`Đã gửi ${reviewBatches.reduce((total, batch) => total + batch.totalReal, 0)} đơn sang extension.`);
+            setReviewBatches([]);
+            setSelectedOrders([]);
+            fetchData();
+        } catch (err) {
+            console.error('Review/send tracking error:', err);
+            alert(err.response?.data?.message || err.message || 'Không thể gửi task upload tracking');
         } finally {
             setSubmitting(false);
         }
@@ -903,12 +951,12 @@ const CheckOder = () => {
                         </button>
 
                         <button
-                            aria-label="Push selected orders to Amazon"
+                            aria-label="Review selected orders before sending to Amazon"
                             onClick={handlePushOrders}
                             disabled={submitting || selectedOrders.length === 0 || loading}
                             className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {submitting ? '...' : `Đẩy đơn (${selectedOrders.length})`}
+                            {submitting ? 'Đang tạo review...' : `Review & gửi (${selectedOrders.length})`}
                         </button>
                     </div>
                 </div>
@@ -1078,6 +1126,49 @@ const CheckOder = () => {
                     </div>
                 </div>
             </div>
+
+            {reviewBatches.length > 0 && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Review Shipping Confirmation">
+                    <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                        <div className="border-b border-slate-200 px-5 py-4">
+                            <h2 className="text-base font-bold text-slate-900">Review Shipping Confirmation</h2>
+                            <p className="mt-1 text-xs text-slate-600" role="status">Chưa có task nào được gửi. Kiểm tra dữ liệu dưới đây trước khi xác nhận.</p>
+                        </div>
+                        <div className="max-h-[52vh] overflow-auto px-5 py-4">
+                            <label className="mb-4 flex max-w-xs flex-col gap-1 text-xs font-semibold text-slate-700">
+                                Ship date dự phòng (chỉ dùng khi vendor chưa có thời điểm trả tracking)
+                                <input type="date" value={reviewShipDate} max={getAmazonUsDate()} onChange={(event) => setReviewShipDate(event.target.value)} className="rounded border border-slate-300 px-2 py-1.5 text-sm" />
+                            </label>
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-100 text-slate-600">
+                                    <tr><th className="px-2 py-2">Order ID</th><th className="px-2 py-2">Tracking</th><th className="px-2 py-2">Carrier</th><th className="px-2 py-2">Ship date</th><th className="px-2 py-2">Items</th><th className="px-2 py-2">Amazon fields</th></tr>
+                                </thead>
+                                <tbody>
+                                    {reviewRows.map((order) => {
+                                        const carrier = getCarrierInfo(order.tracking, order.carrier);
+                                        return <tr key={`${order.orderId}-${order.tracking}`} className="border-b border-slate-100 text-slate-700">
+                                            <td className="px-2 py-2 font-mono">{order.orderId}</td>
+                                            <td className="px-2 py-2 font-mono">{order.tracking}</td>
+                                            <td className="px-2 py-2">{carrier.carrierCode}</td>
+                                            <td className="px-2 py-2">{order.shipDate || 'Dùng ngày dự phòng'}</td>
+                                            <td className="px-2 py-2">{order.itemsCount > 1 ? <span className="font-semibold text-amber-800">{order.itemsCount} · kiểm tra split</span> : order.itemsCount || '—'}</td>
+                                            <td className="px-2 py-2">order-item-id, quantity, Transparency, ship-from: để trống (whole-order)</td>
+                                        </tr>;
+                                    })}
+                                </tbody>
+                            </table>
+                            <div className="mt-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                                <label className="flex items-start gap-2"><input type="checkbox" checked={confirmedSingleShipment} onChange={(event) => setConfirmedSingleShipment(event.target.checked)} className="mt-0.5" />Tôi xác nhận mỗi order trong batch được giao trong một shipment duy nhất. Split shipment cần order-item-id và quantity nên không được gửi bằng flow này.</label>
+                                <label className="flex items-start gap-2"><input type="checkbox" checked={confirmedNoTransparency} onChange={(event) => setConfirmedNoTransparency(event.target.checked)} className="mt-0.5" />Tôi xác nhận các sản phẩm này không yêu cầu Transparency code. Nếu có Transparency, dừng flow này và bổ sung code theo order item.</label>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+                            <button onClick={() => setReviewBatches([])} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Hủy</button>
+                            <button onClick={handleApproveAndSend} disabled={submitting || !reviewShipDate || !confirmedSingleShipment || !confirmedNoTransparency} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{submitting ? 'Đang gửi...' : `Xác nhận & gửi ${reviewBatches.reduce((total, batch) => total + batch.totalReal, 0)} đơn`}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

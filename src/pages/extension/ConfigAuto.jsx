@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { getConfigAutos, updateConfigAuto } from '../../apis/configAuto';
+import { createConfigAuto, deleteConfigAuto, getConfigAutos, updateConfigAuto } from '../../apis/configAuto';
+import { getAllShop } from '../../apis/shop';
+import { getExtensionTask } from '../../apis/extensionLogs';
 import { toast } from 'sonner';
 
 const PAGE_TOKENS = {
@@ -25,45 +27,16 @@ const TYPE_META = {
 };
 
 const SHOP_TYPES = ['Amazon', 'Etsy'];
+const SCHEDULABLE_TYPES = ['IMPORT_ORDER', 'IMPORT_ADS'];
+const DEFAULT_SCHEDULE_HOURS = '5, 10, 15, 20';
 
-const Toggle = ({ checked, onChange, disabled, label }) => (
-    <button
-        type="button"
-        onClick={onChange}
-        disabled={disabled}
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        style={{
-            width: 44,
-            height: 24,
-            borderRadius: 999,
-            border: 'none',
-            padding: 0,
-            position: 'relative',
-            flexShrink: 0,
-            background: checked ? PAGE_TOKENS.primary : PAGE_TOKENS.borderStrong,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.5 : 1,
-            transition: 'background 0.25s'
-        }}
-    >
-        <span
-            style={{
-                position: 'absolute',
-                top: 2,
-                left: 2,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#fff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                transform: checked ? 'translateX(20px)' : 'translateX(0)',
-                transition: 'transform 0.25s'
-            }}
-        />
-    </button>
-);
+const parseScheduleHours = (value) => {
+    const hours = String(value || '')
+        .split(',')
+        .map((part) => Number(part.trim()))
+        .filter((hour) => Number.isInteger(hour) && hour >= 0 && hour <= 23);
+    return [...new Set(hours)].sort((a, b) => a - b);
+};
 
 const formatRelativeTime = (dateStr) => {
     if (!dateStr) return '-';
@@ -83,9 +56,19 @@ const formatFullTime = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return '-';
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return new Intl.DateTimeFormat('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(d);
 };
+
+const taskStatusLabel = (status) => ({
+    sent: 'Đã gửi extension',
+    received: 'Extension đã nhận',
+    completed: 'Hoàn tất',
+    failed: 'Lỗi',
+    'no-client': 'Chưa có extension'
+}[status] || 'Chưa chạy');
 
 const StatusBadge = ({ active }) => (
     <span
@@ -100,22 +83,34 @@ const StatusBadge = ({ active }) => (
             className="h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: active ? PAGE_TOKENS.success : PAGE_TOKENS.borderStrong }}
         />
-        {active ? 'Running' : 'Paused'}
+        {active ? 'Đang bật' : 'Đã tắt'}
     </span>
 );
 
 const ConfigAuto = () => {
     const { collapsed } = useOutletContext();
     const [configs, setConfigs] = useState([]);
+    const [shops, setShops] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updating, setUpdating] = useState(null);
     const [activeShopType, setActiveShopType] = useState('Amazon');
+    const [showCreate, setShowCreate] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [createForm, setCreateForm] = useState({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, status: false });
+    const [editingConfig, setEditingConfig] = useState(null);
+    const [editForm, setEditForm] = useState({ scheduleHours: '', status: false });
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
+    const [taskDetail, setTaskDetail] = useState(null);
+    const [taskDetailLoading, setTaskDetailLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await getConfigAutos();
-            setConfigs(res.data?.data || []);
+            const [configRes, shopRes] = await Promise.all([getConfigAutos(), getAllShop()]);
+            setConfigs(configRes.data?.data || []);
+            const shopRows = Array.isArray(shopRes.data) ? shopRes.data : shopRes.data?.data || [];
+            setShops(shopRows.filter((shop) => shop?.status === 'Active'));
         } catch {
             toast.error('Không thể tải cấu hình');
         } finally {
@@ -162,39 +157,90 @@ const ConfigAuto = () => {
         [filteredConfigs]
     );
 
-    const handleToggle = useCallback(async (cfg) => {
+    const handleCreate = useCallback(async (event) => {
+        event.preventDefault();
+        const shop = shops.find((item) => String(item._id) === createForm.shopId);
+        if (!shop) return toast.error('Vui lòng chọn shop đang hoạt động');
+        const scheduleHours = parseScheduleHours(createForm.scheduleHours);
+        if (!scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        if (configs.some((cfg) => String(cfg.shopId) === createForm.shopId && cfg.type === createForm.type)) {
+            return toast.error('Shop này đã có cấu hình cho tác vụ đã chọn');
+        }
+
+        try {
+            setCreating(true);
+            await createConfigAuto({
+                shopId: createForm.shopId,
+                shopName: shop.name || shop.store,
+                shopType: shop.merchant || 'Amazon',
+                type: createForm.type,
+                scheduleHours,
+                status: createForm.status
+            });
+            toast.success(createForm.status ? 'Đã tạo và bật cấu hình' : 'Đã tạo cấu hình ở trạng thái tắt');
+            setShowCreate(false);
+            setCreateForm({ shopId: '', type: 'IMPORT_ORDER', scheduleHours: DEFAULT_SCHEDULE_HOURS, status: false });
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tạo cấu hình');
+        } finally {
+            setCreating(false);
+        }
+    }, [configs, createForm, fetchData, shops]);
+
+    const openEdit = useCallback((cfg) => {
+        setEditingConfig(cfg);
+        setEditForm({ scheduleHours: (cfg.scheduleHours || []).join(', '), status: cfg.status });
+    }, []);
+
+    const handleEdit = useCallback(async (event) => {
+        event.preventDefault();
+        const scheduleHours = parseScheduleHours(editForm.scheduleHours);
+        if (!scheduleHours.length) return toast.error('Nhập ít nhất một giờ từ 0 đến 23, cách nhau bằng dấu phẩy');
+        setSavingEdit(true);
+        try {
+            const response = await updateConfigAuto(editingConfig._id, { scheduleHours, status: editForm.status });
+            const updated = response.data?.data || { ...editingConfig, scheduleHours, status: editForm.status };
+            setConfigs((prev) => prev.map((item) => (item._id === editingConfig._id ? updated : item)));
+            setEditingConfig(null);
+            toast.success('Đã cập nhật cấu hình');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Cập nhật thất bại');
+        } finally {
+            setSavingEdit(false);
+        }
+    }, [editForm, editingConfig]);
+
+    const handleDelete = useCallback(async (cfg) => {
+        const taskName = TYPE_META[cfg.type]?.label || cfg.type;
+        if (!window.confirm(`Xóa cấu hình ${taskName} của ${cfg.shopName}? Task chưa chạy sẽ không bị gửi tiếp.`)) return;
         setUpdating(cfg._id);
         try {
-            await updateConfigAuto(cfg._id, { status: !cfg.status });
-            setConfigs((prev) =>
-                prev.map((c) => (c._id === cfg._id ? { ...c, status: !c.status } : c))
-            );
-            toast.success(
-                `${TYPE_META[cfg.type]?.label || cfg.type} đã ${!cfg.status ? 'bật' : 'tắt'}`
-            );
-        } catch {
-            toast.error('Cập nhật thất bại');
+            await deleteConfigAuto(cfg._id);
+            setConfigs((prev) => prev.filter((item) => item._id !== cfg._id));
+            toast.success('Đã xóa cấu hình');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể xóa cấu hình');
         } finally {
             setUpdating(null);
         }
     }, []);
 
-    const handleTimeChange = useCallback(async (cfg, newTime) => {
-        setUpdating(cfg._id);
+    const openTaskLog = useCallback(async (taskId) => {
+        setSelectedTaskId(taskId);
+        setTaskDetail(null);
+        setTaskDetailLoading(true);
         try {
-            await updateConfigAuto(cfg._id, { time: newTime });
-            setConfigs((prev) =>
-                prev.map((c) => (c._id === cfg._id ? { ...c, time: newTime } : c))
-            );
-            toast.success('Đã cập nhật thời gian');
-        } catch {
-            toast.error('Cập nhật thất bại');
+            const response = await getExtensionTask(taskId);
+            setTaskDetail(response.data?.data || null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải lịch sử task');
         } finally {
-            setUpdating(null);
+            setTaskDetailLoading(false);
         }
     }, []);
 
-    const shops = Object.values(groupedByShop);
+    const groupedShops = Object.values(groupedByShop);
     const totalActive = shopTypeStats[activeShopType]?.active || 0;
 
     return (
@@ -263,12 +309,12 @@ const ConfigAuto = () => {
                             <span className="text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
                                 {totalActive}
                             </span>
-                            <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>đang chạy</span>
+                            <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>cấu hình bật</span>
                             <span className="mx-1 h-3 w-px" style={{ backgroundColor: PAGE_TOKENS.borderStrong }}></span>
                             <span className="text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
                                 {filteredConfigs.length}
                             </span>
-                            <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>tổng</span>
+                            <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>cấu hình</span>
                         </div>
 
                         <button
@@ -279,6 +325,14 @@ const ConfigAuto = () => {
                         >
                             {loading ? 'Đang tải...' : 'Refresh'}
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowCreate(true)}
+                            className="rounded-md border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0958d7] focus-visible:ring-offset-2"
+                            style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.primary, color: PAGE_TOKENS.primary }}
+                        >
+                            + Thêm cấu hình
+                        </button>
                     </div>
                 </div>
             </div>
@@ -288,13 +342,13 @@ const ConfigAuto = () => {
                     <div className="py-16 text-center text-sm" style={{ color: PAGE_TOKENS.mutedText }}>
                         Đang tải cấu hình...
                     </div>
-                ) : shops.length === 0 ? (
+                ) : groupedShops.length === 0 ? (
                     <div className="py-16 text-center text-sm" style={{ color: PAGE_TOKENS.mutedText }}>
                         Không có cấu hình nào
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-3 pt-4 md:grid-cols-2 xl:grid-cols-3">
-                        {shops.map((shop) => {
+                        {groupedShops.map((shop) => {
                             const activeCount = shop.items.filter((i) => i.status).length;
                             const hasActive = activeCount > 0;
                             return (
@@ -359,50 +413,58 @@ const ConfigAuto = () => {
                                                             {meta.label}
                                                         </div>
                                                         <div
-                                                            className="mt-0.5 flex items-center gap-1 text-xs leading-tight"
+                                                            className="mt-0.5 flex flex-wrap items-center gap-1 text-xs leading-tight"
                                                             style={{ color: PAGE_TOKENS.mutedText }}
                                                             title={
-                                                                cfg.updated_at
-                                                                    ? new Date(
-                                                                          cfg.updated_at
-                                                                      ).toLocaleString('vi-VN')
+                                                                cfg.nextRunAt
+                                                                    ? `Lần chạy tiếp theo: ${new Date(cfg.nextRunAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`
                                                                     : ''
                                                             }
                                                         >
+                                                            <span style={{ color: PAGE_TOKENS.mutedText }}>Chạy tiếp:</span>
                                                             <span className="font-semibold" style={{ color: PAGE_TOKENS.text }}>
-                                                                {formatFullTime(cfg.updated_at)}
+                                                                {cfg.status ? formatFullTime(cfg.nextRunAt) : 'Đã tắt'}
                                                             </span>
                                                             <span style={{ color: PAGE_TOKENS.borderStrong }}>·</span>
-                                                            <span>{formatRelativeTime(cfg.updated_at)}</span>
+                                                            <span>{taskStatusLabel(cfg.lastTaskStatus)}</span>
+                                                            {cfg.lastDispatchedAt && <>
+                                                                <span style={{ color: PAGE_TOKENS.borderStrong }}>·</span>
+                                                                <span>Gửi {formatRelativeTime(cfg.lastDispatchedAt)}</span>
+                                                            </>}
                                                         </div>
                                                     </div>
 
-                                                    <select
-                                                        value={cfg.time}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openEdit(cfg)}
                                                         disabled={isUpdating}
-                                                        onChange={(e) =>
-                                                            handleTimeChange(
-                                                                cfg,
-                                                                Number(e.target.value)
-                                                            )
-                                                        }
-                                                        className="h-8 cursor-pointer rounded-md border bg-white px-2 text-xs font-semibold outline-none transition-colors focus:border-[#0958d7] disabled:cursor-not-allowed disabled:opacity-50"
-                                                        style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}
-                                                        aria-label={`Chọn chu kỳ chạy ${meta.label}`}
+                                                        className="rounded-md border px-2 py-1 text-xs font-semibold transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        style={{ borderColor: `${PAGE_TOKENS.primary}55`, color: PAGE_TOKENS.primary }}
+                                                        aria-label={`Sửa ${meta.label}`}
                                                     >
-                                                        {[5, 30, 60, 120, 240, 720].map((t) => (
-                                                            <option key={t} value={t}>
-                                                                {t}p
-                                                            </option>
-                                                        ))}
-                                                    </select>
-
-                                                    <Toggle
-                                                        checked={cfg.status}
-                                                        onChange={() => handleToggle(cfg)}
+                                                        Sửa
+                                                    </button>
+                                                    {cfg.lastTaskId && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openTaskLog(cfg.lastTaskId)}
+                                                            className="rounded-md border px-2 py-1 text-xs font-semibold transition-colors hover:bg-slate-100"
+                                                            style={{ borderColor: PAGE_TOKENS.borderStrong, color: PAGE_TOKENS.text }}
+                                                            aria-label={`Xem log ${meta.label}`}
+                                                        >
+                                                            Log
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDelete(cfg)}
                                                         disabled={isUpdating}
-                                                        label={`${cfg.status ? 'Tắt' : 'Bật'} ${meta.label}`}
-                                                    />
+                                                        className="rounded-md border px-2 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        style={{ borderColor: '#fecaca' }}
+                                                        aria-label={`Xóa ${meta.label}`}
+                                                    >
+                                                        Xóa
+                                                    </button>
                                                 </div>
                                             );
                                         })}
@@ -413,6 +475,88 @@ const ConfigAuto = () => {
                     </div>
                 )}
             </div>
+            {showCreate && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-auto-config-title">
+                    <form onSubmit={handleCreate} className="w-full max-w-md rounded-xl border p-5 shadow-2xl" style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}>
+                        <div className="mb-5">
+                            <h2 id="create-auto-config-title" className="m-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Thêm cấu hình tự động</h2>
+                            <p className="mt-1 text-xs" style={{ color: PAGE_TOKENS.mutedText }}>BE sẽ tạo task theo cấu hình này; extension chỉ nhận và thực thi task.</p>
+                        </div>
+                        <div className="space-y-4">
+                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                                Shop
+                                <select required value={createForm.shopId} onChange={(event) => setCreateForm((current) => ({ ...current, shopId: event.target.value }))} className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }}>
+                                    <option value="">Chọn shop</option>
+                                    {shops.map((shop) => <option key={shop._id} value={shop._id}>{shop.name || shop.store} · {shop.merchant || 'Amazon'}</option>)}
+                                </select>
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                                Tác vụ
+                                <select value={createForm.type} onChange={(event) => setCreateForm((current) => ({ ...current, type: event.target.value }))} className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }}>
+                                    {SCHEDULABLE_TYPES.map((type) => <option key={type} value={type}>{TYPE_META[type].label}</option>)}
+                                </select>
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                                Giờ chạy (giờ Việt Nam, cách nhau bằng dấu phẩy)
+                                <input required value={createForm.scheduleHours} onChange={(event) => setCreateForm((current) => ({ ...current, scheduleHours: event.target.value }))} placeholder="5, 10, 15, 20" className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }} />
+                            </label>
+                            <label className="flex items-center gap-2 text-sm" style={{ color: PAGE_TOKENS.text }}>
+                                <input type="checkbox" checked={createForm.status} onChange={(event) => setCreateForm((current) => ({ ...current, status: event.target.checked }))} /> Bật ngay sau khi tạo
+                            </label>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button type="button" disabled={creating} onClick={() => setShowCreate(false)} className="rounded-md border px-3 py-2 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Hủy</button>
+                            <button type="submit" disabled={creating || !createForm.shopId || !parseScheduleHours(createForm.scheduleHours).length} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{creating ? 'Đang tạo...' : 'Tạo cấu hình'}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {editingConfig && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-auto-config-title">
+                    <form onSubmit={handleEdit} className="w-full max-w-md rounded-xl border p-5 shadow-2xl" style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}>
+                        <div className="mb-5">
+                            <h2 id="edit-auto-config-title" className="m-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Sửa cấu hình tự động</h2>
+                            <p className="mt-1 text-xs" style={{ color: PAGE_TOKENS.mutedText }}>{editingConfig.shopName} · {TYPE_META[editingConfig.type]?.label || editingConfig.type}</p>
+                        </div>
+                        <div className="space-y-4">
+                            <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: PAGE_TOKENS.text }}>
+                                Giờ chạy (giờ Việt Nam, cách nhau bằng dấu phẩy)
+                                <input autoFocus required value={editForm.scheduleHours} onChange={(event) => setEditForm((current) => ({ ...current, scheduleHours: event.target.value }))} placeholder="5, 10, 15, 20" className="h-10 rounded-md border bg-white px-3 text-sm font-normal" style={{ borderColor: PAGE_TOKENS.border }} />
+                            </label>
+                            <label className="flex items-center gap-2 text-sm" style={{ color: PAGE_TOKENS.text }}>
+                                <input type="checkbox" checked={editForm.status} onChange={(event) => setEditForm((current) => ({ ...current, status: event.target.checked }))} /> Bật cấu hình
+                            </label>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button type="button" disabled={savingEdit} onClick={() => setEditingConfig(null)} className="rounded-md border px-3 py-2 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Hủy</button>
+                            <button type="submit" disabled={savingEdit || !parseScheduleHours(editForm.scheduleHours).length} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: PAGE_TOKENS.primary }}>{savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {selectedTaskId && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="task-log-title">
+                    <div className="w-full max-w-md rounded-xl border p-5 shadow-2xl" style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}>
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 id="task-log-title" className="m-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Vòng đời task</h2>
+                                <p className="mt-1 break-all text-xs" style={{ color: PAGE_TOKENS.mutedText }}>{selectedTaskId}</p>
+                            </div>
+                            <button type="button" onClick={() => setSelectedTaskId(null)} className="rounded-md border px-2 py-1 text-xs font-semibold" style={{ borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.text }}>Đóng</button>
+                        </div>
+                        {taskDetailLoading ? (
+                            <p className="text-sm" style={{ color: PAGE_TOKENS.mutedText }}>Đang tải...</p>
+                        ) : taskDetail ? (
+                            <div className="space-y-3 text-sm" style={{ color: PAGE_TOKENS.text }}>
+                                <p className="m-0"><strong>BE gửi task:</strong> {formatFullTime(taskDetail.sentAt)}</p>
+                                <p className="m-0"><strong>Extension nhận:</strong> {formatFullTime(taskDetail.ackedAt)}</p>
+                                <p className="m-0"><strong>Kết quả:</strong> {taskStatusLabel(taskDetail.status)} {taskDetail.completedAt ? `· ${formatFullTime(taskDetail.completedAt)}` : ''}</p>
+                                {taskDetail.lastError && <p className="m-0 rounded-md bg-red-50 p-3 text-xs text-red-700">{taskDetail.lastError}</p>}
+                            </div>
+                        ) : <p className="text-sm" style={{ color: PAGE_TOKENS.mutedText }}>Chưa có dữ liệu task.</p>}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

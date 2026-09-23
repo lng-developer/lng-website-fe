@@ -15,6 +15,10 @@ export const getLogsByTask = (taskId) => {
   return instance.get(`/ext/logs/task/${taskId}`);
 };
 
+export const getExtensionTask = (taskId) => {
+  return instance.get(`/ext/tasks/${encodeURIComponent(taskId)}`);
+};
+
 // Get logs theo batch ID
 export const getLogsByBatch = (batchId) => {
   return instance.get(`/ext/logs/batch/${batchId}`);

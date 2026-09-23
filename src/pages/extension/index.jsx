@@ -5,8 +5,6 @@ import { TbDatabaseImport } from 'react-icons/tb';
 import { DatePicker, Spin, Input } from 'antd';
 import { getAllClient, pullAll, requestExtension } from '../../apis/socketio';
 import { toast } from 'sonner';
-import useSocketIO from '../../hooks/useSocketIO';
-import { getAllShop } from '../../apis/shop';
 
 const PAGE_TOKENS = {
   background: '#f8fafc',
@@ -25,33 +23,12 @@ const PAGE_TOKENS = {
 
 const STATUS_META = {
   online: { label: 'Online', color: PAGE_TOKENS.success },
-  'maybe-online': { label: 'Maybe Online', color: PAGE_TOKENS.warning },
   offline: { label: 'Offline', color: PAGE_TOKENS.danger },
-  unknown: { label: 'Unknown', color: PAGE_TOKENS.mutedText },
+  'never-connected': { label: 'Chưa kết nối', color: PAGE_TOKENS.mutedText },
+  unknown: { label: 'Không rõ', color: PAGE_TOKENS.mutedText },
 };
 
 const getStatusMeta = (status) => STATUS_META[status] || STATUS_META.unknown;
-
-const RealtimeBadge = ({ connected, error }) => {
-  const color = connected ? PAGE_TOKENS.success : PAGE_TOKENS.danger;
-
-  return (
-    <div
-      className="flex items-center gap-2 rounded-lg border px-3 py-1.5"
-      style={{ backgroundColor: PAGE_TOKENS.surfaceMuted, borderColor: PAGE_TOKENS.border }}
-    >
-      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-xs font-medium" style={{ color: PAGE_TOKENS.text }}>
-        {connected ? 'Real-time Connected' : 'Disconnected'}
-      </span>
-      {error && (
-        <span className="max-w-[220px] truncate text-xs" style={{ color: PAGE_TOKENS.danger }}>
-          ({error})
-        </span>
-      )}
-    </div>
-  );
-};
 
 const StatusBadge = ({ status }) => {
   const meta = getStatusMeta(status);
@@ -74,34 +51,11 @@ const StatusBadge = ({ status }) => {
 const ExtensionManager = () => {
   const { collapsed } = useOutletContext();
   const [clients, setClients] = useState([]);
-  const [shopId, setShopId] = useState(null);
   const [search, setSearch] = useState('');
   const [dateInputs, setDateInputs] = useState({});
   const [loadingOrder, setLoadingOrder] = useState({});
   const [loadingAds, setLoadingAds] = useState({});
   const [loadingAll, setLoadingAll] = useState(false);
-
-  useEffect(() => {
-    const fetchShopId = async () => {
-      try {
-        const res = await getAllShop();
-        if (res.status === 200) {
-          const shops = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-          if (shops.length > 0) setShopId(shops[0]._id ?? shops[0].id);
-        }
-      } catch (err) {
-        console.log('fetchShopId error:', err);
-      }
-    };
-    fetchShopId();
-  }, []);
-
-  const { socket, connected, error: socketError } = useSocketIO('https://api.lngmerch.co', {
-    auth: {
-      token: localStorage.getItem('accessToken')?.replace(/^"|"$/g, ''),
-      shopId,
-    }
-  });
 
   const handleImportOrder = async (client) => {
     setLoadingOrder(prev => ({ ...prev, [client.clientId]: true }));
@@ -168,12 +122,21 @@ const ExtensionManager = () => {
     }
   };
 
-  const formatDateToUI = (time) => {
-    const ts = Number(time);
-    if (!Number.isFinite(ts)) return '-';
-    const d = new Date(ts);
+  const formatDateToUI = (time, empty = 'Chưa từng') => {
+    if (!time) return empty;
+    const d = new Date(time);
     if (Number.isNaN(d.getTime())) return '-';
-    return `${d.toLocaleTimeString('vi-VN')} ${d.toLocaleDateString('vi-VN')}`;
+    return new Intl.DateTimeFormat('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+    }).format(d);
+  };
+
+  const formatSession = (client) => {
+    if (client.status !== 'online') return client.status === 'offline' ? 'Đã ngắt kết nối' : 'Chưa có extension';
+    if (!client.connectedAt) return 'Đang kết nối';
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(client.connectedAt).getTime()) / 60000));
+    return minutes < 60 ? `${minutes} phút` : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`;
   };
 
   const fetchAllClients = async () => {
@@ -194,38 +157,6 @@ const ExtensionManager = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket || !connected) return;
-
-    const handleClientStatusUpdate = (data) => {
-      setClients(prev => prev.map(client => (
-        client.clientId === data.clientId ? { ...client, ...data } : client
-      )));
-    };
-
-    const handleClientConnected = (data) => {
-      toast.success(`${data.label} connected`);
-      fetchAllClients();
-    };
-
-    const handleClientDisconnected = (data) => {
-      toast.info(`${data.label} disconnected`);
-      setClients(prev => prev.map(client => (
-        client.clientId === data.clientId ? { ...client, status: 'offline' } : client
-      )));
-    };
-
-    socket.on('client:status-update', handleClientStatusUpdate);
-    socket.on('client:connected', handleClientConnected);
-    socket.on('client:disconnected', handleClientDisconnected);
-
-    return () => {
-      socket.off('client:status-update', handleClientStatusUpdate);
-      socket.off('client:connected', handleClientConnected);
-      socket.off('client:disconnected', handleClientDisconnected);
-    };
-  }, [socket, connected]);
-
-  useEffect(() => {
     const interval = setInterval(fetchAllClients, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -234,8 +165,8 @@ const ExtensionManager = () => {
     () => ({
       total: clients.length,
       online: clients.filter(c => c.status === 'online').length,
-      maybe: clients.filter(c => c.status === 'maybe-online').length,
       offline: clients.filter(c => c.status === 'offline').length,
+      neverConnected: clients.filter(c => c.status === 'never-connected').length,
     }),
     [clients]
   );
@@ -260,17 +191,17 @@ const ExtensionManager = () => {
             Manage Clients
           </h1>
 
-          <RealtimeBadge connected={connected} error={socketError} />
+          <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>Cập nhật trạng thái mỗi 15 giây</span>
         </div>
       </div>
 
       <div className="mt-[60px] px-4 py-4 md:px-8">
         {/* Stat cards */}
         <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Total Clients" value={statusStats.total} color={PAGE_TOKENS.primary} />
+          <StatCard label="Total Shops" value={statusStats.total} color={PAGE_TOKENS.primary} />
           <StatCard label="Online" value={statusStats.online} color={PAGE_TOKENS.success} />
-          <StatCard label="Maybe Online" value={statusStats.maybe} color={PAGE_TOKENS.warning} />
           <StatCard label="Offline" value={statusStats.offline} color={PAGE_TOKENS.danger} />
+          <StatCard label="Chưa kết nối" value={statusStats.neverConnected} color={PAGE_TOKENS.mutedText} />
         </div>
 
         {/* Toolbar */}
@@ -279,7 +210,7 @@ const ExtensionManager = () => {
           style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
         >
           <div className="flex items-center gap-3">
-            <h2 className="!mb-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Clients</h2>
+            <h2 className="!mb-0 text-lg font-semibold" style={{ color: PAGE_TOKENS.text }}>Shops</h2>
             <span className="text-xs" style={{ color: PAGE_TOKENS.mutedText }}>
               {filteredClients.length} of {clients.length}
             </span>
@@ -297,7 +228,7 @@ const ExtensionManager = () => {
             />
             <button
               onClick={handleImportAllOrder}
-              disabled={loadingAll}
+              disabled={loadingAll || statusStats.online === 0}
               className="flex h-10 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md px-5 text-sm font-semibold !text-white transition-colors hover:!text-white disabled:cursor-not-allowed disabled:opacity-50"
               style={{ backgroundColor: PAGE_TOKENS.primary }}
             >
@@ -317,10 +248,10 @@ const ExtensionManager = () => {
               <thead style={{ backgroundColor: PAGE_TOKENS.surfaceMuted, color: PAGE_TOKENS.mutedText }}>
                 <tr>
                   <th className="w-10 px-4 py-3 text-left text-xs font-semibold uppercase"></th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Client</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Shop</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Uptime</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Connected</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Phiên hiện tại</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Lần thấy gần nhất</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Actions</th>
                 </tr>
               </thead>
@@ -328,18 +259,14 @@ const ExtensionManager = () => {
                 {filteredClients.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-16 text-center text-sm" style={{ color: PAGE_TOKENS.mutedText }}>
-                      {clients.length === 0 ? 'No clients connected' : 'No clients match your search'}
+                      {clients.length === 0 ? 'Không có shop đang hoạt động' : 'Không có shop khớp tìm kiếm'}
                     </td>
                   </tr>
                 ) : (
                   filteredClients.map((client) => {
                     const isOrderLoading = !!loadingOrder[client.clientId];
                     const isAdsLoading = !!loadingAds[client.clientId];
-                    const uptime = client.statusSummary
-                      ? (client.status === 'online'
-                          ? `${Math.floor(client.statusSummary.onlineForSec / 60)}m online`
-                          : `${Math.floor(client.statusSummary.idleForSec / 60)}m idle`)
-                      : '-';
+                    const canRequest = client.status === 'online' && !!client.machineId;
                     const statusMeta = getStatusMeta(client.status);
 
                     return (
@@ -358,21 +285,21 @@ const ExtensionManager = () => {
                           <StatusBadge status={client.status} />
                         </td>
                         <td className="px-4 py-4">
-                          <span className="text-xs tabular-nums" style={{ color: PAGE_TOKENS.mutedText }}>{uptime}</span>
+                          <span className="text-xs tabular-nums" style={{ color: PAGE_TOKENS.mutedText }}>{formatSession(client)}</span>
                         </td>
                         <td className="px-4 py-4">
                           <span className="whitespace-nowrap text-xs tabular-nums" style={{ color: PAGE_TOKENS.mutedText }}>
-                            {formatDateToUI(client.connectedAt)}
+                            {formatDateToUI(client.lastSeen)}
                           </span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
                             <button
                               onClick={() => handleImportOrder(client)}
-                              disabled={isOrderLoading}
+                              disabled={isOrderLoading || !canRequest}
                               className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-3 text-xs font-semibold transition-colors hover:bg-[#f1f5f9] disabled:cursor-not-allowed disabled:opacity-50"
                               style={{ borderColor: PAGE_TOKENS.borderStrong, color: PAGE_TOKENS.text }}
-                              title="Import Orders"
+                              title={canRequest ? 'Import Orders' : 'Chỉ gửi được khi extension online'}
                               aria-label={`Import orders for ${client.label || client.shopName}`}
                             >
                               {isOrderLoading ? <Spin size="small" /> : <TbDatabaseImport size={14} />}
@@ -385,16 +312,17 @@ const ExtensionManager = () => {
                                 setDateInputs(prev => ({ ...prev, [client.clientId]: dateString }))
                               }
                               className="!w-32"
+                              disabled={!canRequest}
                               placeholder="Pick date"
                               aria-label={`Pick ads spend date for ${client.label || client.shopName}`}
                             />
 
                             <button
                               onClick={() => handleImportAdsSpend(client)}
-                              disabled={isAdsLoading}
+                              disabled={isAdsLoading || !canRequest}
                               className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-semibold !text-white transition-colors hover:!text-white disabled:cursor-not-allowed disabled:opacity-50"
                               style={{ backgroundColor: PAGE_TOKENS.primary }}
-                              title="Import Ads Spend"
+                              title={canRequest ? 'Import Ads Spend' : 'Chỉ gửi được khi extension online'}
                               aria-label={`Import ads spend for ${client.label || client.shopName}`}
                             >
                               {isAdsLoading ? <Spin size="small" /> : <TbDatabaseImport size={14} />}
