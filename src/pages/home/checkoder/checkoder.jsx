@@ -15,6 +15,11 @@ import {
     AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS,
     getAmazonSubmitStatus
 } from './shippingEligibility';
+import {
+    buildAmazonFeedProcess,
+    formatAmazonFeedTime,
+    isAmazonFeedInProgress
+} from './amazonFeedProcess';
 
 const getCarrierInfo = (tracking, carrier = '') => {
     const carrierName = carrier.toLowerCase();
@@ -70,6 +75,15 @@ const getShipByMeta = (shipByDate) => {
     if (shipBy < today) return { label: `Quá hạn · ${label}`, tone: 'danger' };
     if (shipBy === today) return { label: `Hôm nay · ${label}`, tone: 'warning' };
     return { label, tone: 'neutral' };
+};
+
+const mergeAmazonFeeds = (previous, batches) => {
+    const persisted = batches.filter((batch) => batch.amazonFeed?.status);
+    const persistedIds = new Set(persisted.map((batch) => String(batch.batchId)));
+    const queued = previous.filter((batch) =>
+        batch.amazonFeed?.status === 'queued' && !persistedIds.has(String(batch.batchId))
+    );
+    return [...queued, ...persisted].slice(0, 5);
 };
 
 const PAGE_TOKENS = {
@@ -269,7 +283,7 @@ const CheckOder = () => {
             ]);
 
             setOrders(res.data.orders || []);
-            setAmazonFeeds((batchesRes.data?.batches || []).filter((batch) => batch.amazonFeed?.status));
+            setAmazonFeeds((previous) => mergeAmazonFeeds(previous, batchesRes.data?.batches || []));
             setFilterOptions(res.data.filterOptions || { vendors: [], carriers: [] });
             setStats(res.data.stats || {});
             setTotalCount(res.data.totalCount || 0);
@@ -284,6 +298,24 @@ const CheckOder = () => {
             setLoading(false);
         }
     };
+
+    const hasAmazonFeedInProgress = amazonFeeds.some((batch) => isAmazonFeedInProgress(batch.amazonFeed));
+
+    useEffect(() => {
+        if (!selectedShop?._id || !hasAmazonFeedInProgress) return undefined;
+
+        const refreshAmazonFeeds = async () => {
+            try {
+                const response = await getShippingBatches({ machineId: selectedShop._id, limit: 5 });
+                setAmazonFeeds((previous) => mergeAmazonFeeds(previous, response.data?.batches || []));
+            } catch (err) {
+                console.error('Không thể cập nhật tiến trình Amazon feed:', err);
+            }
+        };
+
+        const interval = window.setInterval(refreshAmazonFeeds, 15000);
+        return () => window.clearInterval(interval);
+    }, [hasAmazonFeedInProgress, selectedShop?._id]);
 
     const filteredOrders = useMemo(() => {
         const fromTs = filterAmzDateFrom ? new Date(filterAmzDateFrom).setHours(0, 0, 0, 0) : null;
@@ -585,6 +617,10 @@ const CheckOder = () => {
                     shopId: batch.shopId
                 });
             }
+            setAmazonFeeds((previous) => mergeAmazonFeeds(previous, reviewBatches.map((batch) => ({
+                ...batch,
+                amazonFeed: { status: 'queued' }
+            }))));
             alert(`Đã gửi ${reviewBatches.reduce((total, batch) => total + batch.totalReal, 0)} đơn sang extension.`);
             setReviewBatches([]);
             setSelectedOrders([]);
@@ -883,26 +919,102 @@ const CheckOder = () => {
                 </div>
 
                 {amazonFeeds.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 rounded-lg border px-4 py-2" style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}>
-                        <span className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>Amazon feed</span>
-                        {amazonFeeds.map((batch) => {
-                            const feed = batch.amazonFeed;
-                            const isDone = feed.status === 'done';
-                            const isProblem = feed.status === 'failed' || feed.status === 'needs_review';
-                            return (
-                                <div key={batch.batchId} className="flex items-center gap-2 rounded border px-2 py-1 text-[11px]" style={{
-                                    backgroundColor: isDone ? PAGE_TOKENS.successBg : isProblem ? PAGE_TOKENS.warningBg : PAGE_TOKENS.surfaceSubtle,
-                                    borderColor: isDone ? PAGE_TOKENS.successBorder : isProblem ? PAGE_TOKENS.warningBorder : PAGE_TOKENS.border,
-                                    color: isDone ? PAGE_TOKENS.successText : isProblem ? PAGE_TOKENS.warningText : PAGE_TOKENS.muted
+                    <section
+                        aria-label="Tiến trình gửi Amazon"
+                        className="rounded-xl border p-4"
+                        style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h2 className="text-sm font-bold" style={{ color: PAGE_TOKENS.text }}>Tiến trình gửi Amazon</h2>
+                                <p className="mt-0.5 text-xs" style={{ color: PAGE_TOKENS.muted }}>
+                                    {hasAmazonFeedInProgress ? 'Tự cập nhật mỗi 15 giây khi Amazon đang xử lý.' : 'Hiển thị 5 batch gần nhất.'}
+                                </p>
+                            </div>
+                            {hasAmazonFeedInProgress && (
+                                <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{
+                                    color: PAGE_TOKENS.primary,
+                                    backgroundColor: '#eff6ff',
+                                    borderColor: '#bfdbfe'
                                 }}>
-                                    <span className="font-semibold">{feed.amazonBatchId || 'Đang lấy Batch ID'}</span>
-                                    <span>{feed.status === 'done' ? 'Done' : feed.status === 'processing' ? 'Processing' : feed.status === 'needs_review' ? 'Cần review' : feed.status === 'failed' ? 'Failed' : 'Submitted'}</span>
-                                    {feed.status !== 'submitted' && <span>{feed.recordsActivated || 0}/{feed.recordsProcessed || 0} activated</span>}
-                                    {feed.reportText && <button onClick={() => handleDownloadAmazonReport(batch)} className="underline font-semibold">Tải Processing Report</button>}
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    Đang theo dõi
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="mt-3 grid gap-3">
+                            {amazonFeeds.map((batch) => {
+                                const feed = batch.amazonFeed;
+                                const process = buildAmazonFeedProcess(feed);
+                                const tone = process.tone === 'success'
+                                    ? { color: PAGE_TOKENS.successText, backgroundColor: PAGE_TOKENS.successBg, borderColor: PAGE_TOKENS.successBorder }
+                                    : process.tone === 'warning'
+                                        ? { color: PAGE_TOKENS.warningText, backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }
+                                        : process.tone === 'danger'
+                                            ? { color: PAGE_TOKENS.dangerText, backgroundColor: PAGE_TOKENS.dangerBg, borderColor: PAGE_TOKENS.dangerBorder }
+                                            : { color: PAGE_TOKENS.primary, backgroundColor: '#eff6ff', borderColor: '#bfdbfe' };
+
+                                return (
+                                    <article key={batch.batchId} className="rounded-lg border p-3" style={{ borderColor: PAGE_TOKENS.border }}>
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>
+                                                    {feed.amazonBatchId ? `Amazon batch ${feed.amazonBatchId}` : `Batch ${String(batch.batchId).slice(-8)}`}
+                                                </p>
+                                                <p className="mt-0.5 text-xs" style={{ color: PAGE_TOKENS.muted }}>{process.summary}</p>
+                                            </div>
+                                            <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={tone}>{process.badge}</span>
+                                        </div>
+
+                                        <div className="mt-3 overflow-x-auto pb-1">
+                                            <div className="flex min-w-[620px] items-start">
+                                                {process.steps.map((step, index) => {
+                                                    const stepTone = step.state === 'complete'
+                                                        ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.successText, borderColor: PAGE_TOKENS.successText }
+                                                        : step.state === 'active'
+                                                            ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.primary, borderColor: PAGE_TOKENS.primary }
+                                                            : step.state === 'warning'
+                                                                ? { color: PAGE_TOKENS.warningText, backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }
+                                                                : step.state === 'error'
+                                                                    ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.dangerText, borderColor: PAGE_TOKENS.dangerText }
+                                                                    : { color: PAGE_TOKENS.muted, backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.borderStrong };
+                                                    const marker = step.state === 'complete' ? '✓' : step.state === 'active' ? '…' : step.state === 'warning' ? '!' : step.state === 'error' ? '×' : index + 1;
+
+                                                    return (
+                                                        <div className="flex flex-1 items-start last:flex-none" key={step.key}>
+                                                            <div className="min-w-[102px] text-center">
+                                                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold" style={stepTone}>{marker}</span>
+                                                                <p className="mt-1 text-[11px] font-semibold" style={{ color: step.state === 'pending' ? PAGE_TOKENS.muted : PAGE_TOKENS.text }}>{step.label}</p>
+                                                            </div>
+                                                            {index < process.steps.length - 1 && (
+                                                                <span className="mt-3 h-px flex-1" style={{ backgroundColor: step.state === 'complete' ? PAGE_TOKENS.successBorder : PAGE_TOKENS.border }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]" style={{ color: PAGE_TOKENS.muted }}>
+                                            <span>Đã gửi: {formatAmazonFeedTime(feed.submittedAt)}</span>
+                                            {feed.completedAt && <span>Hoàn tất: {formatAmazonFeedTime(feed.completedAt)}</span>}
+                                            {feed.status !== 'queued' && <span>{feed.recordsActivated || 0}/{feed.recordsProcessed || 0} xác nhận</span>}
+                                            {Number(feed.errorCount) > 0 && <span style={{ color: PAGE_TOKENS.dangerText }}>{feed.errorCount} lỗi</span>}
+                                            {Number(feed.warningCount) > 0 && <span style={{ color: PAGE_TOKENS.warningText }}>{feed.warningCount} cảnh báo</span>}
+                                            {feed.reportText && (
+                                                <button type="button" onClick={() => handleDownloadAmazonReport(batch)} className="font-semibold underline" style={{ color: PAGE_TOKENS.primary }}>
+                                                    Tải Processing Report
+                                                </button>
+                                            )}
+                                        </div>
+                                        {feed.failureReason && (
+                                            <p className="mt-2 text-xs" style={{ color: PAGE_TOKENS.dangerText }}>{feed.failureReason}</p>
+                                        )}
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    </section>
                 )}
 
                 {/* Filter Bar */}
