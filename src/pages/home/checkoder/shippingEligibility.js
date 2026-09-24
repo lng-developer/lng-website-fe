@@ -13,6 +13,7 @@ export const AMAZON_SUBMIT_TABLE_COLUMNS = [
   "Vendor / Fulfillment",
   "Tracking & hãng vận chuyển",
   "Carrier nhận hàng lúc",
+  "Ship by",
   "Trạng thái gửi Amazon",
 ];
 
@@ -22,6 +23,7 @@ export const AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS = [
   "w-[180px]",
   "w-[340px]",
   "w-[220px]",
+  "w-[150px]",
   "w-[220px]",
 ];
 

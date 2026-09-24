@@ -13,6 +13,7 @@ test("keeps only the fields needed to send tracking to Amazon", () => {
     "Vendor / Fulfillment",
     "Tracking & hãng vận chuyển",
     "Carrier nhận hàng lúc",
+    "Ship by",
     "Trạng thái gửi Amazon",
   ]);
 });
@@ -24,6 +25,7 @@ test("allocates the table width to the longest shipping fields", () => {
     "w-[180px]",
     "w-[340px]",
     "w-[220px]",
+    "w-[150px]",
     "w-[220px]",
   ]);
 });

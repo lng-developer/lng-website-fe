@@ -48,12 +48,28 @@ const getCarrierInfo = (tracking, carrier = '') => {
 
 const formatShipDate = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
 
-const getAmazonUsDate = () => {
+const getAmazonUsDate = (date = new Date()) => {
     const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date());
+    }).formatToParts(date);
     const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return `${value.year}-${value.month}-${value.day}`;
+};
+
+const addDaysToYmd = (value, days) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+};
+
+const getShipByMeta = (shipByDate) => {
+    if (!shipByDate) return { label: 'Chưa có', tone: 'neutral' };
+    const shipBy = getAmazonUsDate(new Date(shipByDate));
+    const today = getAmazonUsDate();
+    const label = new Date(shipByDate).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' });
+    if (shipBy < today) return { label: `Quá hạn · ${label}`, tone: 'danger' };
+    if (shipBy === today) return { label: `Hôm nay · ${label}`, tone: 'warning' };
+    return { label, tone: 'neutral' };
 };
 
 const PAGE_TOKENS = {
@@ -144,6 +160,9 @@ const CheckOder = () => {
     const [filterVendor, setFilterVendor] = useState('');
     const [filterCarrier, setFilterCarrier] = useState('');
     const [filterCarrierHandoff, setFilterCarrierHandoff] = useState('all');
+    const [filterShipBy, setFilterShipBy] = useState('all');
+    const [filterShipByFrom, setFilterShipByFrom] = useState('');
+    const [filterShipByTo, setFilterShipByTo] = useState('');
     const [filterAmzDateFrom, setFilterAmzDateFrom] = useState('');
     const [filterAmzDateTo, setFilterAmzDateTo] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -175,7 +194,7 @@ const CheckOder = () => {
         if (selectedShop && !showShopModal) {
             fetchData();
         }
-    }, [selectedShop, limit, page, filterTracking, filterAmazon, filterVendor, filterCarrier, filterCarrierHandoff, searchTerm]);
+    }, [selectedShop, limit, page, filterTracking, filterAmazon, filterVendor, filterCarrier, filterCarrierHandoff, filterShipBy, filterShipByFrom, filterShipByTo, searchTerm]);
 
     const getShop = async () => {
         try {
@@ -204,6 +223,9 @@ const CheckOder = () => {
             setFilterVendor('');
             setFilterCarrier('');
             setFilterCarrierHandoff('all');
+            setFilterShipBy('all');
+            setFilterShipByFrom('');
+            setFilterShipByTo('');
             setFilterAmzDateFrom('');
             setFilterAmzDateTo('');
             setSearchTerm('');
@@ -238,7 +260,10 @@ const CheckOder = () => {
                 amazon: filterAmazon,
                 vendor: filterVendor,
                 carrier: filterCarrier,
-                carrierHandoff: filterCarrierHandoff
+                carrierHandoff: filterCarrierHandoff,
+                shipBy: filterShipBy,
+                shipByFrom: filterShipByFrom,
+                shipByTo: filterShipByTo
                 }),
                 getShippingBatches({ machineId: selectedShop._id, limit: 5 })
             ]);
@@ -293,6 +318,25 @@ const CheckOder = () => {
             return matchesTracking && matchesAmazon && matchesAmzDate && matchesSearch;
         });
     }, [orders, filterTracking, filterAmazon, filterAmzDateFrom, filterAmzDateTo, searchTerm]);
+
+    const setShipByPreset = (value) => {
+        const today = getAmazonUsDate();
+        setFilterShipBy(value);
+        if (value === 'today') {
+            setFilterShipByFrom(today);
+            setFilterShipByTo(today);
+        } else if (value === 'overdue') {
+            setFilterShipByFrom(today);
+            setFilterShipByTo('');
+        } else if (value === 'next2') {
+            setFilterShipByFrom(addDaysToYmd(today, 1));
+            setFilterShipByTo(addDaysToYmd(today, 2));
+        } else {
+            setFilterShipByFrom('');
+            setFilterShipByTo('');
+        }
+        setPage(1);
+    };
 
     const reviewRows = useMemo(() => reviewBatches.flatMap((batch) =>
         (batch.orders || []).map((order) => {
@@ -862,8 +906,8 @@ const CheckOder = () => {
                 )}
 
                 {/* Filter Bar */}
-                <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
-                    <div className="relative flex-1 min-w-0">
+                <div className="flex flex-col gap-2 bg-white border border-neutral-200 rounded-xl p-3">
+                    <div className="relative w-full max-w-xl">
                         <svg
                             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400"
                             fill="none"
@@ -890,7 +934,7 @@ const CheckOder = () => {
                         />
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Tracking</span>
                             <select
@@ -951,26 +995,54 @@ const CheckOder = () => {
                                 <option value="no">Chưa nhận</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 border-t border-neutral-100 pt-2">
+
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Ship by</span>
+                            <select aria-label="Filter by Amazon ship-by deadline" value={filterShipBy} onChange={(e) => setShipByPreset(e.target.value)} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                <option value="all">Tất cả</option>
+                                <option value="overdue">Quá hạn</option>
+                                <option value="today">Hôm nay</option>
+                                <option value="next2">1–2 ngày tới</option>
+                                <option value="missing">Chưa có</option>
+                                <option value="range">Khoảng ngày</option>
+                            </select>
+                            {filterShipBy === 'range' && (
+                                <div className="flex items-center gap-1 border-l border-neutral-200 pl-2">
+                                    <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="ship-by-from">Từ</label>
+                                    <input id="ship-by-from" aria-label="Filter ship-by date from" type="date" value={filterShipByFrom} onChange={(e) => { setFilterShipByFrom(e.target.value); setPage(1); }} disabled={loading} className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50" />
+                                    <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="ship-by-to">Đến</label>
+                                    <input id="ship-by-to" aria-label="Filter ship-by date to" type="date" value={filterShipByTo} onChange={(e) => { setFilterShipByTo(e.target.value); setPage(1); }} disabled={loading} className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50" />
+                                </div>
+                            )}
+                        </div>
 
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
-                            <input
-                                aria-label="Filter Amazon submit date from"
-                                type="date"
-                                value={filterAmzDateFrom}
-                                onChange={(e) => setFilterAmzDateFrom(e.target.value)}
-                                disabled={loading}
-                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
-                            />
-                            <span className="text-[10px] text-neutral-400">→</span>
-                            <input
-                                aria-label="Filter Amazon submit date to"
-                                type="date"
-                                value={filterAmzDateTo}
-                                onChange={(e) => setFilterAmzDateTo(e.target.value)}
-                                disabled={loading}
-                                className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
-                            />
+                            <div className="flex items-center gap-1 border-l border-neutral-200 pl-2">
+                                <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-from">Từ</label>
+                                <input
+                                    id="submit-amz-from"
+                                    aria-label="Filter Amazon submit date from"
+                                    type="date"
+                                    value={filterAmzDateFrom}
+                                    onChange={(e) => setFilterAmzDateFrom(e.target.value)}
+                                    disabled={loading}
+                                    className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50"
+                                />
+                                <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-to">Đến</label>
+                                <input
+                                    id="submit-amz-to"
+                                    aria-label="Filter Amazon submit date to"
+                                    type="date"
+                                    value={filterAmzDateTo}
+                                    onChange={(e) => setFilterAmzDateTo(e.target.value)}
+                                    disabled={loading}
+                                    className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50"
+                                />
+                            </div>
                             {(filterAmzDateFrom || filterAmzDateTo) && (
                                 <button
                                     aria-label="Clear Amazon submit date filter"
@@ -986,12 +1058,13 @@ const CheckOder = () => {
                             )}
                         </div>
 
-                        {(filterTracking !== 'all' || filterAmazon !== 'all' || filterVendor || filterCarrier || filterCarrierHandoff !== 'all' || filterAmzDateFrom || filterAmzDateTo) && (
+                        {(filterTracking !== 'all' || filterAmazon !== 'all' || filterVendor || filterCarrier || filterCarrierHandoff !== 'all' || filterShipBy !== 'all' || filterShipByFrom || filterShipByTo || filterAmzDateFrom || filterAmzDateTo) && (
                             <button
                                 aria-label="Clear all filters"
                                 onClick={() => {
                                     setFilterTracking('all'); setFilterAmazon('all'); setFilterVendor('');
                                     setFilterCarrier(''); setFilterCarrierHandoff('all');
+                                    setFilterShipBy('all'); setFilterShipByFrom(''); setFilterShipByTo('');
                                     setFilterAmzDateFrom(''); setFilterAmzDateTo(''); setPage(1);
                                 }}
                                 className="text-neutral-500 hover:text-neutral-900 text-xs font-semibold px-1"
@@ -1032,7 +1105,7 @@ const CheckOder = () => {
                 {/* Table Card */}
                 <div className="flex-1 min-h-0 flex flex-col bg-white border border-neutral-200 rounded-xl overflow-hidden">
                     <div className="flex-1 min-h-0 overflow-auto">
-                        <table className="min-w-[1330px] w-full table-fixed border-separate border-spacing-0 text-xs">
+                        <table className="min-w-[1480px] w-full table-fixed border-separate border-spacing-0 text-xs">
                             <thead>
                                 <tr>
                                     <th className={`sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-center px-2 py-2 border-b border-neutral-200 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[0]}`}>
@@ -1066,7 +1139,7 @@ const CheckOder = () => {
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-10 text-neutral-500">
+                                        <td colSpan="7" className="text-center py-10 text-neutral-500">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
@@ -1123,6 +1196,17 @@ const CheckOder = () => {
                                                         : 'N/A'}
                                                 </td>
                                                 <td className={`px-3 py-2 border-b border-neutral-100 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[5]}`}>
+                                                    {(() => {
+                                                        const shipBy = getShipByMeta(order.shipByDate);
+                                                        const tone = shipBy.tone === 'danger'
+                                                            ? 'bg-red-50 text-red-700 border-red-200'
+                                                            : shipBy.tone === 'warning'
+                                                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                : 'bg-neutral-50 text-neutral-600 border-neutral-200';
+                                                        return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${tone}`}>{shipBy.label}</span>;
+                                                    })()}
+                                                </td>
+                                                <td className={`px-3 py-2 border-b border-neutral-100 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[6]}`}>
                                                     <span
                                                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
                                                             order.submittedToAmazon
@@ -1148,7 +1232,7 @@ const CheckOder = () => {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-12 text-neutral-500">
+                                        <td colSpan="7" className="text-center py-12 text-neutral-500">
                                             {selectedShop
                                                 ? 'Không có dữ liệu phù hợp'
                                                 : 'Vui lòng chọn shop để xem dữ liệu'}
