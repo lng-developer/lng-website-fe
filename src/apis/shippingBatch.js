@@ -15,3 +15,11 @@ export const approveTrackingReview = (batchId, payload) => {
 export const sendShippingBatchUpload = (payload) => {
   return instance.post('/shipping-batch/manual-upload-task', payload);
 };
+
+export const getShippingBatches = (params) => {
+  return instance.get('/shipping-batch', { params });
+};
+
+export const downloadAmazonFeedReport = (batchId) => {
+  return instance.get(`/shipping-batch/${batchId}/amazon-feed-report`, { responseType: 'blob' });
+};

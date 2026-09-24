@@ -4,6 +4,8 @@ import {
     approveTrackingReview,
     checkOrdersStatus,
     createShippingBatchFromOrders,
+    downloadAmazonFeedReport,
+    getShippingBatches,
     sendShippingBatchUpload
 } from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
@@ -160,6 +162,7 @@ const CheckOder = () => {
     const [exporting, setExporting] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
     const [reviewBatches, setReviewBatches] = useState([]);
+    const [amazonFeeds, setAmazonFeeds] = useState([]);
     const [reviewShipDate, setReviewShipDate] = useState(getAmazonUsDate);
     const [confirmedSingleShipment, setConfirmedSingleShipment] = useState(false);
     const [confirmedNoTransparency, setConfirmedNoTransparency] = useState(false);
@@ -192,6 +195,7 @@ const CheckOder = () => {
             setSelectedShop(tempSelectedShop);
             setShowShopModal(false);
             setOrders([]);
+            setAmazonFeeds([]);
             setStats({});
             setSelectedOrders([]);
             setError(null);
@@ -224,7 +228,8 @@ const CheckOder = () => {
             setLoading(true);
             setError(null);
 
-            const res = await checkOrdersStatus({
+            const [res, batchesRes] = await Promise.all([
+                checkOrdersStatus({
                 machineId: selectedShop._id,
                 limit,
                 page,
@@ -234,9 +239,12 @@ const CheckOder = () => {
                 vendor: filterVendor,
                 carrier: filterCarrier,
                 carrierHandoff: filterCarrierHandoff
-            });
+                }),
+                getShippingBatches({ machineId: selectedShop._id, limit: 5 })
+            ]);
 
             setOrders(res.data.orders || []);
+            setAmazonFeeds((batchesRes.data?.batches || []).filter((batch) => batch.amazonFeed?.status));
             setFilterOptions(res.data.filterOptions || { vendors: [], carriers: [] });
             setStats(res.data.stats || {});
             setTotalCount(res.data.totalCount || 0);
@@ -545,6 +553,15 @@ const CheckOder = () => {
         }
     };
 
+    const handleDownloadAmazonReport = async (batch) => {
+        try {
+            const response = await downloadAmazonFeedReport(batch.batchId);
+            saveAs(response.data, `amazon-processing-report-${batch.amazonFeed.amazonBatchId || batch.batchId}.txt`);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Không thể tải Processing Report');
+        }
+    };
+
     if (error) {
         return (
             <div className="h-screen flex items-center justify-center p-4" style={{ backgroundColor: PAGE_TOKENS.bg }}>
@@ -820,6 +837,29 @@ const CheckOder = () => {
                         </button>
                     </div>
                 </div>
+
+                {amazonFeeds.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border px-4 py-2" style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}>
+                        <span className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>Amazon feed</span>
+                        {amazonFeeds.map((batch) => {
+                            const feed = batch.amazonFeed;
+                            const isDone = feed.status === 'done';
+                            const isProblem = feed.status === 'failed' || feed.status === 'needs_review';
+                            return (
+                                <div key={batch.batchId} className="flex items-center gap-2 rounded border px-2 py-1 text-[11px]" style={{
+                                    backgroundColor: isDone ? PAGE_TOKENS.successBg : isProblem ? PAGE_TOKENS.warningBg : PAGE_TOKENS.surfaceSubtle,
+                                    borderColor: isDone ? PAGE_TOKENS.successBorder : isProblem ? PAGE_TOKENS.warningBorder : PAGE_TOKENS.border,
+                                    color: isDone ? PAGE_TOKENS.successText : isProblem ? PAGE_TOKENS.warningText : PAGE_TOKENS.muted
+                                }}>
+                                    <span className="font-semibold">{feed.amazonBatchId || 'Đang lấy Batch ID'}</span>
+                                    <span>{feed.status === 'done' ? 'Done' : feed.status === 'processing' ? 'Processing' : feed.status === 'needs_review' ? 'Cần review' : feed.status === 'failed' ? 'Failed' : 'Submitted'}</span>
+                                    {feed.status !== 'submitted' && <span>{feed.recordsActivated || 0}/{feed.recordsProcessed || 0} activated</span>}
+                                    {feed.reportText && <button onClick={() => handleDownloadAmazonReport(batch)} className="underline font-semibold">Tải Processing Report</button>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Filter Bar */}
                 <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
