@@ -21,6 +21,7 @@ import {
     isAmazonFeedInProgress,
     shouldShowAmazonFeedTimeline
 } from './amazonFeedProcess';
+import { countActiveAdvancedFilters } from './trackingFilterLayout';
 
 const getCarrierInfo = (tracking, carrier = '') => {
     const carrierName = carrier.toLowerCase();
@@ -180,6 +181,7 @@ const CheckOder = () => {
     const [filterShipByTo, setFilterShipByTo] = useState('');
     const [filterAmzDateFrom, setFilterAmzDateFrom] = useState('');
     const [filterAmzDateTo, setFilterAmzDateTo] = useState('');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
     const [page, setPage] = useState(1);
@@ -245,6 +247,7 @@ const CheckOder = () => {
             setFilterShipByTo('');
             setFilterAmzDateFrom('');
             setFilterAmzDateTo('');
+            setShowAdvancedFilters(false);
             setSearchTerm('');
             setPage(1);
         }
@@ -303,6 +306,12 @@ const CheckOder = () => {
     };
 
     const hasAmazonFeedInProgress = amazonFeeds.some((batch) => isAmazonFeedInProgress(batch.amazonFeed));
+    const activeAdvancedFilterCount = countActiveAdvancedFilters({
+        vendor: filterVendor,
+        carrier: filterCarrier,
+        submitFrom: filterAmzDateFrom,
+        submitTo: filterAmzDateTo
+    });
 
     useEffect(() => {
         if (!selectedShop?._id || !hasAmazonFeedInProgress) return undefined;
@@ -1045,34 +1054,21 @@ const CheckOder = () => {
 
                 {/* Filter Bar */}
                 <div className="flex flex-col gap-2 bg-white border border-neutral-200 rounded-xl p-3">
-                    <div className="relative w-full max-w-xl">
-                        <svg
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"
+                    <div className="flex flex-nowrap items-center gap-1.5 overflow-visible">
+                        <div className="relative w-[260px] shrink-0">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                aria-label="Search orders by shop name, shop ID, or order ID"
+                                type="text"
+                                placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
+                                value={searchTerm}
+                                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                                className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-1.5 text-xs bg-neutral-50 outline-none focus:bg-white focus:border-neutral-900 transition-colors"
                             />
-                        </svg>
-                        <input
-                            aria-label="Search orders by shop name, shop ID, or order ID"
-                            type="text"
-                            placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setPage(1);
-                            }}
-                            className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-1.5 text-xs bg-neutral-50 outline-none focus:bg-white focus:border-neutral-900 transition-colors"
-                        />
-                    </div>
+                        </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5">
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Tracking</span>
                             <select
@@ -1110,22 +1106,6 @@ const CheckOder = () => {
                         </div>
 
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
-                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Vendor</span>
-                            <select aria-label="Filter by fulfillment vendor" value={filterVendor} onChange={(e) => { setFilterVendor(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
-                                <option value="">Tất cả</option>
-                                {filterOptions.vendors.map((vendor) => <option key={vendor} value={vendor}>{vendor}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
-                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier</span>
-                            <select aria-label="Filter by carrier" value={filterCarrier} onChange={(e) => { setFilterCarrier(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
-                                <option value="">Tất cả</option>
-                                {filterOptions.carriers.map((carrier) => <option key={carrier} value={carrier}>{carrier}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier nhận</span>
                             <select aria-label="Filter by carrier handoff" value={filterCarrierHandoff} onChange={(e) => { setFilterCarrierHandoff(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
                                 <option value="all">Tất cả</option>
@@ -1133,10 +1113,6 @@ const CheckOder = () => {
                                 <option value="no">Chưa nhận</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 border-t border-neutral-100 pt-2">
-
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Ship by</span>
                             <select aria-label="Filter by Amazon ship-by deadline" value={filterShipBy} onChange={(e) => setShipByPreset(e.target.value)} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
@@ -1156,88 +1132,94 @@ const CheckOder = () => {
                                 </div>
                             )}
                         </div>
-
-                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
-                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
-                            <div className="flex items-center gap-1 border-l border-neutral-200 pl-2">
-                                <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-from">Từ</label>
-                                <input
-                                    id="submit-amz-from"
-                                    aria-label="Filter Amazon submit date from"
-                                    type="date"
-                                    value={filterAmzDateFrom}
-                                    onChange={(e) => setFilterAmzDateFrom(e.target.value)}
-                                    disabled={loading}
-                                    className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50"
-                                />
-                                <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-to">Đến</label>
-                                <input
-                                    id="submit-amz-to"
-                                    aria-label="Filter Amazon submit date to"
-                                    type="date"
-                                    value={filterAmzDateTo}
-                                    onChange={(e) => setFilterAmzDateTo(e.target.value)}
-                                    disabled={loading}
-                                    className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50"
-                                />
-                            </div>
-                            {(filterAmzDateFrom || filterAmzDateTo) && (
+                        <button
+                            type="button"
+                            aria-expanded={showAdvancedFilters}
+                            onClick={() => setShowAdvancedFilters((current) => !current)}
+                            className="px-2 py-1 rounded-lg border border-neutral-200 bg-white text-xs font-semibold text-neutral-700 hover:bg-neutral-100"
+                        >
+                            Bộ lọc nâng cao{activeAdvancedFilterCount ? ` (${activeAdvancedFilterCount})` : ''}
+                        </button>
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                            {(filterTracking !== 'all' || filterAmazon !== 'all' || filterVendor || filterCarrier || filterCarrierHandoff !== 'all' || filterShipBy !== 'all' || filterShipByFrom || filterShipByTo || filterAmzDateFrom || filterAmzDateTo) && (
                                 <button
-                                    aria-label="Clear Amazon submit date filter"
+                                    aria-label="Clear all filters"
                                     onClick={() => {
-                                        setFilterAmzDateFrom('');
-                                        setFilterAmzDateTo('');
+                                        setFilterTracking('all'); setFilterAmazon('all'); setFilterVendor('');
+                                        setFilterCarrier(''); setFilterCarrierHandoff('all');
+                                        setFilterShipBy('all'); setFilterShipByFrom(''); setFilterShipByTo('');
+                                        setFilterAmzDateFrom(''); setFilterAmzDateTo(''); setPage(1);
                                     }}
-                                    className="text-neutral-400 hover:text-neutral-900 text-xs font-bold px-1"
-                                    title="Xoá lọc ngày"
+                                    className="text-neutral-500 hover:text-neutral-900 text-xs font-semibold px-1"
                                 >
-                                    ✕
+                                    Xóa lọc
                                 </button>
                             )}
-                        </div>
-
-                        {(filterTracking !== 'all' || filterAmazon !== 'all' || filterVendor || filterCarrier || filterCarrierHandoff !== 'all' || filterShipBy !== 'all' || filterShipByFrom || filterShipByTo || filterAmzDateFrom || filterAmzDateTo) && (
+                            <details className="relative shrink-0">
+                                <summary className="cursor-pointer list-none rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 [&::-webkit-details-marker]:hidden">
+                                    More
+                                </summary>
+                                <div className="absolute right-0 z-20 mt-1 w-40 rounded-lg border border-neutral-200 bg-white p-1 shadow-lg">
+                                    <button
+                                        aria-label="Export filtered orders to TXT"
+                                        onClick={handleExportTxt}
+                                        disabled={exporting || filteredOrders.length === 0 || loading}
+                                        className="w-full rounded px-2 py-1.5 text-left text-xs font-semibold text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        {exporting ? 'Đang xuất...' : `Xuất TXT (${filteredOrders.filter((o) => o.orderId && o.tracking).length})`}
+                                    </button>
+                                    <button
+                                        aria-label="Export filtered orders to Excel"
+                                        onClick={handleExportExcel}
+                                        disabled={exportingExcel || filteredOrders.length === 0 || loading}
+                                        className="w-full rounded px-2 py-1.5 text-left text-xs font-semibold text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        {exportingExcel ? 'Đang xuất...' : `Xuất Excel (${filteredOrders.length})`}
+                                    </button>
+                                </div>
+                            </details>
                             <button
-                                aria-label="Clear all filters"
-                                onClick={() => {
-                                    setFilterTracking('all'); setFilterAmazon('all'); setFilterVendor('');
-                                    setFilterCarrier(''); setFilterCarrierHandoff('all');
-                                    setFilterShipBy('all'); setFilterShipByFrom(''); setFilterShipByTo('');
-                                    setFilterAmzDateFrom(''); setFilterAmzDateTo(''); setPage(1);
-                                }}
-                                className="text-neutral-500 hover:text-neutral-900 text-xs font-semibold px-1"
+                                aria-label="Review selected orders before sending to Amazon"
+                                onClick={handlePushOrders}
+                                disabled={submitting || selectedOrders.length === 0 || loading}
+                                className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 !text-white font-semibold text-xs hover:bg-blue-700 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                Xóa lọc
+                                {submitting ? 'Đang tạo review...' : `Review & gửi (${selectedOrders.length})`}
                             </button>
-                        )}
-
-                        <button
-                            aria-label="Export filtered orders to TXT"
-                            onClick={handleExportTxt}
-                            disabled={exporting || filteredOrders.length === 0 || loading}
-                            className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-semibold text-xs hover:bg-neutral-100 hover:border-neutral-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            {exporting ? '...' : `Xuất TXT (${filteredOrders.filter((o) => o.orderId && o.tracking).length})`}
-                        </button>
-
-                        <button
-                            aria-label="Export filtered orders to Excel"
-                            onClick={handleExportExcel}
-                            disabled={exportingExcel || filteredOrders.length === 0 || loading}
-                            className="px-3 py-1.5 rounded-lg border border-green-600 bg-green-600 !text-white font-semibold text-xs hover:bg-green-700 hover:border-green-700 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            {exportingExcel ? '...' : `Xuất Excel (${filteredOrders.length})`}
-                        </button>
-
-                        <button
-                            aria-label="Review selected orders before sending to Amazon"
-                            onClick={handlePushOrders}
-                            disabled={submitting || selectedOrders.length === 0 || loading}
-                            className="px-3 py-1.5 rounded-lg bg-neutral-900 !text-white font-semibold text-xs hover:bg-neutral-800 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            {submitting ? 'Đang tạo review...' : `Review & gửi (${selectedOrders.length})`}
-                        </button>
+                        </div>
                     </div>
+
+                    {showAdvancedFilters && (
+                        <div className="flex flex-wrap items-center gap-1.5 border-t border-neutral-100 pt-2">
+                            <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                                <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Vendor</span>
+                                <select aria-label="Filter by fulfillment vendor" value={filterVendor} onChange={(e) => { setFilterVendor(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                    <option value="">Tất cả</option>
+                                    {filterOptions.vendors.map((vendor) => <option key={vendor} value={vendor}>{vendor}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                                <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier</span>
+                                <select aria-label="Filter by carrier" value={filterCarrier} onChange={(e) => { setFilterCarrier(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                    <option value="">Tất cả</option>
+                                    {filterOptions.carriers.map((carrier) => <option key={carrier} value={carrier}>{carrier}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                                <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
+                                <div className="flex items-center gap-1 border-l border-neutral-200 pl-2">
+                                    <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-from">Từ</label>
+                                    <input id="submit-amz-from" aria-label="Filter Amazon submit date from" type="date" value={filterAmzDateFrom} onChange={(e) => setFilterAmzDateFrom(e.target.value)} disabled={loading} className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50" />
+                                    <label className="text-[10px] text-neutral-400 font-semibold" htmlFor="submit-amz-to">Đến</label>
+                                    <input id="submit-amz-to" aria-label="Filter Amazon submit date to" type="date" value={filterAmzDateTo} onChange={(e) => setFilterAmzDateTo(e.target.value)} disabled={loading} className="w-[120px] rounded border border-neutral-200 bg-white px-1.5 py-1 text-xs text-neutral-900 outline-none focus:border-neutral-900 disabled:opacity-50" />
+                                </div>
+                                {(filterAmzDateFrom || filterAmzDateTo) && (
+                                    <button aria-label="Clear Amazon submit date filter" onClick={() => { setFilterAmzDateFrom(''); setFilterAmzDateTo(''); }} className="text-neutral-400 hover:text-neutral-900 text-xs font-bold px-1" title="Xoá lọc ngày">✕</button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Table Card */}
