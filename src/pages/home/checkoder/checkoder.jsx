@@ -621,7 +621,6 @@ const CheckOder = () => {
                 ...batch,
                 amazonFeed: { status: 'queued' }
             }))));
-            alert(`Đã gửi ${reviewBatches.reduce((total, batch) => total + batch.totalReal, 0)} đơn sang extension.`);
             setReviewBatches([]);
             setSelectedOrders([]);
             fetchData();
