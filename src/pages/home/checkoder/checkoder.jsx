@@ -133,6 +133,7 @@ const PAGE_CSS = `
 
 const CheckOder = () => {
     const [orders, setOrders] = useState([]);
+    const [filterOptions, setFilterOptions] = useState({ vendors: [], carriers: [] });
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -236,6 +237,7 @@ const CheckOder = () => {
             });
 
             setOrders(res.data.orders || []);
+            setFilterOptions(res.data.filterOptions || { vendors: [], carriers: [] });
             setStats(res.data.stats || {});
             setTotalCount(res.data.totalCount || 0);
             setSelectedOrders([]);
@@ -889,9 +891,7 @@ const CheckOder = () => {
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Vendor</span>
                             <select aria-label="Filter by fulfillment vendor" value={filterVendor} onChange={(e) => { setFilterVendor(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
                                 <option value="">Tất cả</option>
-                                <option value="MerchFox">MerchFox</option>
-                                <option value="Merchize">Merchize</option>
-                                <option value="Lenful">Lenful</option>
+                                {filterOptions.vendors.map((vendor) => <option key={vendor} value={vendor}>{vendor}</option>)}
                             </select>
                         </div>
 
@@ -899,7 +899,7 @@ const CheckOder = () => {
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier</span>
                             <select aria-label="Filter by carrier" value={filterCarrier} onChange={(e) => { setFilterCarrier(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
                                 <option value="">Tất cả</option>
-                                <option value="USPS">USPS</option>
+                                {filterOptions.carriers.map((carrier) => <option key={carrier} value={carrier}>{carrier}</option>)}
                             </select>
                         </div>
 
