@@ -106,12 +106,14 @@ const taskStatusLabel = (status) => ({
     received: 'Extension đã nhận',
     completed: '✓ Thành công',
     failed: '✕ Thất bại',
+    expired: '✕ Hết hạn chờ extension',
     'no-client': 'Chưa có extension'
 }[status] || 'Chưa chạy');
 
 const taskStatusTone = (status) => ({
     completed: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' },
     failed: { backgroundColor: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' },
+    expired: { backgroundColor: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' },
     received: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' },
     sent: { backgroundColor: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }
 }[status] || { backgroundColor: PAGE_TOKENS.surfaceMuted, borderColor: PAGE_TOKENS.border, color: PAGE_TOKENS.mutedText });
