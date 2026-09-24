@@ -49,14 +49,9 @@ const getAmazonUsDate = () => {
     return `${value.year}-${value.month}-${value.day}`;
 };
 
-const generateFakeTracking = () => {
-    const prefix = '9234';
-    let suffix = '';
-    for (let i = 0; i < 18; i++) {
-        suffix += Math.floor(Math.random() * 10);
-    }
-    return prefix + suffix;
-};
+const formatAmazonDate = (value) => value
+    ? new Date(value).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+    : 'N/A';
 
 const PAGE_TOKENS = {
     bg: '#f8fafc',
@@ -146,6 +141,8 @@ const CheckOder = () => {
     const [filterAmzDateTo, setFilterAmzDateTo] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [limit, setLimit] = useState(20);
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
 
     const [shops, setShops] = useState([]);
     const [selectedShop, setSelectedShop] = useState(null);
@@ -157,7 +154,6 @@ const CheckOder = () => {
     const [submitting, setSubmitting] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
-    const [exportingFake, setExportingFake] = useState(false);
     const [reviewBatches, setReviewBatches] = useState([]);
     const [reviewShipDate, setReviewShipDate] = useState(getAmazonUsDate);
     const [confirmedSingleShipment, setConfirmedSingleShipment] = useState(false);
@@ -171,7 +167,7 @@ const CheckOder = () => {
         if (selectedShop && !showShopModal) {
             fetchData();
         }
-    }, [selectedShop, limit]);
+    }, [selectedShop, limit, page, filterTracking, filterAmazon, searchTerm]);
 
     const getShop = async () => {
         try {
@@ -199,6 +195,7 @@ const CheckOder = () => {
             setFilterAmzDateFrom('');
             setFilterAmzDateTo('');
             setSearchTerm('');
+            setPage(1);
         }
     };
 
@@ -221,17 +218,23 @@ const CheckOder = () => {
 
             const res = await checkOrdersStatus({
                 machineId: selectedShop._id,
-                limit
+                limit,
+                page,
+                search: searchTerm.trim(),
+                tracking: filterTracking,
+                amazon: filterAmazon
             });
 
             setOrders(res.data.orders || []);
             setStats(res.data.stats || {});
+            setTotalCount(res.data.totalCount || 0);
             setSelectedOrders([]);
         } catch (err) {
             console.error('LỖI:', err);
             setError('Không thể tải dữ liệu. Vui lòng thử lại.');
             setOrders([]);
             setStats({});
+            setTotalCount(0);
         } finally {
             setLoading(false);
         }
@@ -272,10 +275,10 @@ const CheckOder = () => {
     }, [orders, filterTracking, filterAmazon, filterAmzDateFrom, filterAmzDateTo, searchTerm]);
 
     const reviewRows = useMemo(() => reviewBatches.flatMap((batch) =>
-        (batch.orders || []).map((order) => ({
-            ...order,
-            itemsCount: orders.find((current) => current.orderId === order.orderId && current.shopId === batch.shopId)?.itemsCount || 0
-        }))
+        (batch.orders || []).map((order) => {
+            const source = orders.find((current) => current.orderId === order.orderId && current.shopId === batch.shopId);
+            return { ...order, itemsCount: source?.itemsCount || 0, shipmentItems: source?.shipmentItems || [] };
+        })
     ), [reviewBatches, orders]);
 
     const getOrderKey = (order) =>
@@ -288,7 +291,7 @@ const CheckOder = () => {
     };
 
     const handleSelectOrder = (order) => {
-        if (!order.orderId || !order.shopId || order.submittedToAmazon) return;
+        if (!order.orderId || !order.shopId || order.submittedToAmazon || !order.bulkConfirmEligible) return;
 
         const payload = { orderId: order.orderId, shopId: order.shopId };
 
@@ -308,7 +311,7 @@ const CheckOder = () => {
     const isAllFilteredSelected =
         filteredOrders.length > 0 &&
         filteredOrders
-            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon)
+            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon && order.bulkConfirmEligible)
             .every((order) =>
                 selectedOrders.some(
                     (item) => item.orderId === order.orderId && item.shopId === order.shopId
@@ -317,7 +320,7 @@ const CheckOder = () => {
 
     const handleSelectAllFiltered = () => {
         const validFilteredOrders = filteredOrders
-            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon)
+            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon && order.bulkConfirmEligible)
             .map((order) => ({ orderId: order.orderId, shopId: order.shopId }));
 
         if (isAllFilteredSelected) {
@@ -379,42 +382,6 @@ const CheckOder = () => {
             alert('Có lỗi khi xuất TXT');
         } finally {
             setExporting(false);
-        }
-    };
-
-    const handleExportFakeTxt = async () => {
-        if (selectedOrders.length === 0) {
-            alert('Vui lòng tích chọn ít nhất 1 đơn để fake tracking');
-            return;
-        }
-
-        try {
-            setExportingFake(true);
-
-            const shipDate = formatShipDate(new Date());
-            const header = ['order-id', 'ship-date', 'carrier-code', 'tracking-number', 'ship-method'].join('\t');
-
-            const lines = selectedOrders.map((sel) => {
-                const fakeTracking = generateFakeTracking();
-                const { carrierCode, shipMethod } = getCarrierInfo(fakeTracking);
-                return [sel.orderId, shipDate, carrierCode, fakeTracking, shipMethod].join('\t');
-            });
-
-            const content = [header, ...lines].join('\n') + '\n';
-
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const shopName = selectedShop?.name || 'AllShops';
-            const filename = `FakeTracking_${shopName}_${timestamp}.txt`;
-
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            saveAs(blob, filename);
-
-            alert(`Xuất Fake Tracking thành công: ${selectedOrders.length} đơn hàng`);
-        } catch (error) {
-            console.error('Export Fake TXT error:', error);
-            alert('Có lỗi khi xuất Fake Tracking');
-        } finally {
-            setExportingFake(false);
         }
     };
 
@@ -514,10 +481,18 @@ const CheckOder = () => {
                 label: 'Manual Upload',
                 autoUpload: false
             });
+            const excludedOrders = (res.data?.batches || []).flatMap((batch) => batch.excludedOrders || []);
             const batches = (res.data?.batches || []).filter((batch) => batch.success && batch.totalReal > 0 && batch.totalFake === 0);
             if (!batches.length) {
-                alert('Không có batch nào đủ tracking thật để review.');
+                const splitCount = excludedOrders.filter((order) => order.reason === 'SPLIT_SHIPMENT').length;
+                alert(splitCount
+                    ? `${splitCount} đơn có nhiều tracking (split shipment), không thể gửi bằng bulk TSV.`
+                    : 'Không có batch nào đủ điều kiện để review.');
                 return;
+            }
+            if (excludedOrders.length) {
+                const splitCount = excludedOrders.filter((order) => order.reason === 'SPLIT_SHIPMENT').length;
+                alert(`${excludedOrders.length} đơn bị loại khỏi bulk review${splitCount ? `, gồm ${splitCount} đơn split shipment` : ''}.`);
             }
             setReviewBatches(batches);
             setConfirmedSingleShipment(false);
@@ -809,7 +784,10 @@ const CheckOder = () => {
                         <select
                             aria-label="Select order limit"
                             value={limit}
-                            onChange={(e) => setLimit(Number(e.target.value))}
+                            onChange={(e) => {
+                                setLimit(Number(e.target.value));
+                                setPage(1);
+                            }}
                             className="bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1.5 text-xs text-neutral-900 font-semibold cursor-pointer outline-none"
                         >
                             <option value={10}>10</option>
@@ -852,7 +830,10 @@ const CheckOder = () => {
                             type="text"
                             placeholder="Tìm theo Shop Name, Shop ID hoặc Order ID..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setPage(1);
+                            }}
                             className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-1.5 text-xs bg-neutral-50 outline-none focus:bg-white focus:border-neutral-900 transition-colors"
                         />
                     </div>
@@ -863,7 +844,10 @@ const CheckOder = () => {
                             <select
                                 aria-label="Filter by tracking availability"
                                 value={filterTracking}
-                                onChange={(e) => setFilterTracking(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterTracking(e.target.value);
+                                    setPage(1);
+                                }}
                                 disabled={loading}
                                 className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
                             >
@@ -878,7 +862,10 @@ const CheckOder = () => {
                             <select
                                 aria-label="Filter by Amazon submit status"
                                 value={filterAmazon}
-                                onChange={(e) => setFilterAmazon(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterAmazon(e.target.value);
+                                    setPage(1);
+                                }}
                                 disabled={loading}
                                 className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50"
                             >
@@ -941,16 +928,6 @@ const CheckOder = () => {
                         </button>
 
                         <button
-                            aria-label="Export fake tracking for selected orders"
-                            onClick={handleExportFakeTxt}
-                            disabled={exportingFake || selectedOrders.length === 0 || loading}
-                            className="px-3 py-1.5 rounded-lg border border-amber-500 bg-amber-500 !text-white font-semibold text-xs hover:bg-amber-600 hover:border-amber-600 hover:!text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Tạo file TXT với tracking giả cho các đơn đã chọn"
-                        >
-                            {exportingFake ? '...' : `Fake Tracking (${selectedOrders.length})`}
-                        </button>
-
-                        <button
                             aria-label="Review selected orders before sending to Amazon"
                             onClick={handlePushOrders}
                             disabled={submitting || selectedOrders.length === 0 || loading}
@@ -976,7 +953,7 @@ const CheckOder = () => {
                                             disabled={
                                                 loading ||
                                                 filteredOrders.filter(
-                                                    (o) => o.orderId && o.shopId && !o.submittedToAmazon
+                                                    (o) => o.orderId && o.shopId && !o.submittedToAmazon && o.bulkConfirmEligible
                                                 ).length === 0
                                             }
                                             className="accent-neutral-900 cursor-pointer"
@@ -988,6 +965,9 @@ const CheckOder = () => {
                                         'Ngày tạo',
                                         'Tracking',
                                         'Mã tracking',
+                                        'Carrier',
+                                        'Nhận tracking',
+                                        'Ship by (Amazon)',
                                         'AMZ',
                                         'Ngày submit AMZ',
                                         'SL',
@@ -1006,7 +986,7 @@ const CheckOder = () => {
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="12" className="text-center py-10 text-neutral-500">
+                                        <td colSpan="13" className="text-center py-10 text-neutral-500">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
@@ -1023,7 +1003,7 @@ const CheckOder = () => {
                                                 }`}
                                             >
                                                 <td className="px-2 py-2 border-b border-neutral-100 text-center">
-                                                    {order.submittedToAmazon ? (
+                                                    {order.submittedToAmazon || !order.bulkConfirmEligible ? (
                                                         <span className="text-neutral-300 font-bold">–</span>
                                                     ) : (
                                                         <input
@@ -1031,7 +1011,7 @@ const CheckOder = () => {
                                                             type="checkbox"
                                                             checked={selected}
                                                             onChange={() => handleSelectOrder(order)}
-                                                            disabled={!order.orderId || !order.shopId}
+                                                            disabled={!order.orderId || !order.shopId || !order.bulkConfirmEligible}
                                                             className="accent-neutral-900 cursor-pointer"
                                                         />
                                                     )}
@@ -1064,9 +1044,32 @@ const CheckOder = () => {
                                                         ></span>
                                                         {order.hasTracking ? 'Có' : 'Không'}
                                                     </span>
+                                                    {order.isSplitShipment && (
+                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Split shipment · chặn bulk</div>
+                                                    )}
+                                                    {order.bulkBlockReason === 'MISSING_TRACKING' && (
+                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Thiếu tracking</div>
+                                                    )}
+                                                    {order.bulkBlockReason === 'MISSING_CARRIER' && (
+                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Thiếu carrier · chặn gửi</div>
+                                                    )}
+                                                    {order.bulkBlockReason === 'BUYER_CANCELLATION' && (
+                                                        <div className="mt-1 text-[10px] font-semibold text-red-700">Buyer yêu cầu huỷ · chặn gửi</div>
+                                                    )}
                                                 </td>
                                                 <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 font-mono whitespace-nowrap">
                                                     {order.tracking || 'N/A'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.trackingInfo?.carrier || 'N/A'}
+                                                </td>
+                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
+                                                    {order.trackingInfo?.trackingReceivedAt
+                                                        ? new Date(order.trackingInfo.trackingReceivedAt).toLocaleString()
+                                                        : 'N/A'}
+                                                </td>
+                                                <td className={`px-3 py-2 border-b border-neutral-100 whitespace-nowrap ${order.shipByDate && new Date(order.shipByDate) <= new Date() ? 'font-semibold text-amber-700' : 'text-neutral-700'}`}>
+                                                    {formatAmazonDate(order.shipByDate)}
                                                 </td>
                                                 <td className="px-3 py-2 border-b border-neutral-100">
                                                     <span
@@ -1105,7 +1108,7 @@ const CheckOder = () => {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="12" className="text-center py-12 text-neutral-500">
+                                        <td colSpan="13" className="text-center py-12 text-neutral-500">
                                             {selectedShop
                                                 ? 'Không có dữ liệu phù hợp'
                                                 : 'Vui lòng chọn shop để xem dữ liệu'}
@@ -1117,12 +1120,25 @@ const CheckOder = () => {
                     </div>
                     <div className="px-3 py-1.5 border-t border-neutral-200 text-[11px] text-neutral-500 flex items-center gap-3 bg-neutral-50">
                         <span>
-                            Hiển thị <strong className="text-neutral-900">{filteredOrders.length}</strong>
+                            Hiển thị <strong className="text-neutral-900">{filteredOrders.length}</strong> / <strong className="text-neutral-900">{totalCount}</strong>
                         </span>
                         <span className="w-1 h-1 rounded-full bg-neutral-300"></span>
                         <span>
                             Đã chọn <strong className="text-neutral-900">{selectedOrders.length}</strong>
                         </span>
+                        <div className="ml-auto flex items-center gap-1">
+                            <button
+                                onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                                disabled={loading || page <= 1}
+                                className="rounded border border-neutral-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-700 disabled:opacity-40"
+                            >Trước</button>
+                            <span>Trang {page}</span>
+                            <button
+                                onClick={() => setPage((current) => current + 1)}
+                                disabled={loading || page * limit >= totalCount}
+                                className="rounded border border-neutral-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-700 disabled:opacity-40"
+                            >Sau</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1136,12 +1152,12 @@ const CheckOder = () => {
                         </div>
                         <div className="max-h-[52vh] overflow-auto px-5 py-4">
                             <label className="mb-4 flex max-w-xs flex-col gap-1 text-xs font-semibold text-slate-700">
-                                Ship date dự phòng (chỉ dùng khi vendor chưa có thời điểm trả tracking)
+                                Ship date để gửi Amazon (xác nhận theo ngày giao thực tế)
                                 <input type="date" value={reviewShipDate} max={getAmazonUsDate()} onChange={(event) => setReviewShipDate(event.target.value)} className="rounded border border-slate-300 px-2 py-1.5 text-sm" />
                             </label>
                             <table className="w-full text-left text-xs">
                                 <thead className="bg-slate-100 text-slate-600">
-                                    <tr><th className="px-2 py-2">Order ID</th><th className="px-2 py-2">Tracking</th><th className="px-2 py-2">Carrier</th><th className="px-2 py-2">Ship date</th><th className="px-2 py-2">Items</th><th className="px-2 py-2">Amazon fields</th></tr>
+                                    <tr><th className="px-2 py-2">Order ID</th><th className="px-2 py-2">Tracking</th><th className="px-2 py-2">Carrier</th><th className="px-2 py-2">Nhận tracking</th><th className="px-2 py-2">Items</th><th className="px-2 py-2">Amazon fields</th></tr>
                                 </thead>
                                 <tbody>
                                     {reviewRows.map((order) => {
@@ -1150,9 +1166,9 @@ const CheckOder = () => {
                                             <td className="px-2 py-2 font-mono">{order.orderId}</td>
                                             <td className="px-2 py-2 font-mono">{order.tracking}</td>
                                             <td className="px-2 py-2">{carrier.carrierCode}</td>
-                                            <td className="px-2 py-2">{order.shipDate || 'Dùng ngày dự phòng'}</td>
-                                            <td className="px-2 py-2">{order.itemsCount > 1 ? <span className="font-semibold text-amber-800">{order.itemsCount} · kiểm tra split</span> : order.itemsCount || '—'}</td>
-                                            <td className="px-2 py-2">order-item-id, quantity, Transparency, ship-from: để trống (whole-order)</td>
+                                            <td className="px-2 py-2">{order.shipDate || 'Chưa có thời điểm nhận tracking'}</td>
+                                            <td className="px-2 py-2">{order.shipmentItems?.map((item) => `${item.orderItemId || 'missing item id'} × ${item.quantity || 1}`).join(', ') || 'Không có item data'}</td>
+                                            <td className="px-2 py-2">Transparency và ship-from: để trống (whole-order)</td>
                                         </tr>;
                                     })}
                                 </tbody>
