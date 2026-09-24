@@ -18,6 +18,9 @@ const STATUS_COPY = {
 export const isAmazonFeedInProgress = (feed = {}) =>
     ['queued', 'submitted', 'processing'].includes(String(feed.status || '').toLowerCase());
 
+export const shouldShowAmazonFeedTimeline = (feed = {}, manuallyExpanded = false) =>
+    manuallyExpanded || isAmazonFeedInProgress(feed);
+
 export const buildAmazonFeedProcess = (feed = {}) => {
     const status = String(feed.status || 'queued').toLowerCase();
     const copy = STATUS_COPY[status] || STATUS_COPY.queued;

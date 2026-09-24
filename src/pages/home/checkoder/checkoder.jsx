@@ -18,7 +18,8 @@ import {
 import {
     buildAmazonFeedProcess,
     formatAmazonFeedTime,
-    isAmazonFeedInProgress
+    isAmazonFeedInProgress,
+    shouldShowAmazonFeedTimeline
 } from './amazonFeedProcess';
 
 const getCarrierInfo = (tracking, carrier = '') => {
@@ -196,6 +197,7 @@ const CheckOder = () => {
     const [exportingExcel, setExportingExcel] = useState(false);
     const [reviewBatches, setReviewBatches] = useState([]);
     const [amazonFeeds, setAmazonFeeds] = useState([]);
+    const [expandedAmazonFeedIds, setExpandedAmazonFeedIds] = useState(() => new Set());
     const [reviewShipDate, setReviewShipDate] = useState(getAmazonUsDate);
     const [confirmedSingleShipment, setConfirmedSingleShipment] = useState(false);
     const [confirmedNoTransparency, setConfirmedNoTransparency] = useState(false);
@@ -229,6 +231,7 @@ const CheckOder = () => {
             setShowShopModal(false);
             setOrders([]);
             setAmazonFeeds([]);
+            setExpandedAmazonFeedIds(new Set());
             setStats({});
             setSelectedOrders([]);
             setError(null);
@@ -920,15 +923,13 @@ const CheckOder = () => {
                 {amazonFeeds.length > 0 && (
                     <section
                         aria-label="Tiến trình gửi Amazon"
-                        className="rounded-xl border p-4"
+                        className="rounded-xl border px-3 py-2"
                         style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h2 className="text-sm font-bold" style={{ color: PAGE_TOKENS.text }}>Tiến trình gửi Amazon</h2>
-                                <p className="mt-0.5 text-xs" style={{ color: PAGE_TOKENS.muted }}>
-                                    {hasAmazonFeedInProgress ? 'Tự cập nhật mỗi 15 giây khi Amazon đang xử lý.' : 'Hiển thị 5 batch gần nhất.'}
-                                </p>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>Amazon feed</h2>
+                                <span className="text-[11px]" style={{ color: PAGE_TOKENS.muted }}>5 batch gần nhất</span>
                             </div>
                             {hasAmazonFeedInProgress && (
                                 <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{
@@ -941,10 +942,11 @@ const CheckOder = () => {
                             )}
                         </div>
 
-                        <div className="mt-3 grid gap-3">
+                        <div className="mt-2 grid gap-1.5">
                             {amazonFeeds.map((batch) => {
                                 const feed = batch.amazonFeed;
                                 const process = buildAmazonFeedProcess(feed);
+                                const isExpanded = shouldShowAmazonFeedTimeline(feed, expandedAmazonFeedIds.has(String(batch.batchId)));
                                 const tone = process.tone === 'success'
                                     ? { color: PAGE_TOKENS.successText, backgroundColor: PAGE_TOKENS.successBg, borderColor: PAGE_TOKENS.successBorder }
                                     : process.tone === 'warning'
@@ -954,60 +956,85 @@ const CheckOder = () => {
                                             : { color: PAGE_TOKENS.primary, backgroundColor: '#eff6ff', borderColor: '#bfdbfe' };
 
                                 return (
-                                    <article key={batch.batchId} className="rounded-lg border p-3" style={{ borderColor: PAGE_TOKENS.border }}>
+                                    <article key={batch.batchId} className="rounded-lg border px-3 py-2" style={{ borderColor: PAGE_TOKENS.border }}>
                                         <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>
+                                            <div className="flex min-w-0 items-center gap-x-3 gap-y-1">
+                                                <p className="text-xs font-bold whitespace-nowrap" style={{ color: PAGE_TOKENS.text }}>
                                                     {feed.amazonBatchId ? `Amazon batch ${feed.amazonBatchId}` : `Batch ${String(batch.batchId).slice(-8)}`}
                                                 </p>
-                                                <p className="mt-0.5 text-xs" style={{ color: PAGE_TOKENS.muted }}>{process.summary}</p>
+                                                <p className="text-[11px]" style={{ color: PAGE_TOKENS.muted }}>{process.summary}</p>
                                             </div>
-                                            <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={tone}>{process.badge}</span>
-                                        </div>
-
-                                        <div className="mt-3 overflow-x-auto pb-1">
-                                            <div className="flex min-w-[620px] items-start">
-                                                {process.steps.map((step, index) => {
-                                                    const stepTone = step.state === 'complete'
-                                                        ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.successText, borderColor: PAGE_TOKENS.successText }
-                                                        : step.state === 'active'
-                                                            ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.primary, borderColor: PAGE_TOKENS.primary }
-                                                            : step.state === 'warning'
-                                                                ? { color: PAGE_TOKENS.warningText, backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }
-                                                                : step.state === 'error'
-                                                                    ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.dangerText, borderColor: PAGE_TOKENS.dangerText }
-                                                                    : { color: PAGE_TOKENS.muted, backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.borderStrong };
-                                                    const marker = step.state === 'complete' ? '✓' : step.state === 'active' ? '…' : step.state === 'warning' ? '!' : step.state === 'error' ? '×' : index + 1;
-
-                                                    return (
-                                                        <div className="flex flex-1 items-start last:flex-none" key={step.key}>
-                                                            <div className="min-w-[102px] text-center">
-                                                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold" style={stepTone}>{marker}</span>
-                                                                <p className="mt-1 text-[11px] font-semibold" style={{ color: step.state === 'pending' ? PAGE_TOKENS.muted : PAGE_TOKENS.text }}>{step.label}</p>
-                                                            </div>
-                                                            {index < process.steps.length - 1 && (
-                                                                <span className="mt-3 h-px flex-1" style={{ backgroundColor: step.state === 'complete' ? PAGE_TOKENS.successBorder : PAGE_TOKENS.border }} />
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                            <div className="flex items-center gap-2">
+                                                <span className="hidden text-[11px] md:inline" style={{ color: PAGE_TOKENS.muted }}>
+                                                    {feed.status !== 'queued' ? `${feed.recordsActivated || 0}/${feed.recordsProcessed || 0} xác nhận` : 'Chờ extension'}
+                                                </span>
+                                                <span className="rounded-full border px-2 py-0.5 text-[11px] font-semibold" style={tone}>{process.badge}</span>
+                                                {!isAmazonFeedInProgress(feed) && (
+                                                    <button
+                                                        type="button"
+                                                        aria-expanded={isExpanded}
+                                                        onClick={() => setExpandedAmazonFeedIds((previous) => {
+                                                            const next = new Set(previous);
+                                                            const id = String(batch.batchId);
+                                                            if (next.has(id)) next.delete(id);
+                                                            else next.add(id);
+                                                            return next;
+                                                        })}
+                                                        className="text-[11px] font-semibold underline"
+                                                        style={{ color: PAGE_TOKENS.primary }}
+                                                    >
+                                                        {isExpanded ? 'Thu gọn' : 'Chi tiết'}
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
-                                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]" style={{ color: PAGE_TOKENS.muted }}>
-                                            <span>Đã gửi: {formatAmazonFeedTime(feed.submittedAt)}</span>
-                                            {feed.completedAt && <span>Hoàn tất: {formatAmazonFeedTime(feed.completedAt)}</span>}
-                                            {feed.status !== 'queued' && <span>{feed.recordsActivated || 0}/{feed.recordsProcessed || 0} xác nhận</span>}
-                                            {Number(feed.errorCount) > 0 && <span style={{ color: PAGE_TOKENS.dangerText }}>{feed.errorCount} lỗi</span>}
-                                            {Number(feed.warningCount) > 0 && <span style={{ color: PAGE_TOKENS.warningText }}>{feed.warningCount} cảnh báo</span>}
-                                            {feed.reportText && (
-                                                <button type="button" onClick={() => handleDownloadAmazonReport(batch)} className="font-semibold underline" style={{ color: PAGE_TOKENS.primary }}>
-                                                    Tải Processing Report
-                                                </button>
-                                            )}
-                                        </div>
-                                        {feed.failureReason && (
-                                            <p className="mt-2 text-xs" style={{ color: PAGE_TOKENS.dangerText }}>{feed.failureReason}</p>
+                                        {isExpanded && (
+                                            <div className="mt-2 border-t pt-2" style={{ borderColor: PAGE_TOKENS.border }}>
+                                                <div className="overflow-x-auto pb-1">
+                                                    <div className="flex min-w-[540px] items-start">
+                                                        {process.steps.map((step, index) => {
+                                                            const stepTone = step.state === 'complete'
+                                                                ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.successText, borderColor: PAGE_TOKENS.successText }
+                                                                : step.state === 'active'
+                                                                    ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.primary, borderColor: PAGE_TOKENS.primary }
+                                                                    : step.state === 'warning'
+                                                                        ? { color: PAGE_TOKENS.warningText, backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }
+                                                                        : step.state === 'error'
+                                                                            ? { color: '#ffffff', backgroundColor: PAGE_TOKENS.dangerText, borderColor: PAGE_TOKENS.dangerText }
+                                                                            : { color: PAGE_TOKENS.muted, backgroundColor: PAGE_TOKENS.surfaceSubtle, borderColor: PAGE_TOKENS.borderStrong };
+                                                            const marker = step.state === 'complete' ? '✓' : step.state === 'active' ? '…' : step.state === 'warning' ? '!' : step.state === 'error' ? '×' : index + 1;
+
+                                                            return (
+                                                                <div className="flex flex-1 items-start last:flex-none" key={step.key}>
+                                                                    <div className="min-w-[88px] text-center">
+                                                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold" style={stepTone}>{marker}</span>
+                                                                        <p className="mt-0.5 text-[10px] font-semibold" style={{ color: step.state === 'pending' ? PAGE_TOKENS.muted : PAGE_TOKENS.text }}>{step.label}</p>
+                                                                    </div>
+                                                                    {index < process.steps.length - 1 && (
+                                                                        <span className="mt-2.5 h-px flex-1" style={{ backgroundColor: step.state === 'complete' ? PAGE_TOKENS.successBorder : PAGE_TOKENS.border }} />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]" style={{ color: PAGE_TOKENS.muted }}>
+                                                    <span>Đã gửi: {formatAmazonFeedTime(feed.submittedAt)}</span>
+                                                    {feed.completedAt && <span>Hoàn tất: {formatAmazonFeedTime(feed.completedAt)}</span>}
+                                                    {Number(feed.errorCount) > 0 && <span style={{ color: PAGE_TOKENS.dangerText }}>{feed.errorCount} lỗi</span>}
+                                                    {Number(feed.warningCount) > 0 && <span style={{ color: PAGE_TOKENS.warningText }}>{feed.warningCount} cảnh báo</span>}
+                                                    {feed.reportText && (
+                                                        <button type="button" onClick={() => handleDownloadAmazonReport(batch)} className="font-semibold underline" style={{ color: PAGE_TOKENS.primary }}>
+                                                            Tải Processing Report
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {feed.failureReason && (
+                                                    <p className="mt-1 text-xs" style={{ color: PAGE_TOKENS.dangerText }}>{feed.failureReason}</p>
+                                                )}
+                                            </div>
                                         )}
                                     </article>
                                 );

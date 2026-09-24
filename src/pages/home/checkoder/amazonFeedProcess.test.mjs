@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAmazonFeedProcess } from './amazonFeedProcess.js';
+import { buildAmazonFeedProcess, shouldShowAmazonFeedTimeline } from './amazonFeedProcess.js';
 
 test('marks every stage complete once Amazon confirms the feed', () => {
     const process = buildAmazonFeedProcess({
@@ -30,4 +30,10 @@ test('shows a review outcome without calling it a successful confirmation', () =
     assert.equal(process.tone, 'warning');
     assert.equal(process.steps.at(-1).state, 'warning');
     assert.equal(process.summary, 'Amazon cần review');
+});
+
+test('keeps active feeds expanded and completed feeds collapsed until requested', () => {
+    assert.equal(shouldShowAmazonFeedTimeline({ status: 'processing' }, false), true);
+    assert.equal(shouldShowAmazonFeedTimeline({ status: 'done' }, false), false);
+    assert.equal(shouldShowAmazonFeedTimeline({ status: 'done' }, true), true);
 });
