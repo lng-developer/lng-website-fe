@@ -8,6 +8,11 @@ import {
 } from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
+import {
+    AMAZON_SUBMIT_TABLE_COLUMNS,
+    AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS,
+    getAmazonSubmitStatus
+} from './shippingEligibility';
 
 const getCarrierInfo = (tracking, carrier = '') => {
     const carrierName = carrier.toLowerCase();
@@ -48,10 +53,6 @@ const getAmazonUsDate = () => {
     const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return `${value.year}-${value.month}-${value.day}`;
 };
-
-const formatAmazonDate = (value) => value
-    ? new Date(value).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
-    : 'N/A';
 
 const PAGE_TOKENS = {
     bg: '#f8fafc',
@@ -137,6 +138,9 @@ const CheckOder = () => {
     const [error, setError] = useState(null);
     const [filterTracking, setFilterTracking] = useState('all');
     const [filterAmazon, setFilterAmazon] = useState('all');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [filterCarrier, setFilterCarrier] = useState('');
+    const [filterCarrierHandoff, setFilterCarrierHandoff] = useState('all');
     const [filterAmzDateFrom, setFilterAmzDateFrom] = useState('');
     const [filterAmzDateTo, setFilterAmzDateTo] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -167,7 +171,7 @@ const CheckOder = () => {
         if (selectedShop && !showShopModal) {
             fetchData();
         }
-    }, [selectedShop, limit, page, filterTracking, filterAmazon, searchTerm]);
+    }, [selectedShop, limit, page, filterTracking, filterAmazon, filterVendor, filterCarrier, filterCarrierHandoff, searchTerm]);
 
     const getShop = async () => {
         try {
@@ -192,6 +196,9 @@ const CheckOder = () => {
             setError(null);
             setFilterTracking('all');
             setFilterAmazon('all');
+            setFilterVendor('');
+            setFilterCarrier('');
+            setFilterCarrierHandoff('all');
             setFilterAmzDateFrom('');
             setFilterAmzDateTo('');
             setSearchTerm('');
@@ -222,7 +229,10 @@ const CheckOder = () => {
                 page,
                 search: searchTerm.trim(),
                 tracking: filterTracking,
-                amazon: filterAmazon
+                amazon: filterAmazon,
+                vendor: filterVendor,
+                carrier: filterCarrier,
+                carrierHandoff: filterCarrierHandoff
             });
 
             setOrders(res.data.orders || []);
@@ -876,6 +886,33 @@ const CheckOder = () => {
                         </div>
 
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Vendor</span>
+                            <select aria-label="Filter by fulfillment vendor" value={filterVendor} onChange={(e) => { setFilterVendor(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                <option value="">Tất cả</option>
+                                <option value="MerchFox">MerchFox</option>
+                                <option value="Merchize">Merchize</option>
+                                <option value="Lenful">Lenful</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier</span>
+                            <select aria-label="Filter by carrier" value={filterCarrier} onChange={(e) => { setFilterCarrier(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                <option value="">Tất cả</option>
+                                <option value="USPS">USPS</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Carrier nhận</span>
+                            <select aria-label="Filter by carrier handoff" value={filterCarrierHandoff} onChange={(e) => { setFilterCarrierHandoff(e.target.value); setPage(1); }} disabled={loading} className="border-none outline-none bg-transparent text-xs text-neutral-900 font-semibold cursor-pointer disabled:opacity-50">
+                                <option value="all">Tất cả</option>
+                                <option value="yes">Đã nhận</option>
+                                <option value="no">Chưa nhận</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wide">Submit AMZ</span>
                             <input
                                 aria-label="Filter Amazon submit date from"
@@ -909,6 +946,20 @@ const CheckOder = () => {
                             )}
                         </div>
 
+                        {(filterTracking !== 'all' || filterAmazon !== 'all' || filterVendor || filterCarrier || filterCarrierHandoff !== 'all' || filterAmzDateFrom || filterAmzDateTo) && (
+                            <button
+                                aria-label="Clear all filters"
+                                onClick={() => {
+                                    setFilterTracking('all'); setFilterAmazon('all'); setFilterVendor('');
+                                    setFilterCarrier(''); setFilterCarrierHandoff('all');
+                                    setFilterAmzDateFrom(''); setFilterAmzDateTo(''); setPage(1);
+                                }}
+                                className="text-neutral-500 hover:text-neutral-900 text-xs font-semibold px-1"
+                            >
+                                Xóa lọc
+                            </button>
+                        )}
+
                         <button
                             aria-label="Export filtered orders to TXT"
                             onClick={handleExportTxt}
@@ -941,42 +992,31 @@ const CheckOder = () => {
                 {/* Table Card */}
                 <div className="flex-1 min-h-0 flex flex-col bg-white border border-neutral-200 rounded-xl overflow-hidden">
                     <div className="flex-1 min-h-0 overflow-auto">
-                        <table className="w-full border-separate border-spacing-0 text-xs">
+                        <table className="min-w-[1330px] w-full table-fixed border-separate border-spacing-0 text-xs">
                             <thead>
                                 <tr>
-                                    <th className="sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-center px-2 py-2 border-b border-neutral-200 w-10">
-                                        <input
-                                            aria-label="Select all eligible filtered orders"
-                                            type="checkbox"
-                                            checked={isAllFilteredSelected}
-                                            onChange={handleSelectAllFiltered}
-                                            disabled={
-                                                loading ||
-                                                filteredOrders.filter(
-                                                    (o) => o.orderId && o.shopId && !o.submittedToAmazon && o.bulkConfirmEligible
-                                                ).length === 0
-                                            }
-                                            className="accent-neutral-900 cursor-pointer"
-                                        />
+                                    <th className={`sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-center px-2 py-2 border-b border-neutral-200 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[0]}`}>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <input
+                                                aria-label="Select all eligible filtered orders"
+                                                type="checkbox"
+                                                checked={isAllFilteredSelected}
+                                                onChange={handleSelectAllFiltered}
+                                                disabled={
+                                                    loading ||
+                                                    filteredOrders.filter(
+                                                        (o) => o.orderId && o.shopId && !o.submittedToAmazon && o.bulkConfirmEligible
+                                                    ).length === 0
+                                                }
+                                                className="accent-neutral-900 cursor-pointer"
+                                            />
+                                            <span>{AMAZON_SUBMIT_TABLE_COLUMNS[0]}</span>
+                                        </div>
                                     </th>
-                                    {[
-                                        'Order ID',
-                                        'Trạng thái',
-                                        'Ngày tạo',
-                                        'Tracking',
-                                        'Mã tracking',
-                                        'Carrier',
-                                        'Nhận tracking',
-                                        'Ship by (Amazon)',
-                                        'AMZ',
-                                        'Ngày submit AMZ',
-                                        'SL',
-                                        'Fulfillment',
-                                        'Updated At'
-                                    ].map((h) => (
+                                    {AMAZON_SUBMIT_TABLE_COLUMNS.slice(1).map((h, index) => (
                                         <th
                                             key={h}
-                                            className="sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-left px-3 py-2 border-b border-neutral-200 whitespace-nowrap"
+                                            className={`sticky top-0 z-10 bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wide text-left px-3 py-2 border-b border-neutral-200 whitespace-nowrap ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[index + 1]}`}
                                         >
                                             {h}
                                         </th>
@@ -986,13 +1026,14 @@ const CheckOder = () => {
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="13" className="text-center py-10 text-neutral-500">
+                                        <td colSpan="6" className="text-center py-10 text-neutral-500">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
                                 ) : filteredOrders.length > 0 ? (
                                     filteredOrders.map((order) => {
                                         const selected = isOrderSelected(order);
+                                        const amazonSubmitStatus = getAmazonSubmitStatus(order);
                                         return (
                                             <tr
                                                 key={getOrderKey(order)}
@@ -1002,76 +1043,46 @@ const CheckOder = () => {
                                                         : 'hover:bg-neutral-50'
                                                 }`}
                                             >
-                                                <td className="px-2 py-2 border-b border-neutral-100 text-center">
-                                                    {order.submittedToAmazon || !order.bulkConfirmEligible ? (
-                                                        <span className="text-neutral-300 font-bold">–</span>
+                                                <td className={`px-2 py-2 border-b border-neutral-100 text-center align-top ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[0]}`}>
+                                                    {amazonSubmitStatus.state !== 'ready' ? (
+                                                        <span className={`inline-flex w-full flex-col break-words rounded border px-1.5 py-1 text-left text-[10px] font-semibold leading-tight ${
+                                                            amazonSubmitStatus.state === 'submitted'
+                                                                ? 'border-neutral-200 bg-neutral-50 text-neutral-600'
+                                                                : 'border-amber-200 bg-amber-50 text-amber-800'
+                                                        }`}>
+                                                            {amazonSubmitStatus.label}
+                                                            <span className="mt-0.5 font-normal">{amazonSubmitStatus.detail}</span>
+                                                        </span>
                                                     ) : (
-                                                        <input
-                                                            aria-label={`Select order ${order.orderId || ''}`}
-                                                            type="checkbox"
-                                                            checked={selected}
-                                                            onChange={() => handleSelectOrder(order)}
-                                                            disabled={!order.orderId || !order.shopId || !order.bulkConfirmEligible}
-                                                            className="accent-neutral-900 cursor-pointer"
-                                                        />
+                                                        <label className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                                                            <input
+                                                                aria-label={`Select order ${order.orderId || ''}`}
+                                                                type="checkbox"
+                                                                checked={selected}
+                                                                onChange={() => handleSelectOrder(order)}
+                                                                disabled={!order.orderId || !order.shopId || !order.bulkConfirmEligible}
+                                                                className="accent-neutral-900 cursor-pointer"
+                                                            />
+                                                            Sẵn sàng
+                                                        </label>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold whitespace-nowrap">
+                                                <td className={`px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold whitespace-nowrap ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[1]}`}>
                                                     {order.orderId || '-'}
                                                 </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100">
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200 whitespace-nowrap">
-                                                        {order.status || '-'}
-                                                    </span>
+                                                <td className={`px-3 py-2 border-b border-neutral-100 text-neutral-700 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[2]}`}>
+                                                    {order.trackingInfo?.fulfillment || 'Chưa có vendor'}
                                                 </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.createdAt
-                                                        ? new Date(order.createdAt).toLocaleString()
-                                                        : '-'}
+                                                <td className={`px-3 py-2 border-b border-neutral-100 text-neutral-700 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[3]}`}>
+                                                    <div className="break-all font-mono text-neutral-900">{order.tracking || 'Chưa có tracking'}</div>
+                                                    <div className="mt-0.5 break-words text-[10px] text-neutral-500">{order.trackingInfo?.carrier || 'Chưa có hãng vận chuyển'}</div>
                                                 </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100">
-                                                    <span
-                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
-                                                            order.hasTracking
-                                                                ? 'bg-neutral-900 text-white'
-                                                                : 'bg-white text-neutral-500 border border-neutral-300'
-                                                        }`}
-                                                    >
-                                                        <span
-                                                            className={`w-1.5 h-1.5 rounded-full ${
-                                                                order.hasTracking ? 'bg-green-400' : 'bg-neutral-400'
-                                                            }`}
-                                                        ></span>
-                                                        {order.hasTracking ? 'Có' : 'Không'}
-                                                    </span>
-                                                    {order.isSplitShipment && (
-                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Split shipment · chặn bulk</div>
-                                                    )}
-                                                    {order.bulkBlockReason === 'MISSING_TRACKING' && (
-                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Thiếu tracking</div>
-                                                    )}
-                                                    {order.bulkBlockReason === 'MISSING_CARRIER' && (
-                                                        <div className="mt-1 text-[10px] font-semibold text-amber-700">Thiếu carrier · chặn gửi</div>
-                                                    )}
-                                                    {order.bulkBlockReason === 'BUYER_CANCELLATION' && (
-                                                        <div className="mt-1 text-[10px] font-semibold text-red-700">Buyer yêu cầu huỷ · chặn gửi</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 font-mono whitespace-nowrap">
-                                                    {order.tracking || 'N/A'}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.trackingInfo?.carrier || 'N/A'}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.trackingInfo?.trackingReceivedAt
-                                                        ? new Date(order.trackingInfo.trackingReceivedAt).toLocaleString()
+                                                <td className={`px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[4]}`}>
+                                                    {order.trackingInfo?.actualShipAt
+                                                        ? new Date(order.trackingInfo.actualShipAt).toLocaleString()
                                                         : 'N/A'}
                                                 </td>
-                                                <td className={`px-3 py-2 border-b border-neutral-100 whitespace-nowrap ${order.shipByDate && new Date(order.shipByDate) <= new Date() ? 'font-semibold text-amber-700' : 'text-neutral-700'}`}>
-                                                    {formatAmazonDate(order.shipByDate)}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100">
+                                                <td className={`px-3 py-2 border-b border-neutral-100 ${AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS[5]}`}>
                                                     <span
                                                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
                                                             order.submittedToAmazon
@@ -1086,29 +1097,18 @@ const CheckOder = () => {
                                                         ></span>
                                                         {order.submittedToAmazon ? 'Có' : 'Không'}
                                                     </span>
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.createAtToAmz
-                                                        ? new Date(order.createAtToAmz).toLocaleString()
-                                                        : '-'}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-900 font-semibold">
-                                                    {order.itemsCount || 0}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.trackingInfo?.fulfillment || 'N/A'}
-                                                </td>
-                                                <td className="px-3 py-2 border-b border-neutral-100 text-neutral-700 whitespace-nowrap">
-                                                    {order.trackingInfo?.updated_at
-                                                        ? new Date(order.trackingInfo.updated_at).toLocaleString()
-                                                        : 'N/A'}
+                                                    <div className="mt-1 text-[10px] text-neutral-500">
+                                                        {order.createAtToAmz
+                                                            ? new Date(order.createAtToAmz).toLocaleString()
+                                                            : 'Chưa gửi'}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="13" className="text-center py-12 text-neutral-500">
+                                        <td colSpan="6" className="text-center py-12 text-neutral-500">
                                             {selectedShop
                                                 ? 'Không có dữ liệu phù hợp'
                                                 : 'Vui lòng chọn shop để xem dữ liệu'}
