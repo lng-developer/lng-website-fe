@@ -47,4 +47,16 @@ test("explains every blocking reason instead of hiding the checkbox", () => {
     getAmazonSubmitStatus({ submittedToAmazon: true }),
     { state: "submitted", label: "Đã gửi Amazon", detail: "Đơn này đã được gửi trước đó" }
   );
+  assert.deepEqual(
+    getAmazonSubmitStatus({ amazonConfirmation: { state: "confirmed" } }),
+    { state: "submitted", label: "Đã xác nhận Amazon", detail: "Amazon Processing Report đã xác nhận" }
+  );
+  assert.deepEqual(
+    getAmazonSubmitStatus({ amazonConfirmation: { state: "submitted" } }),
+    { state: "submitted", label: "Chờ Amazon xử lý", detail: "Đã gửi file, đang chờ Processing Report" }
+  );
+  assert.deepEqual(
+    getAmazonSubmitStatus({ eligibility: { readyForReview: false, reasons: ["SHIP_DATE_AFTER_SHIP_BY"] } }),
+    { state: "blocked", label: "Chưa thể gửi", detail: "Carrier nhận hàng sau Ship By" }
+  );
 });
