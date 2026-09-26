@@ -399,7 +399,7 @@ const CheckOder = () => {
     };
 
     const handleSelectOrder = (order) => {
-        if (!order.orderId || !order.shopId || order.submittedToAmazon || !order.bulkConfirmEligible) return;
+        if (!order.orderId || !order.shopId || getAmazonSubmitStatus(order).state !== 'ready') return;
 
         const payload = { orderId: order.orderId, shopId: order.shopId };
 
@@ -419,7 +419,7 @@ const CheckOder = () => {
     const isAllFilteredSelected =
         filteredOrders.length > 0 &&
         filteredOrders
-            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon && order.bulkConfirmEligible)
+            .filter((order) => order.orderId && order.shopId && getAmazonSubmitStatus(order).state === 'ready')
             .every((order) =>
                 selectedOrders.some(
                     (item) => item.orderId === order.orderId && item.shopId === order.shopId
@@ -428,7 +428,7 @@ const CheckOder = () => {
 
     const handleSelectAllFiltered = () => {
         const validFilteredOrders = filteredOrders
-            .filter((order) => order.orderId && order.shopId && !order.submittedToAmazon && order.bulkConfirmEligible)
+            .filter((order) => order.orderId && order.shopId && getAmazonSubmitStatus(order).state === 'ready')
             .map((order) => ({ orderId: order.orderId, shopId: order.shopId }));
 
         if (isAllFilteredSelected) {
@@ -1238,7 +1238,7 @@ const CheckOder = () => {
                                                 disabled={
                                                     loading ||
                                                     filteredOrders.filter(
-                                                        (o) => o.orderId && o.shopId && !o.submittedToAmazon && o.bulkConfirmEligible
+                                                        (o) => o.orderId && o.shopId && getAmazonSubmitStatus(o).state === 'ready'
                                                     ).length === 0
                                                 }
                                                 className="accent-neutral-900 cursor-pointer"
@@ -1293,7 +1293,7 @@ const CheckOder = () => {
                                                                 type="checkbox"
                                                                 checked={selected}
                                                                 onChange={() => handleSelectOrder(order)}
-                                                                disabled={!order.orderId || !order.shopId || !order.bulkConfirmEligible}
+                                                                disabled={!order.orderId || !order.shopId || amazonSubmitStatus.state !== 'ready'}
                                                                 className="accent-neutral-900 cursor-pointer"
                                                             />
                                                             Sẵn sàng
