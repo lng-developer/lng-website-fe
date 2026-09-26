@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import {
   AMAZON_SUBMIT_TABLE_COLUMNS,
   AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS,
+  getAmazonReviewSummary,
   getAmazonSubmitStatus,
 } from "./shippingEligibility.js";
+import * as shippingEligibility from "./shippingEligibility.js";
 
 test("keeps only the fields needed to send tracking to Amazon", () => {
   assert.deepEqual(AMAZON_SUBMIT_TABLE_COLUMNS, [
@@ -59,4 +61,50 @@ test("explains every blocking reason instead of hiding the checkbox", () => {
     getAmazonSubmitStatus({ eligibility: { readyForReview: false, reasons: ["SHIP_DATE_AFTER_SHIP_BY"] } }),
     { state: "blocked", label: "Chưa thể gửi", detail: "Carrier nhận hàng sau Ship By" }
   );
+});
+
+test("derives one immutable review date from the batch carrier dates", () => {
+  assert.equal(typeof shippingEligibility.getAmazonReviewShipDate, "function");
+  assert.equal(shippingEligibility.getAmazonReviewShipDate({
+    orders: [{ shipDate: "2026-09-24" }, { shipDate: "2026-09-24" }],
+  }), "2026-09-24");
+  assert.equal(shippingEligibility.getAmazonReviewShipDate({
+    orders: [{ shipDate: "2026-09-24" }, { shipDate: "2026-09-25" }],
+  }), "");
+});
+
+test("summarizes review batches without treating an invalid carrier date as ready", () => {
+  assert.deepEqual(getAmazonReviewSummary([
+    { totalReal: 2, orders: [{ shipDate: "2026-09-24" }, { shipDate: "2026-09-24" }] },
+    { totalReal: 1, orders: [{ shipDate: "2026-09-24" }, { shipDate: "2026-09-25" }] },
+  ]), {
+    batchCount: 2,
+    totalOrders: 3,
+    invalidBatchCount: 1,
+  });
+});
+
+test("uses the backend TSV preview rows instead of recreating Amazon fields in the modal", () => {
+  assert.equal(typeof shippingEligibility.getAmazonUploadPreview, "function");
+  assert.deepEqual(shippingEligibility.getAmazonUploadPreview([{
+    batchId: "batch-1",
+    uploadPreview: {
+      headers: ["order-id", "order-item-id", "tracking-number", "ship-date"],
+      rows: [{
+        "order-id": "112-0319169-1534648",
+        "order-item-id": "",
+        "tracking-number": "9234690339407902297338",
+        "ship-date": "2026-09-24",
+      }],
+    },
+  }]), {
+    headers: ["order-id", "order-item-id", "tracking-number", "ship-date"],
+    rows: [{
+      batchId: "batch-1",
+      "order-id": "112-0319169-1534648",
+      "order-item-id": "",
+      "tracking-number": "9234690339407902297338",
+      "ship-date": "2026-09-24",
+    }],
+  });
 });

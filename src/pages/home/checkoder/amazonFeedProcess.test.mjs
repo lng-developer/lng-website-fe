@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAmazonFeedProcess, shouldShowAmazonFeedTimeline } from './amazonFeedProcess.js';
+import { buildAmazonFeedProcess, summarizeAmazonFeeds, shouldShowAmazonFeedTimeline } from './amazonFeedProcess.js';
 
 test('marks every stage complete once Amazon confirms the feed', () => {
     const process = buildAmazonFeedProcess({
@@ -36,4 +36,19 @@ test('keeps active feeds expanded and completed feeds collapsed until requested'
     assert.equal(shouldShowAmazonFeedTimeline({ status: 'processing' }, false), true);
     assert.equal(shouldShowAmazonFeedTimeline({ status: 'done' }, false), false);
     assert.equal(shouldShowAmazonFeedTimeline({ status: 'done' }, true), true);
+});
+
+test('summarizes feed states for the collapsed panel header', () => {
+    assert.deepEqual(summarizeAmazonFeeds([
+        { amazonFeed: { status: 'done' } },
+        { amazonFeed: { status: 'done' } },
+        { amazonFeed: { status: 'needs_review' } },
+        { amazonFeed: { status: 'processing' } },
+    ]), {
+        total: 4,
+        done: 2,
+        needsReview: 1,
+        inProgress: 1,
+        failed: 0,
+    });
 });

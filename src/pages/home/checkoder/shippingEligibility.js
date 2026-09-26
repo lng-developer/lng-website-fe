@@ -32,6 +32,30 @@ export const AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS = [
   "w-[220px]",
 ];
 
+export const getAmazonReviewShipDate = (batch = {}) => {
+  const dates = [...new Set((batch.orders || []).map((order) => String(order.shipDate || '').trim()).filter(Boolean))];
+  return dates.length === 1 ? dates[0] : '';
+};
+
+export const getAmazonReviewSummary = (batches = []) => batches.reduce((summary, batch) => {
+  const orderCount = Number(batch.totalReal) || (batch.orders || []).length;
+  summary.totalOrders += orderCount;
+  if (!getAmazonReviewShipDate(batch)) summary.invalidBatchCount += 1;
+  return summary;
+}, { batchCount: batches.length, totalOrders: 0, invalidBatchCount: 0 });
+
+export const getAmazonUploadPreview = (batches = []) => {
+  const preview = batches.find((batch) => batch.uploadPreview?.headers?.length)?.uploadPreview;
+  if (!preview) return { headers: [], rows: [] };
+  return {
+    headers: preview.headers,
+    rows: batches.flatMap((batch) => (batch.uploadPreview?.rows || []).map((row) => ({
+      batchId: batch.batchId,
+      ...row,
+    }))),
+  };
+};
+
 export function getAmazonSubmitStatus(order = {}) {
   const confirmationState = order.amazonConfirmation?.state;
   if (confirmationState === "confirmed") {

@@ -21,6 +21,16 @@ export const isAmazonFeedInProgress = (feed = {}) =>
 export const shouldShowAmazonFeedTimeline = (feed = {}, manuallyExpanded = false) =>
     manuallyExpanded || isAmazonFeedInProgress(feed);
 
+export const summarizeAmazonFeeds = (batches = []) => batches.reduce((summary, batch) => {
+    const status = String(batch.amazonFeed?.status || 'queued').toLowerCase();
+    summary.total += 1;
+    if (status === 'done') summary.done += 1;
+    else if (status === 'needs_review') summary.needsReview += 1;
+    else if (status === 'failed') summary.failed += 1;
+    else summary.inProgress += 1;
+    return summary;
+}, { total: 0, done: 0, needsReview: 0, inProgress: 0, failed: 0 });
+
 export const buildAmazonFeedProcess = (feed = {}) => {
     const status = String(feed.status || 'queued').toLowerCase();
     const copy = STATUS_COPY[status] || STATUS_COPY.queued;

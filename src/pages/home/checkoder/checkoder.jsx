@@ -13,12 +13,16 @@ import ExcelJS from 'exceljs';
 import {
     AMAZON_SUBMIT_TABLE_COLUMNS,
     AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS,
+    getAmazonUploadPreview,
+    getAmazonReviewShipDate,
+    getAmazonReviewSummary,
     getAmazonSubmitStatus
 } from './shippingEligibility';
 import {
     buildAmazonFeedProcess,
     formatAmazonFeedTime,
     isAmazonFeedInProgress,
+    summarizeAmazonFeeds,
     shouldShowAmazonFeedTimeline
 } from './amazonFeedProcess';
 import { countActiveAdvancedFilters } from './trackingFilterLayout';
@@ -199,8 +203,8 @@ const CheckOder = () => {
     const [exportingExcel, setExportingExcel] = useState(false);
     const [reviewBatches, setReviewBatches] = useState([]);
     const [amazonFeeds, setAmazonFeeds] = useState([]);
+    const [amazonFeedsExpanded, setAmazonFeedsExpanded] = useState(false);
     const [expandedAmazonFeedIds, setExpandedAmazonFeedIds] = useState(() => new Set());
-    const [reviewShipDate, setReviewShipDate] = useState(getAmazonUsDate);
     const [confirmedSingleShipment, setConfirmedSingleShipment] = useState(false);
     const [confirmedNoTransparency, setConfirmedNoTransparency] = useState(false);
 
@@ -306,6 +310,7 @@ const CheckOder = () => {
     };
 
     const hasAmazonFeedInProgress = amazonFeeds.some((batch) => isAmazonFeedInProgress(batch.amazonFeed));
+    const amazonFeedSummary = useMemo(() => summarizeAmazonFeeds(amazonFeeds), [amazonFeeds]);
     const activeAdvancedFilterCount = countActiveAdvancedFilters({
         vendor: filterVendor,
         carrier: filterCarrier,
@@ -382,12 +387,9 @@ const CheckOder = () => {
         setPage(1);
     };
 
-    const reviewRows = useMemo(() => reviewBatches.flatMap((batch) =>
-        (batch.orders || []).map((order) => {
-            const source = orders.find((current) => current.orderId === order.orderId && current.shopId === batch.shopId);
-            return { ...order, itemsCount: source?.itemsCount || 0, shipmentItems: source?.shipmentItems || [] };
-        })
-    ), [reviewBatches, orders]);
+    const reviewSummary = useMemo(() => getAmazonReviewSummary(reviewBatches), [reviewBatches]);
+    const amazonUploadPreview = useMemo(() => getAmazonUploadPreview(reviewBatches), [reviewBatches]);
+    const pendingReviewConfirmations = Number(!confirmedSingleShipment) + Number(!confirmedNoTransparency);
 
     const getOrderKey = (order) =>
         `${order.orderId || 'no-order-id'}__${order.shopId || 'no-shop-id'}`;
@@ -592,10 +594,11 @@ const CheckOder = () => {
             const excludedOrders = (res.data?.batches || []).flatMap((batch) => batch.excludedOrders || []);
             const batches = (res.data?.batches || []).filter((batch) => batch.success && batch.totalReal > 0 && batch.totalFake === 0);
             if (!batches.length) {
+                const batchMessage = (res.data?.batches || []).find((batch) => batch.message)?.message;
                 const splitCount = excludedOrders.filter((order) => order.reason === 'SPLIT_SHIPMENT').length;
                 alert(splitCount
                     ? `${splitCount} đơn có nhiều tracking (split shipment), không thể gửi bằng bulk TSV.`
-                    : 'Không có batch nào đủ điều kiện để review.');
+                    : batchMessage || 'Không có batch nào đủ điều kiện để review.');
                 return;
             }
             if (excludedOrders.length) {
@@ -618,8 +621,10 @@ const CheckOder = () => {
         try {
             setSubmitting(true);
             for (const batch of reviewBatches) {
+                const shipDate = getAmazonReviewShipDate(batch);
+                if (!shipDate) throw new Error(`Batch ${batch.batchId} không có một ngày carrier nhận hàng hợp lệ`);
                 await approveTrackingReview(batch.batchId, {
-                    shipDate: reviewShipDate,
+                    shipDate,
                     confirmedSingleShipment,
                     confirmedNoTransparency
                 });
@@ -936,22 +941,41 @@ const CheckOder = () => {
                         style={{ backgroundColor: PAGE_TOKENS.surface, borderColor: PAGE_TOKENS.border }}
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
                                 <h2 className="text-xs font-bold" style={{ color: PAGE_TOKENS.text }}>Amazon feed</h2>
-                                <span className="text-[11px]" style={{ color: PAGE_TOKENS.muted }}>5 batch gần nhất</span>
-                            </div>
-                            {hasAmazonFeedInProgress && (
-                                <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{
-                                    color: PAGE_TOKENS.primary,
-                                    backgroundColor: '#eff6ff',
-                                    borderColor: '#bfdbfe'
-                                }}>
-                                    Đang theo dõi
+                                <span className="text-[11px]" style={{ color: PAGE_TOKENS.muted }}>{amazonFeedSummary.total} batch gần nhất</span>
+                                <span className="hidden truncate text-[11px] sm:inline" style={{ color: PAGE_TOKENS.muted }}>
+                                    {[
+                                        amazonFeedSummary.done && `${amazonFeedSummary.done} thành công`,
+                                        amazonFeedSummary.needsReview && `${amazonFeedSummary.needsReview} cần review`,
+                                        amazonFeedSummary.failed && `${amazonFeedSummary.failed} lỗi`,
+                                        amazonFeedSummary.inProgress && `${amazonFeedSummary.inProgress} đang xử lý`,
+                                    ].filter(Boolean).join(' · ')}
                                 </span>
-                            )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {hasAmazonFeedInProgress && (
+                                    <span className="rounded-full border px-2.5 py-1 text-[11px] font-semibold" style={{
+                                        color: PAGE_TOKENS.primary,
+                                        backgroundColor: '#eff6ff',
+                                        borderColor: '#bfdbfe'
+                                    }}>
+                                        Đang theo dõi
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    aria-expanded={amazonFeedsExpanded}
+                                    onClick={() => setAmazonFeedsExpanded((expanded) => !expanded)}
+                                    className="text-[11px] font-semibold underline"
+                                    style={{ color: PAGE_TOKENS.primary }}
+                                >
+                                    {amazonFeedsExpanded ? 'Thu gọn' : 'Chi tiết'}
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="mt-2 grid gap-1.5">
+                        {amazonFeedsExpanded && <div className="mt-2 grid gap-1.5">
                             {amazonFeeds.map((batch) => {
                                 const feed = batch.amazonFeed;
                                 const process = buildAmazonFeedProcess(feed);
@@ -1048,7 +1072,7 @@ const CheckOder = () => {
                                     </article>
                                 );
                             })}
-                        </div>
+                        </div>}
                     </section>
                 )}
 
@@ -1389,42 +1413,58 @@ const CheckOder = () => {
 
             {reviewBatches.length > 0 && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Review Shipping Confirmation">
-                    <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
-                        <div className="border-b border-slate-200 px-5 py-4">
-                            <h2 className="text-base font-bold text-slate-900">Review Shipping Confirmation</h2>
-                            <p className="mt-1 text-xs text-slate-600" role="status">Chưa có task nào được gửi. Kiểm tra dữ liệu dưới đây trước khi xác nhận.</p>
+                    <div className="w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                            <div>
+                                <h2 className="text-base font-bold text-slate-900">Xác nhận gửi tracking Amazon</h2>
+                                <p className="mt-1 text-xs text-slate-600" role="status">Ngày gửi được khóa theo thời điểm carrier nhận hàng tại Los Angeles.</p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${reviewSummary.invalidBatchCount ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>{reviewSummary.invalidBatchCount ? 'Cần kiểm tra' : 'Sẵn sàng review'}</span>
                         </div>
                         <div className="max-h-[52vh] overflow-auto px-5 py-4">
-                            <label className="mb-4 flex max-w-xs flex-col gap-1 text-xs font-semibold text-slate-700">
-                                Ship date để gửi Amazon (xác nhận theo ngày giao thực tế)
-                                <input type="date" value={reviewShipDate} max={getAmazonUsDate()} onChange={(event) => setReviewShipDate(event.target.value)} className="rounded border border-slate-300 px-2 py-1.5 text-sm" />
-                            </label>
-                            <table className="w-full text-left text-xs">
-                                <thead className="bg-slate-100 text-slate-600">
-                                    <tr><th className="px-2 py-2">Order ID</th><th className="px-2 py-2">Tracking</th><th className="px-2 py-2">Carrier</th><th className="px-2 py-2">Nhận tracking</th><th className="px-2 py-2">Items</th><th className="px-2 py-2">Amazon fields</th></tr>
-                                </thead>
-                                <tbody>
-                                    {reviewRows.map((order) => {
-                                        const carrier = getCarrierInfo(order.tracking, order.carrier);
-                                        return <tr key={`${order.orderId}-${order.tracking}`} className="border-b border-slate-100 text-slate-700">
-                                            <td className="px-2 py-2 font-mono">{order.orderId}</td>
-                                            <td className="px-2 py-2 font-mono">{order.tracking}</td>
-                                            <td className="px-2 py-2">{carrier.carrierCode}</td>
-                                            <td className="px-2 py-2">{order.shipDate || 'Chưa có thời điểm nhận tracking'}</td>
-                                            <td className="px-2 py-2">{order.shipmentItems?.map((item) => `${item.orderItemId || 'missing item id'} × ${item.quantity || 1}`).join(', ') || 'Không có item data'}</td>
-                                            <td className="px-2 py-2">Transparency và ship-from: để trống (whole-order)</td>
-                                        </tr>;
-                                    })}
-                                </tbody>
-                            </table>
-                            <div className="mt-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                                <label className="flex items-start gap-2"><input type="checkbox" checked={confirmedSingleShipment} onChange={(event) => setConfirmedSingleShipment(event.target.checked)} className="mt-0.5" />Tôi xác nhận mỗi order trong batch được giao trong một shipment duy nhất. Split shipment cần order-item-id và quantity nên không được gửi bằng flow này.</label>
-                                <label className="flex items-start gap-2"><input type="checkbox" checked={confirmedNoTransparency} onChange={(event) => setConfirmedNoTransparency(event.target.checked)} className="mt-0.5" />Tôi xác nhận các sản phẩm này không yêu cầu Transparency code. Nếu có Transparency, dừng flow này và bổ sung code theo order item.</label>
+                            <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Batch</div><div className="mt-1 text-lg font-bold text-slate-900">{reviewSummary.batchCount}</div></div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Đơn sẽ gửi</div><div className="mt-1 text-lg font-bold text-slate-900">{reviewSummary.totalOrders}</div></div>
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2"><div className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">Quy tắc ngày gửi</div><div className="mt-1 text-xs font-semibold text-blue-900">Theo carrier · Los Angeles</div></div>
                             </div>
+                            <section className="mb-4" aria-label="Batch gửi Amazon">
+                                <div className="mb-2 text-xs font-semibold text-slate-800">Batch sẽ gửi</div>
+                                <div className="space-y-2">{reviewBatches.map((batch) => {
+                                    const shipDate = getAmazonReviewShipDate(batch);
+                                    const orderCount = Number(batch.totalReal) || (batch.orders || []).length;
+                                    return <div key={batch.batchId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                                        <div><div className="font-mono font-semibold text-slate-800">{batch.batchId}</div><div className="mt-0.5 text-slate-500">{orderCount} đơn · {batch.shopName || 'Shop Amazon'}{batch.reused ? ' · Mở lại batch nháp' : ''}</div></div>
+                                        <span className={`rounded-full px-2 py-1 font-semibold ${shipDate ? 'bg-blue-50 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>{shipDate ? `Ship date: ${shipDate}` : 'Thiếu ngày carrier'}</span>
+                                    </div>;
+                                })}</div>
+                            </section>
+                            <section className="overflow-hidden rounded-lg border border-slate-200" aria-label="Preview file TSV gửi Amazon">
+                                <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                                    <div className="text-xs font-semibold text-slate-800">Preview file TSV sẽ upload Amazon</div>
+                                    <div className="mt-0.5 text-[11px] text-slate-500">Tab-delimited; mỗi cột và ô trống bên dưới là đúng payload extension sẽ gửi.</div>
+                                </div>
+                                {amazonUploadPreview.headers.length ? (
+                                    <div className="overflow-x-auto"><table className="w-full min-w-max text-left text-[11px]">
+                                        <thead className="bg-slate-100 text-slate-600"><tr><th className="whitespace-nowrap px-3 py-2">Batch</th>{amazonUploadPreview.headers.map((header) => <th key={header} className="whitespace-nowrap px-3 py-2 font-mono">{header}</th>)}</tr></thead>
+                                        <tbody>{amazonUploadPreview.rows.map((row, rowIndex) => <tr key={`${row.batchId}-${row['order-id']}-${rowIndex}`} className="border-t border-slate-100 text-slate-700">
+                                            <td className="whitespace-nowrap px-3 py-2 font-mono text-slate-500">{row.batchId}</td>
+                                            {amazonUploadPreview.headers.map((header) => <td key={header} className="whitespace-nowrap px-3 py-2 font-mono">{row[header] || <span className="text-slate-300" title="Amazon sẽ nhận ô trống">∅</span>}</td>)}
+                                        </tr>)}</tbody>
+                                    </table></div>
+                                ) : <div className="px-3 py-4 text-xs text-amber-800">Chưa có payload preview từ server. Không gửi khi chưa nhìn thấy file sẽ upload.</div>}
+                            </section>
+                            <section className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950" aria-label="Xác nhận bắt buộc">
+                                <div className="mb-2 font-semibold">Xác nhận bắt buộc trước khi gửi</div>
+                                <div className="space-y-2">
+                                    <label className="flex cursor-pointer items-start gap-2"><input type="checkbox" checked={confirmedSingleShipment} onChange={(event) => setConfirmedSingleShipment(event.target.checked)} className="mt-0.5" /><span><strong>Không split shipment.</strong> Mỗi order chỉ có một shipment; flow này không gửi split shipment.</span></label>
+                                    <label className="flex cursor-pointer items-start gap-2"><input type="checkbox" checked={confirmedNoTransparency} onChange={(event) => setConfirmedNoTransparency(event.target.checked)} className="mt-0.5" /><span><strong>Không cần Transparency code.</strong> Nếu có, dừng flow và bổ sung code theo order item.</span></label>
+                                </div>
+                            </section>
                         </div>
                         <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
-                            <button onClick={() => setReviewBatches([])} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Hủy</button>
-                            <button onClick={handleApproveAndSend} disabled={submitting || !reviewShipDate || !confirmedSingleShipment || !confirmedNoTransparency} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{submitting ? 'Đang gửi...' : `Xác nhận & gửi ${reviewBatches.reduce((total, batch) => total + batch.totalReal, 0)} đơn`}</button>
+                            <span className="mr-auto self-center text-xs text-slate-500">{!amazonUploadPreview.headers.length ? 'Thiếu payload preview từ server' : pendingReviewConfirmations ? `Còn ${pendingReviewConfirmations} xác nhận bắt buộc` : 'Đủ điều kiện để gửi task cho extension'}</span>
+                            <button onClick={() => setReviewBatches([])} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Đóng, giữ batch nháp</button>
+                            <button onClick={handleApproveAndSend} disabled={submitting || reviewSummary.invalidBatchCount > 0 || !amazonUploadPreview.headers.length || !confirmedSingleShipment || !confirmedNoTransparency} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{submitting ? 'Đang gửi...' : `Xác nhận & gửi ${reviewSummary.totalOrders} đơn`}</button>
                         </div>
                     </div>
                 </div>
