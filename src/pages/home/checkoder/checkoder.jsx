@@ -4,19 +4,24 @@ import {
     approveTrackingReview,
     checkOrdersStatus,
     createShippingBatchFromOrders,
+    discardShippingBatch,
     downloadAmazonFeedReport,
     getShippingBatches,
+    getUploadableShippingBatches,
     sendShippingBatchUpload
 } from '../../../apis/shippingBatch';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
+import { Modal } from 'antd';
+import { toast } from 'sonner';
 import {
     AMAZON_SUBMIT_TABLE_COLUMNS,
     AMAZON_SUBMIT_TABLE_COLUMN_WIDTHS,
     getAmazonUploadPreview,
     getAmazonReviewShipDate,
     getAmazonReviewSummary,
-    getAmazonSubmitStatus
+    getAmazonSubmitStatus,
+    isPendingAmazonReviewBatch
 } from './shippingEligibility';
 import {
     buildAmazonFeedProcess,
@@ -113,6 +118,8 @@ const PAGE_TOKENS = {
     dangerBorder: '#fecaca'
 };
 
+const PENDING_BATCH_PAGE_SIZE = 20;
+
 const pillStyles = {
     primary: {
         color: '#ffffff',
@@ -202,6 +209,10 @@ const CheckOder = () => {
     const [exporting, setExporting] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
     const [reviewBatches, setReviewBatches] = useState([]);
+    const [uploadableReviewBatches, setUploadableReviewBatches] = useState([]);
+    const [uploadableReviewPage, setUploadableReviewPage] = useState(1);
+    const [uploadableReviewTotal, setUploadableReviewTotal] = useState(0);
+    const [showBatchManager, setShowBatchManager] = useState(false);
     const [amazonFeeds, setAmazonFeeds] = useState([]);
     const [amazonFeedsExpanded, setAmazonFeedsExpanded] = useState(false);
     const [expandedAmazonFeedIds, setExpandedAmazonFeedIds] = useState(() => new Set());
@@ -216,7 +227,7 @@ const CheckOder = () => {
         if (selectedShop && !showShopModal) {
             fetchData();
         }
-    }, [selectedShop, limit, page, filterTracking, filterAmazon, filterVendor, filterCarrier, filterCarrierHandoff, filterShipBy, filterShipByFrom, filterShipByTo, searchTerm]);
+    }, [selectedShop, limit, page, filterTracking, filterAmazon, filterVendor, filterCarrier, filterCarrierHandoff, filterShipBy, filterShipByFrom, filterShipByTo, searchTerm, uploadableReviewPage]);
 
     const getShop = async () => {
         try {
@@ -237,6 +248,9 @@ const CheckOder = () => {
             setShowShopModal(false);
             setOrders([]);
             setAmazonFeeds([]);
+            setUploadableReviewBatches([]);
+            setUploadableReviewPage(1);
+            setUploadableReviewTotal(0);
             setExpandedAmazonFeedIds(new Set());
             setStats({});
             setSelectedOrders([]);
@@ -274,7 +288,7 @@ const CheckOder = () => {
             setLoading(true);
             setError(null);
 
-            const [res, batchesRes] = await Promise.all([
+            const [res, batchesRes, uploadableRes] = await Promise.all([
                 checkOrdersStatus({
                 machineId: selectedShop._id,
                 limit,
@@ -289,11 +303,14 @@ const CheckOder = () => {
                 shipByFrom: filterShipByFrom,
                 shipByTo: filterShipByTo
                 }),
-                getShippingBatches({ machineId: selectedShop._id, limit: 5 })
+                getShippingBatches({ machineId: selectedShop._id, limit: 5 }),
+                getUploadableShippingBatches({ machineId: selectedShop._id, type: 'CONFIRM', limit: PENDING_BATCH_PAGE_SIZE, page: uploadableReviewPage })
             ]);
 
             setOrders(res.data.orders || []);
             setAmazonFeeds((previous) => mergeAmazonFeeds(previous, batchesRes.data?.batches || []));
+            setUploadableReviewBatches((uploadableRes.data?.batches || []).filter(isPendingAmazonReviewBatch));
+            setUploadableReviewTotal(Number(uploadableRes.data?.total) || 0);
             setFilterOptions(res.data.filterOptions || { vendors: [], carriers: [] });
             setStats(res.data.stats || {});
             setTotalCount(res.data.totalCount || 0);
@@ -462,7 +479,7 @@ const CheckOder = () => {
         const rows = filteredOrders.filter((o) => o.orderId && o.tracking);
 
         if (rows.length === 0) {
-            alert('Không có đơn có tracking để xuất');
+            toast.info('Không có đơn có tracking để xuất');
             return;
         }
 
@@ -486,10 +503,10 @@ const CheckOder = () => {
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             saveAs(blob, filename);
 
-            alert(`Xuất TXT thành công: ${rows.length} đơn hàng`);
+            toast.success(`Xuất TXT thành công: ${rows.length} đơn hàng`);
         } catch (error) {
             console.error('Export TXT error:', error);
-            alert('Có lỗi khi xuất TXT');
+            toast.error('Có lỗi khi xuất TXT');
         } finally {
             setExporting(false);
         }
@@ -497,7 +514,7 @@ const CheckOder = () => {
 
     const handleExportExcel = async () => {
         if (filteredOrders.length === 0) {
-            alert('Không có dữ liệu để xuất');
+            toast.info('Không có dữ liệu để xuất');
             return;
         }
 
@@ -564,10 +581,10 @@ const CheckOder = () => {
             const filename = `Orders_${shopName}_${timestamp}.xlsx`;
             saveAs(blob, filename);
 
-            alert(`Xuất Excel thành công: ${filteredOrders.length} đơn hàng`);
+            toast.success(`Xuất Excel thành công: ${filteredOrders.length} đơn hàng`);
         } catch (error) {
             console.error('Export Excel error:', error);
-            alert('Có lỗi khi xuất Excel');
+            toast.error('Có lỗi khi xuất Excel');
         } finally {
             setExportingExcel(false);
         }
@@ -575,11 +592,11 @@ const CheckOder = () => {
 
     const handlePushOrders = async () => {
         if (!selectedShop) {
-            alert('Vui lòng chọn shop.');
+            toast.warning('Vui lòng chọn shop.');
             return;
         }
         if (selectedOrders.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 đơn hàng.');
+            toast.warning('Vui lòng chọn ít nhất 1 đơn hàng.');
             return;
         }
 
@@ -596,21 +613,21 @@ const CheckOder = () => {
             if (!batches.length) {
                 const batchMessage = (res.data?.batches || []).find((batch) => batch.message)?.message;
                 const splitCount = excludedOrders.filter((order) => order.reason === 'SPLIT_SHIPMENT').length;
-                alert(splitCount
+                toast.warning(splitCount
                     ? `${splitCount} đơn có nhiều tracking (split shipment), không thể gửi bằng bulk TSV.`
                     : batchMessage || 'Không có batch nào đủ điều kiện để review.');
                 return;
             }
             if (excludedOrders.length) {
                 const splitCount = excludedOrders.filter((order) => order.reason === 'SPLIT_SHIPMENT').length;
-                alert(`${excludedOrders.length} đơn bị loại khỏi bulk review${splitCount ? `, gồm ${splitCount} đơn split shipment` : ''}.`);
+                toast.warning(`${excludedOrders.length} đơn bị loại khỏi bulk review${splitCount ? `, gồm ${splitCount} đơn split shipment` : ''}.`);
             }
             setReviewBatches(batches);
             setConfirmedSingleShipment(false);
             setConfirmedNoTransparency(false);
         } catch (err) {
             console.error('Push orders error:', err);
-            alert(err.response?.data?.message || err.message || 'Có lỗi khi đẩy đơn');
+            toast.error(err.response?.data?.message || err.message || 'Có lỗi khi đẩy đơn');
         } finally {
             setSubmitting(false);
         }
@@ -639,14 +656,55 @@ const CheckOder = () => {
                 amazonFeed: { status: 'queued' }
             }))));
             setReviewBatches([]);
+            setUploadableReviewBatches([]);
+            setUploadableReviewTotal(0);
             setSelectedOrders([]);
             fetchData();
         } catch (err) {
             console.error('Review/send tracking error:', err);
-            alert(err.response?.data?.message || err.message || 'Không thể gửi task upload tracking');
+            toast.error(err.response?.data?.message || err.message || 'Không thể gửi task upload tracking');
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleOpenPendingReview = () => {
+        setReviewBatches(uploadableReviewBatches);
+        setShowBatchManager(false);
+        setConfirmedSingleShipment(false);
+        setConfirmedNoTransparency(false);
+    };
+
+    const handleOpenBatchReview = (batch) => {
+        setReviewBatches([batch]);
+        setShowBatchManager(false);
+        setConfirmedSingleShipment(false);
+        setConfirmedNoTransparency(false);
+    };
+
+    const handleDiscardBatch = (batch) => {
+        Modal.confirm({
+            title: 'Hủy batch nháp?',
+            content: `Các order trong ${batch.batchLabel || batch.batchId} sẽ được mở khóa để tạo batch lại.`,
+            okText: 'Hủy draft',
+            cancelText: 'Quay lại',
+            okButtonProps: { danger: true },
+            onOk: async () => {
+                try {
+                    setSubmitting(true);
+                    await discardShippingBatch(batch.batchId);
+                    setUploadableReviewBatches((batches) => batches.filter(({ batchId }) => batchId !== batch.batchId));
+                    setReviewBatches((batches) => batches.filter(({ batchId }) => batchId !== batch.batchId));
+                    if (uploadableReviewBatches.length === 1 && uploadableReviewPage > 1) setUploadableReviewPage((page) => page - 1);
+                    else fetchData();
+                    toast.success('Đã hủy batch nháp');
+                } catch (err) {
+                    toast.error(err.response?.data?.message || err.message || 'Không thể hủy batch nháp');
+                } finally {
+                    setSubmitting(false);
+                }
+            }
+        });
     };
 
     const handleDownloadAmazonReport = async (batch) => {
@@ -654,7 +712,7 @@ const CheckOder = () => {
             const response = await downloadAmazonFeedReport(batch.batchId);
             saveAs(response.data, `amazon-processing-report-${batch.amazonFeed.amazonBatchId || batch.batchId}.txt`);
         } catch (err) {
-            alert(err.response?.data?.message || 'Không thể tải Processing Report');
+            toast.error(err.response?.data?.message || 'Không thể tải Processing Report');
         }
     };
 
@@ -933,6 +991,18 @@ const CheckOder = () => {
                         </button>
                     </div>
                 </div>
+
+                {uploadableReviewTotal > 0 && (
+                    <section aria-label="Batch chờ review Amazon" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2" style={{ backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }}>
+                        <div>
+                            <h2 className="text-xs font-bold" style={{ color: PAGE_TOKENS.warningText }}>Batch chờ review</h2>
+                            <p className="text-[11px]" style={{ color: PAGE_TOKENS.warningText }}>{uploadableReviewTotal} batch nháp đang giữ các order chưa gửi Amazon</p>
+                        </div>
+                        <button type="button" onClick={() => setShowBatchManager(true)} disabled={submitting} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40" style={{ backgroundColor: PAGE_TOKENS.primary }}>
+                            Quản lý {uploadableReviewTotal} batch
+                        </button>
+                    </section>
+                )}
 
                 {amazonFeeds.length > 0 && (
                     <section
@@ -1466,6 +1536,24 @@ const CheckOder = () => {
                             <button onClick={() => setReviewBatches([])} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Đóng, giữ batch nháp</button>
                             <button onClick={handleApproveAndSend} disabled={submitting || reviewSummary.invalidBatchCount > 0 || !amazonUploadPreview.headers.length || !confirmedSingleShipment || !confirmedNoTransparency} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{submitting ? 'Đang gửi...' : `Xác nhận & gửi ${reviewSummary.totalOrders} đơn`}</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showBatchManager && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Quản lý batch chờ review Amazon">
+                    <div className="w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                            <div><h2 className="text-base font-bold text-slate-900">Quản lý batch chờ review</h2><p className="mt-1 text-xs text-slate-600">Batch nháp giữ order để tránh gửi trùng; tracking và ship date được khóa theo carrier.</p></div>
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{uploadableReviewTotal} batch</span>
+                        </div>
+                        <div className="max-h-[55vh] space-y-2 overflow-auto px-5 py-4">
+                            {uploadableReviewBatches.map((batch) => <article key={batch.batchId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-xs">
+                                <div><p className="font-semibold text-slate-900">{batch.batchLabel || batch.label || `Batch ${batch.batchId}`}</p><p className="mt-1 text-slate-500">{Number(batch.totalReal) || (batch.orders || []).length} đơn · Ship date: {getAmazonReviewShipDate(batch) || 'Thiếu ngày carrier'}</p></div>
+                                <div className="flex gap-2"><button type="button" onClick={() => handleOpenBatchReview(batch)} disabled={submitting} className="rounded border border-blue-200 bg-blue-50 px-3 py-1.5 font-semibold text-blue-800 disabled:opacity-40">Review & gửi</button><button type="button" onClick={() => handleDiscardBatch(batch)} disabled={submitting} className="rounded border border-red-200 bg-red-50 px-3 py-1.5 font-semibold text-red-800 disabled:opacity-40">Hủy draft</button></div>
+                            </article>)}
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-3"><span className="mr-auto text-xs text-slate-500">Trang {uploadableReviewPage} · {uploadableReviewTotal} batch</span><button type="button" onClick={() => setUploadableReviewPage((page) => page - 1)} disabled={submitting || uploadableReviewPage === 1} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40">Trước</button><button type="button" onClick={() => setUploadableReviewPage((page) => page + 1)} disabled={submitting || uploadableReviewPage * PENDING_BATCH_PAGE_SIZE >= uploadableReviewTotal} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40">Sau</button><button type="button" onClick={() => setShowBatchManager(false)} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Đóng</button><button type="button" onClick={handleOpenPendingReview} disabled={submitting || !uploadableReviewBatches.length} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Review trang này</button></div>
                     </div>
                 </div>
             )}

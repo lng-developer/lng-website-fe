@@ -44,6 +44,9 @@ export const getAmazonReviewSummary = (batches = []) => batches.reduce((summary,
   return summary;
 }, { batchCount: batches.length, totalOrders: 0, invalidBatchCount: 0 });
 
+export const isPendingAmazonReviewBatch = (batch = {}) =>
+  batch.status === 'CONFIRM_FILE_READY' && batch.canUpload === true;
+
 export const getAmazonUploadPreview = (batches = []) => {
   const preview = batches.find((batch) => batch.uploadPreview?.headers?.length)?.uploadPreview;
   if (!preview) return { headers: [], rows: [] };

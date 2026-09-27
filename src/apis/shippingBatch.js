@@ -20,6 +20,14 @@ export const getShippingBatches = (params) => {
   return instance.get('/shipping-batch', { params });
 };
 
+export const getUploadableShippingBatches = (params) => {
+  return instance.get('/shipping-batch/uploadable', { params });
+};
+
+export const discardShippingBatch = (batchId) => {
+  return instance.post(`/shipping-batch/${batchId}/discard`);
+};
+
 export const downloadAmazonFeedReport = (batchId) => {
   return instance.get(`/shipping-batch/${batchId}/amazon-feed-report`, { responseType: 'blob' });
 };

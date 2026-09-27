@@ -108,3 +108,15 @@ test("uses the backend TSV preview rows instead of recreating Amazon fields in t
     }],
   });
 });
+
+test("keeps only unsent confirmation drafts in the batch manager", () => {
+  assert.equal(typeof shippingEligibility.isPendingAmazonReviewBatch, "function");
+  assert.equal(shippingEligibility.isPendingAmazonReviewBatch({
+    status: "CONFIRM_FILE_READY",
+    canUpload: true,
+  }), true);
+  assert.equal(shippingEligibility.isPendingAmazonReviewBatch({
+    status: "CONFIRM_FILE_READY",
+    canUpload: false,
+  }), false);
+});
