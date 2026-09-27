@@ -212,6 +212,8 @@ const CheckOder = () => {
     const [uploadableReviewBatches, setUploadableReviewBatches] = useState([]);
     const [uploadableReviewPage, setUploadableReviewPage] = useState(1);
     const [uploadableReviewTotal, setUploadableReviewTotal] = useState(0);
+    const [sentBatchHistory, setSentBatchHistory] = useState([]);
+    const [sentBatchHistoryTotal, setSentBatchHistoryTotal] = useState(0);
     const [showBatchManager, setShowBatchManager] = useState(false);
     const [amazonFeeds, setAmazonFeeds] = useState([]);
     const [amazonFeedsExpanded, setAmazonFeedsExpanded] = useState(false);
@@ -288,7 +290,7 @@ const CheckOder = () => {
             setLoading(true);
             setError(null);
 
-            const [res, batchesRes, uploadableRes] = await Promise.all([
+            const [res, batchesRes, uploadableRes, sentBatchesRes] = await Promise.all([
                 checkOrdersStatus({
                 machineId: selectedShop._id,
                 limit,
@@ -304,13 +306,16 @@ const CheckOder = () => {
                 shipByTo: filterShipByTo
                 }),
                 getShippingBatches({ machineId: selectedShop._id, limit: 5 }),
-                getUploadableShippingBatches({ machineId: selectedShop._id, type: 'CONFIRM', limit: PENDING_BATCH_PAGE_SIZE, page: uploadableReviewPage })
+                getUploadableShippingBatches({ machineId: selectedShop._id, type: 'CONFIRM', sent: 'false', limit: PENDING_BATCH_PAGE_SIZE, page: uploadableReviewPage }),
+                getUploadableShippingBatches({ machineId: selectedShop._id, type: 'CONFIRM', sent: 'true', limit: 10, page: 1 })
             ]);
 
             setOrders(res.data.orders || []);
             setAmazonFeeds((previous) => mergeAmazonFeeds(previous, batchesRes.data?.batches || []));
             setUploadableReviewBatches((uploadableRes.data?.batches || []).filter(isPendingAmazonReviewBatch));
             setUploadableReviewTotal(Number(uploadableRes.data?.total) || 0);
+            setSentBatchHistory(sentBatchesRes.data?.batches || []);
+            setSentBatchHistoryTotal(Number(sentBatchesRes.data?.total) || 0);
             setFilterOptions(res.data.filterOptions || { vendors: [], carriers: [] });
             setStats(res.data.stats || {});
             setTotalCount(res.data.totalCount || 0);
@@ -992,14 +997,14 @@ const CheckOder = () => {
                     </div>
                 </div>
 
-                {uploadableReviewTotal > 0 && (
+                {(uploadableReviewTotal > 0 || sentBatchHistoryTotal > 0) && (
                     <section aria-label="Batch chờ review Amazon" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2" style={{ backgroundColor: PAGE_TOKENS.warningBg, borderColor: PAGE_TOKENS.warningBorder }}>
                         <div>
-                            <h2 className="text-xs font-bold" style={{ color: PAGE_TOKENS.warningText }}>Batch chờ review</h2>
-                            <p className="text-[11px]" style={{ color: PAGE_TOKENS.warningText }}>{uploadableReviewTotal} batch nháp đang giữ các order chưa gửi Amazon</p>
+                            <h2 className="text-xs font-bold" style={{ color: PAGE_TOKENS.warningText }}>Batch Amazon</h2>
+                            <p className="text-[11px]" style={{ color: PAGE_TOKENS.warningText }}>{uploadableReviewTotal} batch nháp · {sentBatchHistoryTotal} batch đã gửi</p>
                         </div>
                         <button type="button" onClick={() => setShowBatchManager(true)} disabled={submitting} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40" style={{ backgroundColor: PAGE_TOKENS.primary }}>
-                            Quản lý {uploadableReviewTotal} batch
+                            Quản lý batch
                         </button>
                     </section>
                 )}
@@ -1541,17 +1546,26 @@ const CheckOder = () => {
             )}
 
             {showBatchManager && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Quản lý batch chờ review Amazon">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Quản lý batch Amazon">
                     <div className="w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl">
                         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                            <div><h2 className="text-base font-bold text-slate-900">Quản lý batch chờ review</h2><p className="mt-1 text-xs text-slate-600">Batch nháp giữ order để tránh gửi trùng; tracking và ship date được khóa theo carrier.</p></div>
-                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{uploadableReviewTotal} batch</span>
+                            <div><h2 className="text-base font-bold text-slate-900">Quản lý batch Amazon</h2><p className="mt-1 text-xs text-slate-600">Batch nháp giữ order để tránh gửi trùng; lịch sử cho biết task và Amazon đã xử lý tới đâu.</p></div>
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{uploadableReviewTotal} nháp · {sentBatchHistoryTotal} đã gửi</span>
                         </div>
                         <div className="max-h-[55vh] space-y-2 overflow-auto px-5 py-4">
+                            {uploadableReviewBatches.length > 0 && <p className="pt-1 text-xs font-semibold text-slate-700">Chờ review</p>}
                             {uploadableReviewBatches.map((batch) => <article key={batch.batchId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-xs">
                                 <div><p className="font-semibold text-slate-900">{batch.batchLabel || batch.label || `Batch ${batch.batchId}`}</p><p className="mt-1 text-slate-500">{Number(batch.totalReal) || (batch.orders || []).length} đơn · Ship date: {getAmazonReviewShipDate(batch) || 'Thiếu ngày carrier'}</p></div>
                                 <div className="flex gap-2"><button type="button" onClick={() => handleOpenBatchReview(batch)} disabled={submitting} className="rounded border border-blue-200 bg-blue-50 px-3 py-1.5 font-semibold text-blue-800 disabled:opacity-40">Review & gửi</button><button type="button" onClick={() => handleDiscardBatch(batch)} disabled={submitting} className="rounded border border-red-200 bg-red-50 px-3 py-1.5 font-semibold text-red-800 disabled:opacity-40">Hủy draft</button></div>
                             </article>)}
+                            {sentBatchHistory.length > 0 && <p className="pt-3 text-xs font-semibold text-slate-700">Đã gửi gần đây</p>}
+                            {sentBatchHistory.map((batch) => {
+                                const process = buildAmazonFeedProcess(batch.amazonFeed);
+                                return <article key={batch.batchId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-xs">
+                                    <div><p className="font-semibold text-slate-900">{batch.batchLabel || batch.label || `Batch ${batch.batchId}`}</p><p className="mt-1 text-slate-500">{Number(batch.totalReal) || (batch.orders || []).length} đơn · Gửi: {formatAmazonFeedTime(batch.uploadTaskSentAt)}</p></div>
+                                    <span className={`rounded-full border px-2 py-1 font-semibold ${process.tone === 'success' ? 'border-green-200 bg-green-50 text-green-700' : process.tone === 'danger' ? 'border-red-200 bg-red-50 text-red-700' : process.tone === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{process.badge}</span>
+                                </article>;
+                            })}
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-3"><span className="mr-auto text-xs text-slate-500">Trang {uploadableReviewPage} · {uploadableReviewTotal} batch</span><button type="button" onClick={() => setUploadableReviewPage((page) => page - 1)} disabled={submitting || uploadableReviewPage === 1} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40">Trước</button><button type="button" onClick={() => setUploadableReviewPage((page) => page + 1)} disabled={submitting || uploadableReviewPage * PENDING_BATCH_PAGE_SIZE >= uploadableReviewTotal} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40">Sau</button><button type="button" onClick={() => setShowBatchManager(false)} disabled={submitting} className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Đóng</button><button type="button" onClick={handleOpenPendingReview} disabled={submitting || !uploadableReviewBatches.length} className="rounded bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Review trang này</button></div>
                     </div>
