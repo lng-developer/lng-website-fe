@@ -20,14 +20,14 @@ export function buildProfitArrays(r, len) {
             numberSafe(rv) -
             numberSafe(baseCost[i]) -
             numberSafe(fee[i]) -
-            numberSafe(refund[i]) -
-            Math.abs(numberSafe(discount[i]))
+            Math.abs(numberSafe(discount[i])) -
+            numberSafe(ads[i])
         );
 
   const profit2 =
     Array.isArray(r?.profit2) && r.profit2.length === len
       ? r.profit2
-      : profit1.map((p1, i) => numberSafe(p1) - numberSafe(ads[i]) - numberSafe(opCost[i]));
+    : profit1.map((p1, i) => numberSafe(p1) - numberSafe(opCost[i]) - numberSafe(refund[i]));
 
   const roi = ads.map((ad, i) => {
     const a = numberSafe(ad);

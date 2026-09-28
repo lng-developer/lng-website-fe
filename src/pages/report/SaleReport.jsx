@@ -236,7 +236,7 @@ const SaleReport = () => {
     Object.entries(normalizedView).forEach(([seller, r]) => {
       const taxArr = r.revenue.map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
 
-      // Profit1 = revenue - baseCost - fee - refund - discount
+      // Profit1 = revenue - baseCost - fee - discount - ads
       const profit1 =
         r.profit1 ??
         r.revenue.map(
@@ -245,13 +245,13 @@ const SaleReport = () => {
               numberSafe(v) -
               numberSafe(r.baseCost[i]) -
               numberSafe(r.fee[i]) -
-              numberSafe(r.refund[i]) -
-              Math.abs(numberSafe(r.itemPromotionDiscount?.[i]))
+              Math.abs(numberSafe(r.itemPromotionDiscount?.[i])) -
+              numberSafe(r.ads[i])
             ).toFixed(2)
         );
 
-      // Profit2 = Profit1 - ads - opCost
-      const profit2 = r.profit2 ?? profit1.map((v, i) => +(numberSafe(v) - numberSafe(r.ads[i]) - numberSafe(r.opCost[i])).toFixed(2));
+      // Profit2 = Profit1 - opCost - refund
+      const profit2 = r.profit2 ?? profit1.map((v, i) => +(numberSafe(v) - numberSafe(r.opCost[i]) - numberSafe(r.refund[i])).toFixed(2));
 
       const roiArr = r.ads.map((ad, i) => (numberSafe(ad) > 0 ? +((numberSafe(profit2[i]) / numberSafe(ad)) * 100).toFixed(2) : null));
 

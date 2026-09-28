@@ -14,7 +14,7 @@ const result = buildProfitArrays(
   1
 );
 
-assert.deepEqual(result.profit1, [57]);
+assert.deepEqual(result.profit1, [55]);
 assert.deepEqual(result.profit2, [40]);
 assert.deepEqual(result.roi, [571.43]);
 
