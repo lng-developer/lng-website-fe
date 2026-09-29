@@ -31,6 +31,7 @@ const fmtNum = (n) =>
   typeof n === 'number'
     ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : n;
+const TABLE_BOTTOM_SAFE_AREA = 64;
 
 // ── Status badge ─────────────────────────────────────────────
 const statusColor = { completed: 'green', shipped: 'blue', processing: 'orange', New: 'cyan' };
@@ -459,7 +460,7 @@ const EtsyOrderCost = () => {
     const handleResize = () => {
       const tableTop = tableContainerRef.current?.getBoundingClientRect().top;
       if (typeof tableTop !== 'number') return;
-      setTableHeight(Math.max(160, window.innerHeight - tableTop - 16));
+      setTableHeight(Math.max(160, window.innerHeight - tableTop - TABLE_BOTTOM_SAFE_AREA));
     };
     handleResize();
     window.addEventListener('resize', handleResize);
