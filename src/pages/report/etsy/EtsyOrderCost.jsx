@@ -97,6 +97,7 @@ const EtsyOrderCost = () => {
     allExpanded,
     handleExpand,
     toggleAllExpanded,
+    fetchExportOrders,
     refresh,
   } = useEtsyOrderCost();
 
@@ -411,8 +412,8 @@ const EtsyOrderCost = () => {
       });
       ws.getRow(1).height = 20;
 
-      // Use full filtered list for export (not paged)
-      pagedOrders.forEach((o, ri) => {
+      const exportOrders = await fetchExportOrders();
+      exportOrders.forEach((o, ri) => {
         const row = ws.getRow(ri + 2);
         const vals = [
           o.orderId, o.orderDateFmt, o.shopName, o.buyerName, o.status,

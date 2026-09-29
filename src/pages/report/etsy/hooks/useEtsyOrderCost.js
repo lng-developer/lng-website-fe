@@ -8,6 +8,7 @@ import {
 } from '../etsyOrderCostMapper';
 
 const PAGE_SIZE = 10;
+const EXPORT_PAGE_SIZE = 200;
 
 export function useEtsyOrderCost() {
   const [allOrders, setAllOrders] = useState([]);
@@ -62,6 +63,29 @@ export function useEtsyOrderCost() {
       if (latestRequestRef.current === requestId) setLoading(false);
     }
   }, []);
+
+  const fetchExportOrders = useCallback(async () => {
+    const orders = [];
+    let page = 1;
+    let totalCount = Infinity;
+
+    while (orders.length < totalCount) {
+      const res = await getAllEtsyOrders({
+        page,
+        perPage: EXPORT_PAGE_SIZE,
+        ...filters,
+        includeLogs: false,
+      });
+      const payload = normalizeEtsyOrderCostResponse(res?.data);
+      orders.push(...payload.orders);
+      totalCount = payload.totalCount;
+
+      if (!payload.orders.length) break;
+      page += 1;
+    }
+
+    return orders;
+  }, [filters]);
 
   const updateFilter = (newValues) => {
     setFilters((prev) => ({ ...prev, ...newValues }));
@@ -143,6 +167,7 @@ export function useEtsyOrderCost() {
     allExpanded,
     handleExpand,
     toggleAllExpanded,
+    fetchExportOrders,
     refresh: () => fetchOrders({ ...filters, page: currentPage, limit: pageSize }),
   };
 }
