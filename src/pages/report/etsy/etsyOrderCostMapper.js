@@ -1,7 +1,7 @@
 const num = (value) => (Number.isFinite(+value) ? +value : 0);
 const roundMoney = (value) => +num(value).toFixed(2);
 const ETSY_IMAGE_VARIANT_PATTERN = /\/il_(?:fullxfull|\d+x(?:N|\d+))(?=\.)/i;
-const DEFAULT_FREE = 21.5;
+const FEE_RATE = 0.21;
 
 const formatOrderDate = (value) => {
   const date = new Date(value);
@@ -21,8 +21,8 @@ const getEtsyPreviewImageUrl = (url = '') => {
 export const normalizeEtsyOrderCostOrder = (order = {}) => {
   const items = Array.isArray(order.items) ? order.items : [];
   const baseCost = roundMoney(order.baseCost ?? order.base_cost);
-  const free = roundMoney(order.free ?? DEFAULT_FREE);
-  const revenue = roundMoney(order.revenue ?? order.total ?? order.total_price);
+  const revenue = roundMoney(order.revenue ?? order.totals?.orderTotal ?? order.total ?? order.total_price);
+  const fee = roundMoney(order.fee ?? revenue * FEE_RATE);
   const listingFee = roundMoney(order.listingFee ?? order.listing_fee);
   const transactionFee = roundMoney(order.transactionFee ?? order.transaction_fee);
   const paymentFee = roundMoney(order.paymentFee ?? order.payment_fee);
@@ -30,7 +30,7 @@ export const normalizeEtsyOrderCostOrder = (order = {}) => {
   const offsiteAds = roundMoney(order.offsiteAds ?? order.offsite_ads);
   const discount = roundMoney(order.discount);
   const refund = roundMoney(order.refund);
-  const totalCost = baseCost + free + listingFee + transactionFee + paymentFee + tax + offsiteAds + discount + refund;
+  const totalCost = baseCost + fee + listingFee + transactionFee + paymentFee + tax + offsiteAds + discount + refund;
   const profit = roundMoney(order.profit ?? revenue - totalCost);
   const orderDateRaw = order.orderDate ?? order.purchase_date ?? order.createdAt;
 
@@ -44,7 +44,7 @@ export const normalizeEtsyOrderCostOrder = (order = {}) => {
     status: order.status ?? '',
     revenue,
     baseCost,
-    free,
+    fee,
     listingFee,
     transactionFee,
     paymentFee,
@@ -64,7 +64,7 @@ export const normalizeEtsyOrderCostOrder = (order = {}) => {
         title: item.title ?? '',
         sku: item.sku ?? '',
         quantity,
-        price: roundMoney(item.price ?? item.unit_price),
+        price: roundMoney(item.price ?? item.unitPrice ?? item.unit_price),
         imageUrl,
         previewImageUrl: getEtsyPreviewImageUrl(imageUrl),
         baseCost: itemBaseCost,
@@ -81,6 +81,15 @@ export const normalizeEtsyOrderCostResponse = (payload = {}) => {
     totalCount: num(payload.totalCount ?? data.length),
     totalPages: num(payload.totalPages),
     currentPage: num(payload.currentPage),
+    summary: payload.summary
+      ? {
+          orders: num(payload.summary.orders),
+          revenue: roundMoney(payload.summary.revenue),
+          baseCost: roundMoney(payload.summary.baseCost),
+          fee: roundMoney(payload.summary.fee),
+          profit: roundMoney(payload.summary.profit),
+        }
+      : null,
   };
 };
 
@@ -90,7 +99,7 @@ export const computeEtsyOrderStats = (orders = []) => {
       acc.orders += 1;
       acc.revenue += num(order.revenue);
       acc.baseCost += num(order.baseCost);
-      acc.free += num(order.free);
+      acc.fee += num(order.fee);
       acc.listingFee += num(order.listingFee);
       acc.transactionFee += num(order.transactionFee);
       acc.paymentFee += num(order.paymentFee);
@@ -105,7 +114,7 @@ export const computeEtsyOrderStats = (orders = []) => {
       orders: 0,
       revenue: 0,
       baseCost: 0,
-      free: 0,
+      fee: 0,
       listingFee: 0,
       transactionFee: 0,
       paymentFee: 0,
@@ -127,7 +136,7 @@ export const computeEtsyOrderStats = (orders = []) => {
 export const getEtsyOrderCostDetails = (order = {}) => [
   { key: 'revenue', label: 'Revenue', value: roundMoney(order.revenue) },
   { key: 'baseCost', label: 'Base Cost', value: roundMoney(order.baseCost) },
-  { key: 'free', label: 'Free', value: roundMoney(order.free) },
+  { key: 'fee', label: 'Fee (21%)', value: roundMoney(order.fee) },
   { key: 'listingFee', label: 'Listing Fee', value: roundMoney(order.listingFee) },
   { key: 'transactionFee', label: 'Transaction Fee', value: roundMoney(order.transactionFee) },
   { key: 'paymentFee', label: 'Payment Fee', value: roundMoney(order.paymentFee) },

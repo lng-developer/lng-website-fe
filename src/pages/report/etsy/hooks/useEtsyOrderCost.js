@@ -12,6 +12,7 @@ const PAGE_SIZE = 10;
 export function useEtsyOrderCost() {
   const [allOrders, setAllOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const latestRequestRef = useRef(0);
 
@@ -42,6 +43,7 @@ export function useEtsyOrderCost() {
         search: params.search,
         shopName: params.shopName,
         status: params.status,
+        includeCostSummary: true,
       });
 
       if (latestRequestRef.current !== requestId) return;
@@ -49,11 +51,13 @@ export function useEtsyOrderCost() {
       const payload = normalizeEtsyOrderCostResponse(res?.data);
       setAllOrders(payload.orders);
       setTotalCount(payload.totalCount);
+      setSummary(payload.summary);
     } catch (error) {
       if (latestRequestRef.current !== requestId) return;
       console.error('Failed to fetch Etsy order cost report:', error);
       setAllOrders([]);
       setTotalCount(0);
+      setSummary(null);
     } finally {
       if (latestRequestRef.current === requestId) setLoading(false);
     }
@@ -66,15 +70,14 @@ export function useEtsyOrderCost() {
 
   const debouncedSearch = useMemo(
     () => debounce((val) => updateFilter({ search: val }), 300),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
   const pagedOrders = allOrders;
 
   const filteredStats = useMemo(
-    () => computeEtsyOrderStats(allOrders),
-    [allOrders]
+    () => summary || computeEtsyOrderStats(allOrders),
+    [allOrders, summary]
   );
 
   const shopOptions = useMemo(

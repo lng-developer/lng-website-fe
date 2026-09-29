@@ -5,7 +5,7 @@
  * UI layer thuần túy – toàn bộ logic nằm trong useEtsyOrderCost.
  * ─────────────────────────────────────────────────────────────
  */
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Descriptions, Image, Input, Modal, Pagination, Table, Tooltip, Tag, Select } from 'antd';
 import { FaBox, FaDollarSign, FaUser, FaRedo, FaPercentage, FaEtsy } from 'react-icons/fa';
@@ -77,6 +77,7 @@ const EtsyOrderCost = () => {
   const { collapsed } = useOutletContext();
   const [tableHeight, setTableHeight] = useState(0);
   const [selectedCostOrder, setSelectedCostOrder] = useState(null);
+  const tableContainerRef = useRef(null);
 
   const {
     pagedOrders,
@@ -116,7 +117,7 @@ const EtsyOrderCost = () => {
     { key: 'profit',          label: 'Profit',          value: num(s.profit),          prefix: '$', icon: <FaUser className="text-white" />,         iconBg: 'bg-blue-500' },
     { key: 'baseCost',        label: 'Base Cost',       value: num(s.baseCost),        prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-amber-500' },
    // { key: 'listingFee',      label: 'Listing Fee',     value: num(s.listingFee),      prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-fuchsia-500' },
-    { key: 'transactionFee',  label: 'Transaction Fee', value: num(s.transactionFee),  prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-orange-500' },
+    { key: 'fee',             label: 'Fee (21%)',      value: num(s.fee),             prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-orange-500' },
     { key: 'offsiteAds',      label: 'Offsite Ads',     value: num(s.offsiteAds),      prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-rose-500' },
     { key: 'refund',          label: 'Refund',          value: num(s.refund),          prefix: '$', icon: <FaRedo className="text-white" />,         iconBg: 'bg-violet-500' },
   ];
@@ -224,9 +225,9 @@ const EtsyOrderCost = () => {
     //   width: 80,
     // },
     {
-      title: <span style={{ color: dataColors.title }}>Free</span>,
-      dataIndex: 'freeCell',
-      key: 'free',
+      title: <span style={{ color: dataColors.title }}>Fee (21%)</span>,
+      dataIndex: 'feeCell',
+      key: 'fee',
       align: 'right',
       width: 80,
     },
@@ -312,7 +313,7 @@ const EtsyOrderCost = () => {
     offsiteAdsCell:      <span className="font-medium">{o.offsiteAds > 0 ? fmtMoney(o.offsiteAds) : '-'}</span>,
     discountCell:        <span className="font-medium">{o.discount > 0 ? fmtMoney(o.discount) : '-'}</span>,
     refundCell:          <span className="font-medium">{o.refund > 0 ? fmtMoney(o.refund) : '-'}</span>,
-    freeCell:            <span className="font-medium">{fmtMoney(o.free)}</span>,
+    feeCell:             <span className="font-medium">{fmtMoney(o.fee)}</span>,
     profitCell: (
       <span
         className="font-semibold"
@@ -399,7 +400,7 @@ const EtsyOrderCost = () => {
       const headers = [
         'Order ID','Order Date','Shop','Buyer','Status',
         'Revenue','Base Cost','Listing Fee','Transaction Fee','Payment Fee',
-        'Tax','Offsite Ads','Discount','Refund','Free','Profit',
+        'Tax','Offsite Ads','Discount','Refund','Fee (21%)','Profit',
       ];
       const headerRow = ws.getRow(1);
       headers.forEach((h, i) => {
@@ -415,7 +416,7 @@ const EtsyOrderCost = () => {
         const vals = [
           o.orderId, o.orderDateFmt, o.shopName, o.buyerName, o.status,
           o.revenue, o.baseCost, o.listingFee, o.transactionFee, o.paymentFee,
-          o.tax, o.offsiteAds, o.discount, o.refund, o.free, o.profit,
+          o.tax, o.offsiteAds, o.discount, o.refund, o.fee, o.profit,
         ];
         vals.forEach((v, ci) => {
           const c = row.getCell(ci + 1);
@@ -456,9 +457,9 @@ const EtsyOrderCost = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      const headerHeight = 240;
-      const availableHeight = window.innerHeight - headerHeight - 20;
-      setTableHeight(availableHeight);
+      const tableTop = tableContainerRef.current?.getBoundingClientRect().top;
+      if (typeof tableTop !== 'number') return;
+      setTableHeight(Math.max(160, window.innerHeight - tableTop - 16));
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -554,7 +555,7 @@ const EtsyOrderCost = () => {
         </div>
 
         {/* Table */}
-        <div className="mt-4">
+        <div ref={tableContainerRef} className="mt-4">
           <Table
             className="no-indent-table no-backgroud-title"
             columns={columns}

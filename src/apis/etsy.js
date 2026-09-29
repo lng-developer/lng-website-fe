@@ -21,6 +21,7 @@ const getAllEtsyOrders = (params = {}) => {
     addressUnchecked: params.addressUnchecked || undefined,
     openCase: params.openCase || undefined,
     noPsd: params.noPsd || undefined,
+    includeCostSummary: params.includeCostSummary === true ? true : undefined,
     includeLogs: true,
     logLimit: 5,
   };
