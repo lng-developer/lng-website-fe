@@ -201,18 +201,6 @@ const ReportOrderCost = () => {
       align: 'center',
     },
     {
-      title: <span style={{ color: dataColors.title }}>Tax</span>,
-      dataIndex: 'tax',
-      key: 'tax',
-      align: 'center',
-    },
-    {
-      title: <span style={{ color: dataColors.title }}>S-Tax</span>,
-      dataIndex: 'shipping_tax',
-      key: 'shipping_tax',
-      align: 'center',
-    },
-    {
       title: <span style={{ color: dataColors.title }}>Fee</span>,
       dataIndex: 'fee',
       key: 'fee',
