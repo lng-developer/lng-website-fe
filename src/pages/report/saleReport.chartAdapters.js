@@ -99,6 +99,32 @@ export function buildDailyAggregate({ normalized, days, sellerFilter }) {
   return agg;
 }
 
+export function buildMetricTotals(normalized, dayLen) {
+  const daily = buildDailyAggregate({
+    normalized,
+    days: Array.from({ length: dayLen }, () => ''),
+  });
+
+  return {
+    items: sum(daily.items),
+    revenue: sum(daily.revenue),
+    baseCost: sum(daily.baseCost),
+    ads: sum(daily.ads),
+    fee: sum(daily.fee),
+    discount: sum(daily.discount),
+    profit: daily.revenue.reduce(
+      (total, revenue, index) =>
+        total +
+        numberSafe(revenue) -
+        numberSafe(daily.baseCost[index]) -
+        numberSafe(daily.fee[index]) -
+        Math.abs(numberSafe(daily.discount[index])) -
+        numberSafe(daily.ads[index]),
+      0,
+    ),
+  };
+}
+
 export function buildLineSeries({ days, dailyAgg, metrics }) {
   const safeDays = Array.isArray(days) ? days : [];
   return (metrics || []).map((m) => ({

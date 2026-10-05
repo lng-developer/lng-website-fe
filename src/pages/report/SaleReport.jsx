@@ -23,6 +23,7 @@ import { TableOutlined, BarChartOutlined } from '@ant-design/icons';
 import { saveAs } from 'file-saver';
 
 import SaleReportCharts from './SaleReportCharts';
+import { buildMetricTotals } from './saleReport.chartAdapters';
 import ModalRefund from './ModalRefund';
 import { getAllTeam } from '../../apis/teams';
 
@@ -234,8 +235,6 @@ const SaleReport = () => {
     const rows = [];
 
     Object.entries(normalizedView).forEach(([seller, r]) => {
-      const taxArr = r.revenue.map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
-
       // Profit1 = revenue - baseCost - fee - discount - ads
       const profit1 =
         r.profit1 ??
@@ -266,7 +265,6 @@ const SaleReport = () => {
         profit1: r.totals?.profit1 ?? sum(profit1),
         profit2: r.totals?.profit2 ?? sum(profit2),
         itemPromotionDiscount: r.totals?.itemPromotionDiscount ?? sum(r.itemPromotionDiscount || []),
-        tax: sum(taxArr),
       };
 
       // ROI tổng: dùng totals.profit2 / totals.ads
@@ -279,7 +277,6 @@ const SaleReport = () => {
         { type: 'Base cost', values: r.baseCost, money: true, totalVal: totals.baseCost },
         { type: 'Ads spend', values: r.ads, money: true, totalVal: totals.ads },
         { type: 'Fee', values: r.fee, money: true, totalVal: totals.fee },
-        { type: 'Tax', values: taxArr, money: true, totalVal: totals.tax },
         {
           type: 'Discount',
           values: r.itemPromotionDiscount || [],
@@ -416,26 +413,14 @@ const SaleReport = () => {
 
   // ----- KPIs tổng trên đầu -----
   const kpis = useMemo(() => {
-    const entries = Object.values(normalizedView);
-    const totals = entries.map((r) => r.totals).filter(Boolean);
-    const get = (key) => (totals.length ? totals.reduce((a, t) => a + numberSafe(t?.[key]), 0) : 0);
-
-    const totalItems = get('items');
-    const totalRevenue = get('revenue');
-    const totalAds = get('ads');
-    const totalProfit2 = get('profit2');
-    const baseCost = get('baseCost');
-    const totalFee = get('fee');
-    const totalTax = entries.reduce((acc, r) => acc + sum(r.itemTax || []) + sum(r.shippingTax || []), 0);
-
-    const totalDiscount = entries.reduce((acc, r) => acc + sum(r.itemPromotionDiscount || []), 0);
+    const totals = buildMetricTotals(normalizedView, dayKeys.length);
 
     return [
-      { key: 'order', label: 'Order Items', value: totalItems, icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
+      { key: 'order', label: 'Order Items', value: totals.items, icon: <LuBoxes className="text-white" />, iconBg: 'bg-slate-600' },
       {
         key: 'revenue',
         label: 'Revenue',
-        value: totalRevenue,
+        value: totals.revenue,
         prefix: '$',
         icon: <FaMoneyBillWave className="text-white" />,
         iconBg: 'bg-emerald-500',
@@ -443,7 +428,7 @@ const SaleReport = () => {
       {
         key: 'ads',
         label: 'Ads Spend',
-        value: totalAds,
+        value: totals.ads,
         prefix: '$',
         icon: <FaBuysellads className="text-white" />,
         iconBg: 'bg-blue-500',
@@ -451,7 +436,7 @@ const SaleReport = () => {
       {
         key: 'vendor',
         label: 'Base Cost',
-        value: baseCost,
+        value: totals.baseCost,
         prefix: '$',
         icon: <FaDollarSign className="text-white" />,
         iconBg: 'bg-amber-500',
@@ -459,7 +444,7 @@ const SaleReport = () => {
       {
         key: 'diff',
         label: 'Discount',
-        value: totalDiscount,
+        value: totals.discount,
         prefix: '$',
         icon: <FaPercentage className="text-white" />,
         iconBg: 'bg-violet-500',
@@ -467,22 +452,21 @@ const SaleReport = () => {
       {
         key: 'fee',
         label: 'Amz Fee',
-        value: totalFee,
+        value: totals.fee,
         prefix: '$',
         icon: <FaDolly className="text-white" />,
         iconBg: 'bg-fuchsia-500',
       },
-      { key: 'tax', label: 'Tax', value: totalTax, prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-orange-500' },
       {
         key: 'profit',
-        label: 'Profit',
-        value: totalProfit2,
+        label: 'Profit 1',
+        value: totals.profit,
         prefix: '$',
         icon: <FaUser className="text-white" />,
         iconBg: 'bg-emerald-500',
       },
     ];
-  }, [normalizedView]);
+  }, [normalizedView, dayKeys.length]);
 
   const formatNumber = (n) =>
     typeof n === 'number' ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : n;
