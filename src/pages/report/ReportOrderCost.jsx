@@ -123,7 +123,7 @@ const ReportOrderCost = () => {
         icon: <FaRedo className="text-white" />,
         iconBg: 'bg-fuchsia-500',
       },
-      { key: 'tax', label: 'Tax', value: num(s.tax), prefix: '$', icon: <FaPercentage className="text-white" />, iconBg: 'bg-orange-500' },
+      { key: 'ads', label: 'Ads', value: num(s.ads), prefix: '$', icon: <FaDollarSign className="text-white" />, iconBg: 'bg-orange-500' },
     ];
   }, [counts]);
 
