@@ -120,7 +120,7 @@ const EtsyOrderCost = () => {
     { key: 'baseCost',        label: 'Base Cost',       value: num(s.baseCost),        prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-amber-500' },
    // { key: 'listingFee',      label: 'Listing Fee',     value: num(s.listingFee),      prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-fuchsia-500' },
     { key: 'fee',             label: 'Fee (21%)',      value: num(s.fee),             prefix: '$', icon: <FaPercentage className="text-white" />,  iconBg: 'bg-orange-500' },
-    { key: 'offsiteAds',      label: 'Offsite Ads',     value: num(s.offsiteAds),      prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-rose-500' },
+    { key: 'offsiteAds',      label: 'Ads',             value: num(s.offsiteAds),      prefix: '$', icon: <FaDollarSign className="text-white" />,  iconBg: 'bg-rose-500' },
     { key: 'refund',          label: 'Refund',          value: num(s.refund),          prefix: '$', icon: <FaRedo className="text-white" />,         iconBg: 'bg-violet-500' },
   ];
 
@@ -311,8 +311,6 @@ const EtsyOrderCost = () => {
     listingFeeCell:      <span className="font-medium">{fmtMoney(o.listingFee)}</span>,
     transactionFeeCell:  <span className="font-medium">{fmtMoney(o.transactionFee)}</span>,
     paymentFeeCell:      <span className="font-medium">{fmtMoney(o.paymentFee)}</span>,
-    taxCell:             <span className="font-medium">{fmtMoney(o.tax)}</span>,
-    offsiteAdsCell:      <span className="font-medium">{o.offsiteAds > 0 ? fmtMoney(o.offsiteAds) : '-'}</span>,
     discountCell:        <span className="font-medium">{o.discount > 0 ? fmtMoney(o.discount) : '-'}</span>,
     refundCell:          <span className="font-medium">{o.refund > 0 ? fmtMoney(o.refund) : '-'}</span>,
     feeCell:             <span className="font-medium">{fmtMoney(o.fee)}</span>,
@@ -402,7 +400,7 @@ const EtsyOrderCost = () => {
       const headers = [
         'Order ID','Order Date','Shop','Buyer','Status',
         'Revenue','Base Cost','Listing Fee','Transaction Fee','Payment Fee',
-        'Tax','Offsite Ads','Discount','Refund','Fee (21%)','Profit',
+        'Discount','Refund','Fee (21%)','Profit',
       ];
       const headerRow = ws.getRow(1);
       headers.forEach((h, i) => {
@@ -418,20 +416,20 @@ const EtsyOrderCost = () => {
         const vals = [
           o.orderId, o.orderDateFmt, o.shopName, o.buyerName, o.status,
           o.revenue, o.baseCost, o.listingFee, o.transactionFee, o.paymentFee,
-          o.tax, o.offsiteAds, o.discount, o.refund, o.fee, o.profit,
+          o.discount, o.refund, o.fee, o.profit,
         ];
         vals.forEach((v, ci) => {
           const c = row.getCell(ci + 1);
           c.value = v; c.border = borderThin;
           c.alignment = { horizontal: ci < 5 ? 'center' : 'right' };
           if (ci >= 5) c.numFmt = moneyFmt;
-          if (ci === 15 && typeof v === 'number') {
+          if (ci === 13 && typeof v === 'number') {
             c.font = { color: { argb: v >= 0 ? '008000' : 'FF0000' }, bold: true };
           }
         });
       });
 
-      [18, 20, 14, 18, 12, 12, 12, 12, 16, 11, 11, 12, 11, 11, 10, 12].forEach((w, i) => {
+      [18, 20, 14, 18, 12, 12, 12, 12, 16, 11, 11, 12, 10, 12].forEach((w, i) => {
         ws.getColumn(i + 1).width = w;
       });
 

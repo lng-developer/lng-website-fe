@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  getEtsyOrderCostDetails,
   normalizeEtsyOrderCostResponse,
 } from './etsyOrderCostMapper.js';
 
@@ -33,5 +34,9 @@ assert.equal(result.orders[0].revenue, 83.51);
 assert.equal(result.orders[0].fee, 17.54);
 assert.equal(result.orders[0].profit, 32.79);
 assert.equal(result.orders[0].items[0].price, 100.95);
+
+const details = getEtsyOrderCostDetails({ tax: 2, offsiteAds: 3 });
+assert.equal(details.some((item) => item.key === 'tax'), false);
+assert.equal(details.some((item) => item.key === 'offsiteAds'), false);
 
 console.log('etsyOrderCostMapper self-check passed');

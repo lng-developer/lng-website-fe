@@ -140,8 +140,6 @@ export const getEtsyOrderCostDetails = (order = {}) => [
   { key: 'listingFee', label: 'Listing Fee', value: roundMoney(order.listingFee) },
   { key: 'transactionFee', label: 'Transaction Fee', value: roundMoney(order.transactionFee) },
   { key: 'paymentFee', label: 'Payment Fee', value: roundMoney(order.paymentFee) },
-  { key: 'tax', label: 'Tax', value: roundMoney(order.tax) },
-  { key: 'offsiteAds', label: 'Offsite Ads', value: roundMoney(order.offsiteAds) },
   { key: 'discount', label: 'Discount', value: roundMoney(order.discount) },
   { key: 'refund', label: 'Refund', value: roundMoney(order.refund) },
   { key: 'profit', label: 'Profit', value: roundMoney(order.profit) },
