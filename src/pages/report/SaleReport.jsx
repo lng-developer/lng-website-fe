@@ -580,7 +580,7 @@ const SaleReport = () => {
       const toStr = (filters.to || '').slice(0, 10).split('-').reverse().join('/');
       set('B3', `Từ ngày ${fromStr} đến ngày ${toStr}`, { italic: true, color: '0033CC', align: { horizontal: 'center' } });
 
-      set('J3', `Tổng đơn: ${totalOrders}`, { bold: true, align: { horizontal: 'right' } });
+      set('J3', `Tổng dòng sản phẩm: ${totalOrders}`, { bold: true, align: { horizontal: 'right' } });
 
       ws.mergeCells('B5', 'I5');
       set('B5', 'Chi phí tuần', { bold: true, align: { horizontal: 'center' }, fill: fillBlue, border: borderThin });
@@ -658,7 +658,7 @@ const SaleReport = () => {
         const taxArr = (r.itemTax || []).map((_, i) => +(numberSafe(r.itemTax?.[i]) + numberSafe(r.shippingTax?.[i])).toFixed(2));
         const taxTotalSeller = sumArr(taxArr);
         const group = [
-          { label: 'Total Orders', values: r.items || [], total: r.totals?.items, money: false },
+          { label: 'Total Order Items', values: r.items || [], total: r.totals?.items, money: false },
           { label: 'Revenue', values: r.revenue || [], total: r.totals?.revenue, money: true },
           { label: 'Base cost', values: r.baseCost || [], total: r.totals?.baseCost, money: true },
           { label: 'Ads spend', values: r.ads || [], total: r.totals?.ads, money: true },

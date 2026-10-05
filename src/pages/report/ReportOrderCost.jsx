@@ -599,7 +599,7 @@ const ReportOrderCost = () => {
           <div>
             <Pagination
               total={totalCount}
-              showTotal={(total) => `Total ${total} items`}
+              showTotal={(total) => `Total ${total} orders`}
               defaultPageSize={PAGE_SIZE}
               defaultCurrent={currentPage}
               onChange={handlePageChange}
