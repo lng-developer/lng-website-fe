@@ -10,5 +10,7 @@ assert.match(hook, /while \(orders\.length < totalCount\)/);
 assert.match(hook, /includeLogs: false/);
 assert.match(page, /const exportOrders = await fetchExportOrders\(\);/);
 assert.match(page, /exportOrders\.forEach\(\(o, ri\) =>/);
+assert.match(page, /'Order ID','Order Date','Shop','Seller','Buyer','Status'/);
+assert.match(page, /o\.orderId, o\.orderDateFmt, o\.shopName, o\.sellerName, o\.buyerName, o\.status/);
 
 console.log('EtsyOrderCost export self-check passed');

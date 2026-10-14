@@ -39,6 +39,7 @@ export const normalizeEtsyOrderCostOrder = (order = {}) => {
     orderDate: orderDateRaw ? new Date(orderDateRaw).toISOString().slice(0, 10) : '',
     orderDateFmt: formatOrderDate(orderDateRaw),
     shopName: order.shopName ?? '',
+    sellerName: order.seller?.full_name ?? '',
     buyerName: order.buyerName ?? order.customer_infor?.name ?? '',
     country: order.country ?? order.customer_infor?.country ?? '',
     status: order.status ?? '',

@@ -149,6 +149,14 @@ const EtsyOrderCost = () => {
       render: (text) => <StatusComponent title={text} color={dataColors.pending} />,
     },
     {
+      title: <span style={{ color: dataColors.title }}>Seller</span>,
+      dataIndex: 'sellerName',
+      key: 'sellerName',
+      align: 'center',
+      width: 140,
+      render: (text) => text || '—',
+    },
+    {
       title: <span style={{ color: dataColors.title }}>Buyer</span>,
       dataIndex: 'buyerName',
       key: 'buyerName',
@@ -304,6 +312,7 @@ const EtsyOrderCost = () => {
       </div>
     ),
     shopName:    o.shopName,
+    sellerName:  o.sellerName,
     buyerName:   o.buyerName,
     status:      o.status,
     revenue:     <span className="font-medium">{fmtMoney(o.revenue)}</span>,
@@ -398,7 +407,7 @@ const EtsyOrderCost = () => {
       const moneyFmt   = '$#,##0.00;[Red]-$#,##0.00';
 
       const headers = [
-        'Order ID','Order Date','Shop','Buyer','Status',
+        'Order ID','Order Date','Shop','Seller','Buyer','Status',
         'Revenue','Base Cost','Listing Fee','Transaction Fee','Payment Fee',
         'Discount','Refund','Fee (21%)','Profit',
       ];
@@ -414,22 +423,22 @@ const EtsyOrderCost = () => {
       exportOrders.forEach((o, ri) => {
         const row = ws.getRow(ri + 2);
         const vals = [
-          o.orderId, o.orderDateFmt, o.shopName, o.buyerName, o.status,
+          o.orderId, o.orderDateFmt, o.shopName, o.sellerName, o.buyerName, o.status,
           o.revenue, o.baseCost, o.listingFee, o.transactionFee, o.paymentFee,
           o.discount, o.refund, o.fee, o.profit,
         ];
         vals.forEach((v, ci) => {
           const c = row.getCell(ci + 1);
           c.value = v; c.border = borderThin;
-          c.alignment = { horizontal: ci < 5 ? 'center' : 'right' };
-          if (ci >= 5) c.numFmt = moneyFmt;
-          if (ci === 13 && typeof v === 'number') {
+          c.alignment = { horizontal: ci < 6 ? 'center' : 'right' };
+          if (ci >= 6) c.numFmt = moneyFmt;
+          if (ci === 14 && typeof v === 'number') {
             c.font = { color: { argb: v >= 0 ? '008000' : 'FF0000' }, bold: true };
           }
         });
       });
 
-      [18, 20, 14, 18, 12, 12, 12, 12, 16, 11, 11, 12, 10, 12].forEach((w, i) => {
+      [18, 20, 14, 18, 18, 12, 12, 12, 12, 16, 11, 11, 12, 10, 12].forEach((w, i) => {
         ws.getColumn(i + 1).width = w;
       });
 
